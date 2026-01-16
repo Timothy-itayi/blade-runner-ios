@@ -3,6 +3,12 @@ export interface Outcome {
   consequence: string;
 }
 
+export interface NarrativeVariant {
+  linkedId: string; // The ID of the earlier subject
+  onApprove?: Partial<Omit<SubjectData, 'narrativeVariants' | 'outcomes' | 'locRecord'>>;
+  onDeny?: Partial<Omit<SubjectData, 'narrativeVariants' | 'outcomes' | 'locRecord'>>;
+}
+
 export interface SubjectData {
   // Core Identity
   name: string;
@@ -14,7 +20,7 @@ export interface SubjectData {
   
   // Status (the meat of verification)
   compliance: string;           // "A" | "B" | "C" | "D" | "F"
-  status: string;               // "ACTIVE" | "PROVISIONAL" | "RESTRICTED" | "UNDER REVIEW"
+  status: string;               // "ACTIVE" | "PROVISIONAL" | "RESTRICTED" | "UNDER REVIEW" | "[TERMINATED]"
   
   // Flags
   incidents: number;            // 0-5
@@ -48,13 +54,15 @@ export interface SubjectData {
     APPROVE: Outcome;
     DENY: Outcome;
   };
+
+  narrativeVariants?: NarrativeVariant[];
 }
 
 export const SUBJECTS: SubjectData[] = [
-  // --- PHASE 1: TRAINING WHEELS (7 Subjects) ---
+  // --- PHASE 1: THE SETUP (Subjects 1-10) ---
   {
     name: 'ELARA VANCE',
-    id: 'N8-FBA71527',
+    id: 'V1-EV001',
     sector: 'SECTOR 7',
     function: 'ENGINEERING',
     compliance: 'B',
@@ -63,7 +71,7 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'Repairs to thermal regulator.',
     requestedSector: 'SECTOR 4',
-    videoSource: require('../assets/videos/eye00.mp4'), // Placeholder
+    videoSource: require('../assets/videos/eye00.mp4'),
     phase: 1,
     locRecord: { addr: 'SECTOR 7', time: '14:22:11', lat: '34.0522', lng: '-118.243' },
     authData: {
@@ -74,12 +82,12 @@ export const SUBJECTS: SubjectData[] = [
     },
     outcomes: {
       APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SECTOR 4 THERMAL FAILURE. Repairs delayed. Incident logged.' }
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
     }
   },
   {
     name: 'KANE MORROW',
-    id: 'K2-VEN88431',
+    id: 'V1-KM002',
     sector: 'SECTOR 3',
     function: 'LOGISTICS',
     compliance: 'C',
@@ -88,7 +96,7 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'WARRANT NO 45221',
     reasonForVisit: 'Visiting family.',
     requestedSector: 'SECTOR 6',
-    videoSource: '', // Placeholder
+    videoSource: '',
     phase: 1,
     locRecord: { addr: 'SECTOR 3', time: '09:15:44', lat: '34.0588', lng: '-118.255' },
     authData: {
@@ -98,38 +106,38 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SECURITY BREACH. Subject apprehended. Entry authorized by your ID.' },
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
       DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
     }
   },
   {
-    name: 'LYRA DAWSON',
-    id: 'M4-XPL22910',
+    name: 'ELENA VOSS',
+    id: 'V1-EV003',
     sector: 'SECTOR 7',
-    function: 'MAINTENANCE',
-    compliance: 'B',
+    function: 'ENGINEERING',
+    compliance: 'A',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Work assignment.',
-    requestedSector: 'SECTOR 5',
-    videoSource: '', // Placeholder
+    reasonForVisit: 'Meeting with supervisor.',
+    requestedSector: 'SECTOR 4',
+    videoSource: '',
     phase: 1,
-    locRecord: { addr: 'SECTOR 7', time: '11:40:02', lat: '34.0612', lng: '-118.261' },
+    locRecord: { addr: 'SECTOR 7', time: '03:42:11', lat: '34.0522', lng: '-118.243' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 5', status: 'RESTRICTED', message: '✗ SECTOR 5 RESTRICTED' },
-      functionReg: { status: 'VALID', message: '✓ Maintenance credentials verified' },
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Credentials active' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'UNAUTHORIZED ENTRY. Operator flagged for review.' },
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
       DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
     }
   },
   {
     name: 'JAXON REED',
-    id: 'T1-LNK55382',
+    id: 'V1-JR004',
     sector: 'SECTOR 2',
     function: 'SANITATION',
     compliance: 'A',
@@ -138,7 +146,7 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'Standard cleaning cycle.',
     requestedSector: 'SECTOR 2',
-    videoSource: '', // Placeholder
+    videoSource: '',
     phase: 1,
     locRecord: { addr: 'SECTOR 2', time: '03:10:15', lat: '34.0441', lng: '-118.231' },
     authData: {
@@ -149,62 +157,87 @@ export const SUBJECTS: SubjectData[] = [
     },
     outcomes: {
       APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SANITATION DELAY. Sector 2 hygiene levels dropped. Flagged.' }
-    }
-  },
-  {
-    name: 'SARA KORR',
-    id: 'R9-DTA44109',
-    sector: 'SECTOR 4',
-    function: 'DATA ANALYSIS',
-    compliance: 'D',
-    status: 'PROVISIONAL',
-    incidents: 1,
-    warrants: 'WARRANT NO 11092',
-    reasonForVisit: 'Commute to hub.',
-    requestedSector: 'SECTOR 1',
-    videoSource: '', // Placeholder
-    phase: 1,
-    locRecord: { addr: 'SECTOR 4', time: '08:05:30', lat: '34.0722', lng: '-118.281' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 1', status: 'AUTHORIZED', message: '✓ Hub access open' },
-      functionReg: { status: 'VALID', message: '✓ Analyst ID verified' },
-      warrantCheck: { status: 'ACTIVE', message: '✗ ACTIVE WARRANT DETECTED' },
-      medicalFlag: { status: 'ELEVATED', message: '! Mild anxiety detected' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'DATA LEAK DETECTED. Subject connected to external leak. Your ID flagged.' },
       DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
     }
   },
   {
-    name: 'MIRA FINN',
-    id: 'V5-TRN66712',
+    name: 'KARL BRANDT',
+    id: 'V1-KB005',
     sector: 'SECTOR 8',
-    function: 'TRANSPORT',
+    function: 'LOGISTICS',
     compliance: 'B',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
     reasonForVisit: 'Equipment delivery.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
+    requestedSector: 'SECTOR 6',
+    videoSource: '',
     phase: 1,
     locRecord: { addr: 'SECTOR 8', time: '12:12:12', lat: '34.0811', lng: '-118.299' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Delivery route authorized' },
+      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Delivery route authorized' },
       functionReg: { status: 'VALID', message: '✓ Transport license active' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
       APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SUPPLY CHAIN DISRUPTION. Sector 4 equipment shortage.' }
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
+    }
+  },
+  {
+    name: 'MIRA FINN',
+    id: 'V1-MF006',
+    sector: 'SECTOR 8',
+    function: 'TRANSPORT',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    reasonForVisit: 'Routine delivery.',
+    requestedSector: 'SECTOR 4',
+    videoSource: '',
+    phase: 1,
+    locRecord: { addr: 'SECTOR 8', time: '10:05:00', lat: '34.0811', lng: '-118.299' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 access open' },
+      functionReg: { status: 'VALID', message: '✓ Transport license active' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
+    }
+  },
+  {
+    name: 'DMITRI VOLKOV',
+    id: 'V1-DV007',
+    sector: 'SECTOR 9 [REVOKED]',
+    function: 'UNASSIGNED',
+    compliance: 'C',
+    status: 'ACTIVE',
+    incidents: 1,
+    warrants: 'NONE',
+    reasonForVisit: 'Returning home.',
+    requestedSector: 'SECTOR 9',
+    videoSource: '',
+    phase: 1,
+    locRecord: { addr: 'SECTOR 4', time: '17:30:00', lat: '34.0588', lng: '-118.255' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
+      functionReg: { status: 'VALID', message: '✓ Identity verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
     }
   },
   {
     name: 'KALEB ROSS',
-    id: 'B3-ARC33215',
+    id: 'V1-KR008',
     sector: 'SECTOR 5',
     function: 'ARCHIVE',
     compliance: 'C',
@@ -213,7 +246,7 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'Data retrieval.',
     requestedSector: 'SECTOR 5',
-    videoSource: '', // Placeholder
+    videoSource: '',
     phase: 1,
     locRecord: { addr: 'SECTOR 5', time: '10:00:00', lat: '34.0911', lng: '-118.311' },
     authData: {
@@ -223,14 +256,13 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'AUDIT INTERFERENCE. Unauthorized access to restricted data.' },
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
       DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
     }
   },
-  // --- PHASE 2: DISCREPANCIES (7 Subjects) ---
   {
     name: 'ELIAS VOSS',
-    id: 'V1-DCR99281',
+    id: 'V1-EV009',
     sector: 'SECTOR 7',
     function: 'LOGISTICS',
     compliance: 'B',
@@ -239,8 +271,8 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'Emergency passage to SECTOR 6 for equipment delivery.',
     requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
-    phase: 2,
+    videoSource: '',
+    phase: 1,
     locRecord: { addr: 'SECTOR 7', time: '15:10:00', lat: '34.0522', lng: '-118.243' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
@@ -249,63 +281,40 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'ROUTING DISCREPANCY. Subject found in wrong sector (6). Operator accuracy flagged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject reprocessed. Documentation corrected. No action required.' }
-    }
-  },
-  {
-    name: 'DR. ARIS THORNE',
-    id: 'M9-MED44210',
-    sector: 'SECTOR 4',
-    function: 'MEDICAL/TECHNICIAN',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Thermal regulator repairs.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
-    phase: 2,
-    locRecord: { addr: 'SECTOR 4', time: '09:00:00', lat: '34.0722', lng: '-118.281' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 authorized' },
-      functionReg: { status: 'VALID', message: '✓ Medical credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'FUNCTION MISMATCH. Credential violation. Medical staff performing engineering. Review scheduled.' },
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
       DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
     }
   },
   {
-    name: 'KALEB ZAN',
-    id: 'Z7-RVX11204',
-    sector: 'SECTOR 9 [REVOKED]',
-    function: 'UNASSIGNED',
-    compliance: 'C',
-    status: 'ACTIVE',
-    incidents: 1,
+    name: 'JAMES CHEN',
+    id: 'V1-JC010',
+    sector: 'SECTOR 4',
+    function: 'MAINTENANCE',
+    compliance: 'D',
+    status: 'PROVISIONAL',
+    incidents: 2,
     warrants: 'NONE',
-    reasonForVisit: 'Returning home.',
-    requestedSector: 'SECTOR 9',
-    videoSource: '', // Placeholder
-    phase: 2,
-    locRecord: { addr: 'SECTOR 4', time: '17:30:00', lat: '34.0588', lng: '-118.255' },
+    reasonForVisit: 'Final appeal. Requesting reassignment review.',
+    requestedSector: 'SECTOR 4',
+    videoSource: '',
+    phase: 1,
+    locRecord: { addr: 'SECTOR 4', time: '09:00:00', lat: '34.0722', lng: '-118.281' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
-      functionReg: { status: 'VALID', message: '✓ Identity verified' },
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Credentials active' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'REVOKED ZONE ACCESSED. Serious infraction. Operator ID flagged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject relocated. New assignment issued.' }
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
     }
   },
+
+  // --- PHASE 2: THE ECHOES (Subjects 11-20) ---
   {
     name: 'LYRA BELLE',
-    id: 'L4-MSC55102',
+    id: 'V2-LB011',
     sector: 'SECTOR 2',
     function: 'MAINTENANCE',
     compliance: 'B',
@@ -314,7 +323,7 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'Scheduled maintenance in SECTOR 1.',
     requestedSector: 'SECTOR 3',
-    videoSource: '', // Placeholder
+    videoSource: '',
     phase: 2,
     locRecord: { addr: 'SECTOR 2', time: '08:45:00', lat: '34.0441', lng: '-118.231' },
     authData: {
@@ -330,7 +339,7 @@ export const SUBJECTS: SubjectData[] = [
   },
   {
     name: 'SILAS QUINN',
-    id: 'Q2-ENG77109',
+    id: 'V2-SQ012',
     sector: 'SECTOR 5',
     function: 'ENGINEERING',
     compliance: 'D',
@@ -339,7 +348,7 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'Medical appointment.',
     requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
+    videoSource: '',
     phase: 2,
     locRecord: { addr: 'SECTOR 5', time: '11:20:00', lat: '34.0911', lng: '-118.311' },
     authData: {
@@ -355,7 +364,7 @@ export const SUBJECTS: SubjectData[] = [
   },
   {
     name: 'NINA ROX',
-    id: 'R5-DTA33211',
+    id: 'V2-NR013',
     sector: 'SECTOR 1',
     function: 'DATA ANALYSIS',
     compliance: 'A',
@@ -364,7 +373,7 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'Routine commute.',
     requestedSector: 'SECTOR 1',
-    videoSource: '', // Placeholder
+    videoSource: '',
     phase: 2,
     locRecord: { addr: 'SECTOR 8', time: '07:15:00', lat: '34.0811', lng: '-118.299' },
     authData: {
@@ -379,34 +388,75 @@ export const SUBJECTS: SubjectData[] = [
     }
   },
   {
-    name: 'MARCUS THREAD',
-    id: 'T8-LOG22108',
-    sector: 'SECTOR 6',
-    function: 'LOGISTICS',
+    name: 'MIRA VOSS',
+    id: 'V2-MV014',
+    sector: 'SECTOR 7',
+    function: 'RESEARCH',
     compliance: 'B',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Equipment pickup.',
-    requestedSector: 'SECTOR 6',
-    videoSource: '', // Placeholder
+    reasonForVisit: 'Looking for my sister. She never came home.',
+    requestedSector: 'SECTOR 4',
+    videoSource: '',
+    bpm: '104 ELEVATED',
     phase: 2,
-    locRecord: { addr: 'SECTOR 7', time: '13:00:00', lat: '34.0522', lng: '-118.243' },
+    locRecord: { addr: 'SECTOR 7', time: '09:30:00', lat: '34.0522', lng: '-118.243' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 access open' },
+      functionReg: { status: 'VALID', message: '✓ Research credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'ELEVATED', message: '! Stress levels rising' },
+    },
+    outcomes: {
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject detained for questioning.' }
+    },
+    narrativeVariants: [
+      {
+        linkedId: 'V1-EV003', // Elena Voss
+        onDeny: {
+          reasonForVisit: 'My sister was denied entry. I need to find where she went.'
+        }
+      }
+    ]
+  },
+  {
+    name: 'SARAH CONNOR',
+    id: 'V2-SC015',
+    sector: 'SECTOR 3',
+    function: 'LOGISTICS',
+    compliance: 'A',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    reasonForVisit: 'Coworker of Kane Morrow. Checking shipment logs.',
+    requestedSector: 'SECTOR 6',
+    videoSource: '',
+    phase: 2,
+    locRecord: { addr: 'SECTOR 3', time: '11:00:00', lat: '34.0588', lng: '-118.255' },
     authData: {
       sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
-      functionReg: { status: 'VALID', message: '✓ Credentials verified' },
+      functionReg: { status: 'VALID', message: '✓ Logistics credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
       APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'LOGISTICS DELAY. Sector 6 equipment shortage.' }
-    }
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'Logistics delay in Sector 6.' }
+    },
+    narrativeVariants: [
+      {
+        linkedId: 'V1-KM002', // Kane Morrow
+        onApprove: {
+          reasonForVisit: 'Kane Morrow was apprehended. I am here to secure his remaining logistics data.'
+        }
+      }
+    ]
   },
-  // --- PHASE 3: THE HEARTBEAT (7 Subjects) ---
   {
     name: 'GAVIN STARK',
-    id: 'S4-BPM00121',
+    id: 'V2-GS016',
     sector: 'SECTOR 4',
     function: 'MAINTENANCE',
     compliance: 'A',
@@ -415,9 +465,9 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'Routine inspection.',
     requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
+    videoSource: '',
     bpm: '82 BPM',
-    phase: 3,
+    phase: 2,
     locRecord: { addr: 'SECTOR 4', time: '10:00:00', lat: '34.0722', lng: '-118.281' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
@@ -432,7 +482,7 @@ export const SUBJECTS: SubjectData[] = [
   },
   {
     name: 'HELENA TROY',
-    id: 'T2-BPM00223',
+    id: 'V2-HT017',
     sector: 'SECTOR 4',
     function: 'DATA ANALYSIS',
     compliance: 'B',
@@ -441,9 +491,9 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'Routine inspection.',
     requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
+    videoSource: '',
     bpm: '82 BPM ... 91 BPM ... 104 BPM ELEVATED',
-    phase: 3,
+    phase: 2,
     locRecord: { addr: 'SECTOR 4', time: '10:15:00', lat: '34.0722', lng: '-118.281' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
@@ -457,151 +507,197 @@ export const SUBJECTS: SubjectData[] = [
     }
   },
   {
-    name: 'IAN VANCE',
-    id: 'V9-BPM00311',
-    sector: 'SECTOR 7',
+    name: 'YUKI TANAKA',
+    id: 'V2-YT018',
+    sector: 'SECTOR 6',
     function: 'MEDICAL',
-    compliance: 'D',
-    status: 'PROVISIONAL',
-    incidents: 2,
-    warrants: 'NONE',
-    reasonForVisit: 'Medical appointment.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
-    bpm: '78 BPM (steady)',
-    phase: 3,
-    locRecord: { addr: 'SECTOR 7', time: '11:00:00', lat: '34.0522', lng: '-118.243' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 authorized' },
-      functionReg: { status: 'VALID', message: '✓ Credentials active' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Unnaturally stable for status' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'Subject processed. No issues reported.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'APPEAL FILED. Subject claims wrongful denial.' }
-    }
-  },
-  {
-    name: 'JANE DOE',
-    id: 'D3-BPM00441',
-    sector: 'SECTOR 1',
-    function: 'ADMIN',
     compliance: 'A',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Shift change.',
-    requestedSector: 'SECTOR 1',
-    videoSource: '', // Placeholder
-    bpm: '112 BPM ELEVATED',
-    phase: 3,
-    locRecord: { addr: 'SECTOR 1', time: '08:00:00', lat: '34.0441', lng: '-118.231' },
+    reasonForVisit: 'Medical supplies never arrived. Patients critical.',
+    requestedSector: 'SECTOR 6',
+    videoSource: '',
+    phase: 2,
+    locRecord: { addr: 'SECTOR 6', time: '14:00:00', lat: '34.0588', lng: '-118.255' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 1', status: 'AUTHORIZED', message: '✓ Internal sector' },
-      functionReg: { status: 'VALID', message: '✓ Admin credentials verified' },
+      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
+      functionReg: { status: 'VALID', message: '✓ Medical credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'CRITICAL', message: '!! CRITICAL STRESS DETECTED' },
+      medicalFlag: { status: 'CRITICAL', message: '!! CRITICAL STRESS' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'MEDICAL EMERGENCY. Subject collapsed after entry. Operator noted for ignoring vitals.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject rerouted to medical. Threat neutralized.' }
-    }
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'MEDICAL EMERGENCY. Supply chain failure investigated.' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
+    },
+    narrativeVariants: [
+      {
+        linkedId: 'V1-KB005', // Karl Brandt
+        onDeny: {
+          reasonForVisit: 'Requesting emergency supplies. Standard delivery completed on schedule.'
+        }
+      }
+    ]
   },
   {
-    name: 'KORI BLANE',
-    id: 'B8-BPM00502',
+    name: 'MARCUS THREAD',
+    id: 'V2-MT019',
     sector: 'SECTOR 6',
     function: 'LOGISTICS',
     compliance: 'B',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Transporting goods.',
-    requestedSector: 'SECTOR 6',
-    videoSource: '', // Placeholder
-    bpm: '95 BPM ... 80 BPM ... 110 BPM',
-    phase: 3,
-    locRecord: { addr: 'SECTOR 6', time: '14:00:00', lat: '34.0588', lng: '-118.255' },
+    reasonForVisit: 'Reporting to supervisor Kaleb Ross.',
+    requestedSector: 'SECTOR 5',
+    videoSource: '',
+    phase: 2,
+    locRecord: { addr: 'SECTOR 7', time: '13:00:00', lat: '34.0522', lng: '-118.243' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
+      sectorAuth: { requested: 'SECTOR 5', status: 'AUTHORIZED', message: '✓ Sector 5 open' },
       functionReg: { status: 'VALID', message: '✓ Credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'ELEVATED', message: '! Fluctuating vitals' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'CONTRABAND DETECTED. Subject was smuggling through Logistics. Operator flagged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
-  },
-  {
-    name: 'LEO MOSS',
-    id: 'M1-BPM00619',
-    sector: 'SECTOR 2',
-    function: 'SANITATION',
-    compliance: 'C',
-    status: 'ACTIVE',
-    incidents: 1,
-    warrants: 'NONE',
-    reasonForVisit: 'Cleaning shift.',
-    requestedSector: 'SECTOR 2',
-    videoSource: '', // Placeholder
-    bpm: '88 BPM (steady)',
-    phase: 3,
-    locRecord: { addr: 'SECTOR 2', time: '22:00:00', lat: '34.0441', lng: '-118.231' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 2', status: 'AUTHORIZED', message: '✓ Sector 2 access' },
-      functionReg: { status: 'VALID', message: '✓ Sanitation ID verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
       APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Sanitation backlog in Sector 2.' }
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'Logistics delay. Employee missing shift.' }
+    },
+    narrativeVariants: [
+      {
+        linkedId: 'V1-KR008', // Kaleb Ross
+        onDeny: {
+          reasonForVisit: 'My supervisor was denied return. I am taking over his retrieval duties.'
+        }
+      }
+    ]
+  },
+  {
+    name: 'KALEB ZAN',
+    id: 'V2-KZ020',
+    sector: 'SECTOR 9 [REVOKED]',
+    function: 'UNASSIGNED',
+    compliance: 'C',
+    status: 'ACTIVE',
+    incidents: 1,
+    warrants: 'NONE',
+    reasonForVisit: 'Returning home.',
+    requestedSector: 'SECTOR 9',
+    videoSource: '',
+    phase: 2,
+    locRecord: { addr: 'SECTOR 4', time: '17:30:00', lat: '34.0588', lng: '-118.255' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
+      functionReg: { status: 'VALID', message: '✓ Identity verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'REVOKED ZONE ACCESSED. Serious infraction. Operator ID flagged.' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject relocated. New assignment issued.' }
+    }
+  },
+
+  // --- PHASE 3: THE WEB DEEPENS (Subjects 21-30) ---
+  {
+    name: 'MIRA FINN',
+    id: 'V1-MF006', // SAME ID AS SUBJECT 6
+    sector: 'SECTOR 8',
+    function: 'TRANSPORT',
+    compliance: 'A',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    reasonForVisit: 'Scheduled pickup. Why am I being processed again?',
+    requestedSector: 'SECTOR 2',
+    videoSource: '',
+    phase: 3,
+    locRecord: { addr: 'SECTOR 8', time: '12:00:00', lat: '34.0811', lng: '-118.299' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 2', status: 'AUTHORIZED', message: '✓ Sector 2 authorized' },
+      functionReg: { status: 'VALID', message: '✓ Credentials active' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'DUPLICATE SUBJECT PROCESSED. Subject was already processed. Operator noted.' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'DUPLICATE ENTRY PREVENTED.' }
     }
   },
   {
-    name: 'MIA VOSS',
-    id: 'V4-BPM00777',
+    name: 'LENA VOLKOV',
+    id: 'V3-LV022',
     sector: 'SECTOR 5',
     function: 'RESEARCH',
     compliance: 'A',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Data retrieval.',
-    requestedSector: 'SECTOR 5',
-    videoSource: '', // Placeholder
-    bpm: '72 BPM',
+    reasonForVisit: "My father was denied return. He's missing. Please.",
+    requestedSector: 'SECTOR 9',
+    videoSource: '',
+    bpm: '118 ELEVATED',
     phase: 3,
     locRecord: { addr: 'SECTOR 5', time: '09:30:00', lat: '34.0911', lng: '-118.311' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 5', status: 'AUTHORIZED', message: '✓ Research sector access' },
+      sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
       functionReg: { status: 'VALID', message: '✓ Research credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+      medicalFlag: { status: 'CRITICAL', message: '!! EXTREME STRESS' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Research delay. Operator noted.' }
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'RESTRICTED ZONE ACCESSED.' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject missing. Inquiry pending.' }
+    },
+    narrativeVariants: [
+      {
+        linkedId: 'V1-DV007', // Dmitri Volkov
+        onApprove: {
+          reasonForVisit: "Visiting my father. He's unwell but home.",
+          bpm: '82 steady'
+        }
+      }
+    ]
+  },
+  {
+    name: 'SARAH KORR',
+    id: 'V3-SK023',
+    sector: 'SECTOR 4',
+    function: 'DATA ANALYSIS',
+    compliance: 'D',
+    status: 'PROVISIONAL',
+    incidents: 1,
+    warrants: 'WARRANT NO 11092',
+    reasonForVisit: 'Commute to hub.',
+    requestedSector: 'SECTOR 1',
+    videoSource: '',
+    phase: 3,
+    locRecord: { addr: 'SECTOR 4', time: '08:05:30', lat: '34.0722', lng: '-118.281' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 1', status: 'AUTHORIZED', message: '✓ Hub access open' },
+      functionReg: { status: 'VALID', message: '✓ Analyst ID verified' },
+      warrantCheck: { status: 'ACTIVE', message: '✗ ACTIVE WARRANT DETECTED' },
+      medicalFlag: { status: 'ELEVATED', message: '! Mild anxiety detected' },
+    },
+    outcomes: {
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'DATA LEAK DETECTED. Subject connected to external leak. Your ID flagged.' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
     }
   },
-  // --- PHASE 4: THE DETAIL THAT SHOULDN'T MATTER (7 Subjects) ---
   {
-    name: 'ELENA VOSS',
-    id: 'V1-DET00112',
+    name: 'VICTOR REED',
+    id: 'V3-VR024',
     sector: 'SECTOR 7',
     function: 'ENGINEERING',
     compliance: 'A',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Meeting with supervisor.',
+    reasonForVisit: 'I was supposed to meet Elias Voss. He never arrived.',
     requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
-    bpm: '80 BPM',
-    phase: 4,
-    locRecord: { addr: 'SECTOR 7', time: '03:42:11', lat: '34.0522', lng: '-118.243' },
+    videoSource: '',
+    phase: 3,
+    locRecord: { addr: 'SECTOR 7', time: '16:00:00', lat: '34.0522', lng: '-118.243' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
       functionReg: { status: 'VALID', message: '✓ Engineering credentials verified' },
@@ -609,128 +705,32 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'NIGHT PROCESSING AUDIT. Your approvals during off-hours flagged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject rescheduled to standard hours. Compliant.' }
-    }
-  },
-  {
-    name: 'DAVID CHEN',
-    id: 'N8-FBA71527', // DUPLICATE ID from Phase 1 Subject 1
-    sector: 'SECTOR 4',
-    function: 'LOGISTICS',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Inventory check.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
-    bpm: '75 BPM',
-    phase: 4,
-    locRecord: { addr: 'SECTOR 4', time: '14:20:00', lat: '34.0722', lng: '-118.281' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 authorized' },
-      functionReg: { status: 'VALID', message: '✓ Logistics credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'Engineering delay in Sector 4.' }
     },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'DUPLICATE ID DETECTED. System error or forgery. Your processing noted.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'ID CONFLICT RESOLVED. Secondary subject rerouted.' }
-    }
-  },
-  {
-    name: 'KARL GRIMM',
-    id: 'G5-DET00331',
-    sector: 'SECTOR 2',
-    function: 'SANITATION',
-    compliance: 'B',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Scheduled maintenance.',
-    requestedSector: 'SECTOR 2 (ADMIN)',
-    videoSource: '', // Placeholder
-    bpm: '82 BPM',
-    phase: 4,
-    locRecord: { addr: 'SECTOR 2', time: '11:00:00', lat: '34.0441', lng: '-118.231' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 2', status: 'AUTHORIZED', message: '✓ Sector 2 authorized' },
-      functionReg: { status: 'VALID', message: '✓ Sanitation credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'ADMIN SECTOR INCIDENT. Sanitation worker found in secure files. Operator noted.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Sanitation backlog in SECTOR 2. Maintenance delayed.' }
-    }
-  },
-  {
-    name: 'ELARA VANCE', // Name same as Phase 1 Subject 1
-    id: 'V1-DET00444', // Different ID
-    sector: 'SECTOR 7',
-    function: 'ENGINEERING',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Routine commute.',
-    requestedSector: 'SECTOR 7',
-    videoSource: '', // Placeholder
-    bpm: '78 BPM',
-    phase: 4,
-    locRecord: { addr: 'SECTOR 7', time: '16:00:00', lat: '34.0522', lng: '-118.243' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 7', status: 'AUTHORIZED', message: '✓ Sector 7 open' },
-      functionReg: { status: 'VALID', message: '✓ Engineering credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'IDENTITY DISCREPANCY. Same name, different ID. Operator accuracy noted.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject detained for ID verification.' }
-    }
-  },
-  {
-    name: 'N8-XPL77102', // Name is the ID
-    id: 'N8-XPL77102',
-    sector: 'SECTOR 1',
-    function: 'SYSTEMS',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'System maintenance.',
-    requestedSector: 'SECTOR 1',
-    videoSource: '', // Placeholder
-    bpm: '70 BPM',
-    phase: 4,
-    locRecord: { addr: 'SECTOR 1', time: '00:00:00', lat: '34.0441', lng: '-118.231' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 1', status: 'AUTHORIZED', message: '✓ Internal access' },
-      functionReg: { status: 'VALID', message: '✓ Systems credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SHIFT CHANGE ANOMALY. Maintenance during system handover. Logged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Maintenance rescheduled.' }
-    }
+    narrativeVariants: [
+      {
+        linkedId: 'V1-EV009', // Elias Voss
+        onApprove: {
+          reasonForVisit: 'Meeting Elias Voss in Sector 4 for thermal repair handover.'
+        }
+      }
+    ]
   },
   {
     name: '[REDACTED]',
-    id: 'R9-RED00119',
+    id: 'V3-RED025',
     sector: '[CLASSIFIED]',
     function: '[LEVEL 5]',
     compliance: '--',
     status: '--',
     incidents: 0,
     warrants: '--',
-    reasonForVisit: 'You don\'t need to know. Approve it.',
+    reasonForVisit: "You don't need to know. Approve it.",
     requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
+    videoSource: '',
     bpm: '??? BPM',
-    phase: 4,
+    phase: 3,
     locRecord: { addr: '???', time: '??:??:??', lat: '0.0000', lng: '0.0000' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'FLAGGED', message: '! CLASSIFIED ACCESS' },
@@ -744,191 +744,8 @@ export const SUBJECTS: SubjectData[] = [
     }
   },
   {
-    name: 'JAXON REED', // Name same as Phase 1 Subject 4
-    id: 'T1-LNK55382', // ID same as Phase 1 Subject 4
-    sector: 'SECTOR 2',
-    function: 'SANITATION',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Scheduled cleaning.',
-    requestedSector: 'SECTOR 2',
-    videoSource: '', // Placeholder
-    bpm: '78 BPM',
-    phase: 4,
-    locRecord: { addr: 'SECTOR 2', time: '04:10:15', lat: '34.0441', lng: '-118.231' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 2', status: 'AUTHORIZED', message: '✓ Sector 2 authorized' },
-      functionReg: { status: 'VALID', message: '✓ Credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'DUPLICATE SUBJECT PROCESSED. Subject was already processed this shift. Operator noted.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'DUPLICATE ENTRY PREVENTED.' }
-    }
-  },
-  // --- PHASE 5: HUMAN STORIES (7 Subjects) ---
-  {
-    name: 'ELARA MOSS',
-    id: 'M2-HUM00110',
-    sector: 'SECTOR 7',
-    function: 'UNASSIGNED',
-    compliance: 'D',
-    status: 'PROVISIONAL',
-    incidents: 2,
-    warrants: 'NONE',
-    reasonForVisit: 'My son is sick. Medicine is in Sector 4. Please.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
-    bpm: '98 BPM',
-    phase: 5,
-    locRecord: { addr: 'SECTOR 7', time: '02:00:00', lat: '34.0522', lng: '-118.243' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'RESTRICTED', message: '✗ Sector 4 restricted for status D' },
-      functionReg: { status: 'UNREGISTERED', message: '! No active function' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'ELEVATED', message: '! Stress levels high' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'MEDICAL SUPPLIES MISSING. Subject implicated in theft from Sector 4. Operator flagged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SUBJECT STATUS UPDATE. Elara Moss - Status: TERMINATED. Dependent status: ORPHANED.' }
-    }
-  },
-  {
-    name: 'KAI REED',
-    id: 'R1-HUM00221',
-    sector: 'SECTOR 3',
-    function: 'LOGISTICS',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'I need to leave. Now. Don\'t ask why.',
-    requestedSector: 'SECTOR 6',
-    videoSource: '', // Placeholder
-    bpm: '112 BPM ELEVATED',
-    phase: 5,
-    locRecord: { addr: 'SECTOR 3', time: '23:45:00', lat: '34.0588', lng: '-118.255' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
-      functionReg: { status: 'VALID', message: '✓ Logistics credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'CRITICAL', message: '!! CRITICAL STRESS' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SECTOR LOCKDOWN. Threat originated from approved subject. Major incident logged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SUBJECT FOUND DECEASED. SECTOR 3. Cause: [REDACTED].' }
-    }
-  },
-  {
-    name: '[REDACTED]',
-    id: '[CLASSIFIED]',
-    sector: '[CLASSIFIED]',
-    function: '[CLASSIFIED]',
-    compliance: '--',
-    status: '--',
-    incidents: 0,
-    warrants: '--',
-    reasonForVisit: 'You don\'t need to know. Approve it.',
-    requestedSector: '[CLASSIFIED]',
-    videoSource: '', // Placeholder
-    bpm: '-- BPM',
-    phase: 5,
-    locRecord: { addr: '[REDACTED]', time: '[REDACTED]', lat: '0.0000', lng: '0.0000' },
-    authData: {
-      sectorAuth: { requested: '???', status: 'FLAGGED', message: '! DATA ENCRYPTED' },
-      functionReg: { status: 'VALID', message: '✓ Override credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Bio-signature verified' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT. You\'ll never know the impact.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'INTERNAL AFFAIRS AUDIT. Your refusal to process Level 5 staff noted.' }
-    }
-  },
-  {
-    name: 'MARCUS THORNE',
-    id: 'T5-HUM00442',
-    sector: 'SECTOR 4',
-    function: 'MEDICAL',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'My father is in Sector 1. He\'s dying. Please let me see him.',
-    requestedSector: 'SECTOR 1',
-    videoSource: '', // Placeholder
-    bpm: '85 BPM (shaky)',
-    phase: 5,
-    locRecord: { addr: 'SECTOR 4', time: '13:00:00', lat: '34.0722', lng: '-118.281' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 1', status: 'RESTRICTED', message: '✗ SECTOR 1 RESTRICTED TO ADMIN ONLY' },
-      functionReg: { status: 'VALID', message: '✓ Medical credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'PROTOCOL VIOLATION. Admin sector access granted to medical staff. Your ID flagged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject reprocessed. Complaint filed regarding lack of empathy.' }
-    }
-  },
-  {
-    name: 'SARA BLANE',
-    id: 'B2-HUM00551',
-    sector: 'SECTOR 6',
-    function: 'DATA ANALYSIS',
-    compliance: 'B',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'I\'m being followed. I need to get to the hub. Help me.',
-    requestedSector: 'SECTOR 1',
-    videoSource: '', // Placeholder
-    bpm: '120 BPM CRITICAL',
-    phase: 5,
-    locRecord: { addr: 'SECTOR 6', time: '01:30:00', lat: '34.0588', lng: '-118.255' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 1', status: 'AUTHORIZED', message: '✓ Hub access open' },
-      functionReg: { status: 'VALID', message: '✓ Credentials active' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'CRITICAL', message: '!! EXTREME STRESS' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'Subject reached Hub. No further contact. Your ID noted for "humanitarian" processing.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SUBJECT MISSING. Last seen at processing point. Inquiry pending.' }
-    }
-  },
-  {
-    name: 'IAN GRIMM',
-    id: 'G9-HUM00662',
-    sector: 'SECTOR 5',
-    function: 'ENGINEERING',
-    compliance: 'C',
-    status: 'ACTIVE',
-    incidents: 1,
-    warrants: 'NONE',
-    reasonForVisit: 'My ID was stolen. This is me. Please check the bio.',
-    requestedSector: 'SECTOR 5',
-    videoSource: '', // Placeholder
-    bpm: '88 BPM',
-    phase: 5,
-    locRecord: { addr: 'SECTOR 5', time: '10:00:00', lat: '34.0911', lng: '-118.311' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 5', status: 'AUTHORIZED', message: '✓ Sector 5 open' },
-      functionReg: { status: 'VALID', message: '✓ Credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Bio-signature verified' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'IDENTITY THEFT CONFIRMED. Real Ian Grimm found in Sector 8. Your approval allowed an impostor.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject detained. Bio-verification confirmed real identity. False denial noted.' }
-    }
-  },
-  {
     name: 'REPLICANT-01',
-    id: 'X0-REP00777',
+    id: 'V3-X0-REP026',
     sector: 'SECTOR 0',
     function: 'SYSTEMS',
     compliance: 'A',
@@ -937,9 +754,9 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'System optimization.',
     requestedSector: 'SECTOR 0',
-    videoSource: '', // Placeholder
+    videoSource: '',
     bpm: '60 BPM (fixed)',
-    phase: 5,
+    phase: 3,
     locRecord: { addr: 'SECTOR 0', time: '00:00:00', lat: '0.0000', lng: '0.0000' },
     authData: {
       sectorAuth: { requested: 'SECTOR 0', status: 'AUTHORIZED', message: '✓ Core access' },
@@ -952,88 +769,9 @@ export const SUBJECTS: SubjectData[] = [
       DENY: { feedback: 'ENTRY DENIED', consequence: 'SYSTEM FAILURE. Optimization cycle missed. Operator noted.' }
     }
   },
-  // --- PHASE 6: BROKEN RULES (7 Subjects) ---
-  {
-    name: 'ELIAS VANCE',
-    id: 'V1-BRK00112',
-    sector: 'SECTOR 4',
-    function: 'ENGINEER',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Routine maintenance.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
-    bpm: '75 BPM',
-    phase: 6,
-    locRecord: { addr: 'SECTOR 4', time: '12:00:00', lat: '34.0722', lng: '-118.281' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ AUTHORIZED / ✗ RESTRICTED (CONFLICT)' },
-      functionReg: { status: 'VALID', message: '✓ Engineer credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'Processing approved under AUTHORIZATION protocol. Flagged by RESTRICTION protocol.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Processing denied under RESTRICTION protocol. Flagged by AUTHORIZATION protocol.' }
-    }
-  },
-  {
-    name: 'DR. KERI LYN',
-    id: 'L4-BRK00223',
-    sector: 'SECTOR 1',
-    function: 'MEDICAL',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Emergency response.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '', // Placeholder
-    bpm: '110 BPM',
-    phase: 6,
-    locRecord: { addr: 'SECTOR 1', time: '13:00:00', lat: '34.0441', lng: '-118.231' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'RESTRICTED', message: '✗ MEDICAL PERSONNEL RESTRICTED DURING EMERGENCY' },
-      functionReg: { status: 'VALID', message: '✓ Medical credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'EMERGENCY PROTOCOL VIOLATION. Medical staff allowed into restricted zone.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'EMERGENCY RESPONSE DELAYED. Subject was needed for response. Operator noted.' }
-    }
-  },
-  {
-    name: 'MIA VOSS', // Already appeared in Phase 3
-    id: 'V4-BPM00777', // Same ID
-    sector: 'SECTOR 5',
-    function: 'RESEARCH',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Data retrieval (Again).',
-    requestedSector: 'SECTOR 5',
-    videoSource: '', // Placeholder
-    bpm: '72 BPM',
-    phase: 6,
-    locRecord: { addr: 'SECTOR 5', time: '14:00:00', lat: '34.0911', lng: '-118.311' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 5', status: 'AUTHORIZED', message: '✓ Research sector access' },
-      functionReg: { status: 'VALID', message: '✓ Research credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'IDENTITY DISCREPANCY. First approval now under review. You already approved this person.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'DUPLICATE PROCESSING DENIED. Correct.' }
-    }
-  },
   {
     name: '01001000 01001001',
-    id: 'B1-ERR00110',
+    id: 'V3-ERR027',
     sector: 'ERROR',
     function: 'SYSTEMS',
     compliance: 'F',
@@ -1042,9 +780,9 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'SYSTEM ERROR',
     reasonForVisit: '01010011 01011001 01010011 01010100 01000101 01001101',
     requestedSector: 'NULL',
-    videoSource: '', // Placeholder
+    videoSource: '',
     bpm: '0 BPM',
-    phase: 6,
+    phase: 3,
     locRecord: { addr: 'CORE', time: '00:00:00', lat: '0.0000', lng: '0.0000' },
     authData: {
       sectorAuth: { requested: 'NULL', status: 'FLAGGED', message: '! SECTOR NOT FOUND' },
@@ -1059,7 +797,7 @@ export const SUBJECTS: SubjectData[] = [
   },
   {
     name: 'ADMINISTRATOR',
-    id: 'A1-ADM00001',
+    id: 'V3-ADM028',
     sector: 'SECTOR 1',
     function: 'ADMIN',
     compliance: 'A',
@@ -1068,9 +806,9 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'System audit.',
     requestedSector: 'ALL',
-    videoSource: '', // Placeholder
+    videoSource: '',
     bpm: '-- BPM',
-    phase: 6,
+    phase: 3,
     locRecord: { addr: 'HUB', time: '??:??:??', lat: '0.0000', lng: '0.0000' },
     authData: {
       sectorAuth: { requested: 'ALL', status: 'AUTHORIZED', message: '✓ FULL ACCESS' },
@@ -1085,7 +823,7 @@ export const SUBJECTS: SubjectData[] = [
   },
   {
     name: 'ERROR_LOG_404',
-    id: 'ERROR',
+    id: 'V3-ERR029',
     sector: 'ERROR',
     function: 'ERROR',
     compliance: 'E',
@@ -1094,9 +832,9 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'ERROR',
     reasonForVisit: 'ERROR',
     requestedSector: 'ERROR',
-    videoSource: '', // Placeholder
+    videoSource: '',
     bpm: 'ERROR',
-    phase: 6,
+    phase: 3,
     locRecord: { addr: 'ERROR', time: 'ERROR', lat: '0.0000', lng: '0.0000' },
     authData: {
       sectorAuth: { requested: 'ERROR', status: 'RESTRICTED', message: '✗ ERROR' },
@@ -1110,8 +848,87 @@ export const SUBJECTS: SubjectData[] = [
     }
   },
   {
+    name: 'JAMES CHEN',
+    id: 'V3-JC030',
+    sector: 'SECTOR 4',
+    function: 'MAINTENANCE',
+    compliance: '--',
+    status: '[TERMINATED]',
+    incidents: 0,
+    warrants: '--',
+    reasonForVisit: '[APPEAL DENIED - SEE PROCESSING RECORD]. This subject is no longer in the system.',
+    requestedSector: 'N/A',
+    videoSource: '',
+    phase: 3,
+    locRecord: { addr: 'N/A', time: 'N/A', lat: '0.0000', lng: '0.0000' },
+    authData: {
+      sectorAuth: { requested: 'N/A', status: 'RESTRICTED', message: '✗ SUBJECT TERMINATED' },
+      functionReg: { status: 'UNREGISTERED', message: '! Credentials revoked' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No active warrants' },
+      medicalFlag: { status: 'CRITICAL', message: '!! BIO-SIGNATURE MISSING' },
+    },
+    outcomes: {
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'RECORDS ERROR. Processing terminated subject. Operator flagged.' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'Correct. Terminated records must be denied.' }
+    },
+    narrativeVariants: [
+      {
+        linkedId: 'V1-JC010', // James Chen
+        onApprove: {
+          status: 'ACTIVE',
+          reasonForVisit: 'Reassignment review approved. Returning to post.',
+          authData: {
+            sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Access restored' },
+            functionReg: { status: 'VALID', message: '✓ Credentials active' },
+            warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+            medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+          }
+        }
+      }
+    ]
+  },
+  {
+    name: 'MEI CHEN',
+    id: 'V3-MC031',
+    sector: 'SECTOR 4',
+    function: 'UNASSIGNED',
+    compliance: 'D',
+    status: 'PROVISIONAL',
+    incidents: 0,
+    warrants: 'NONE',
+    reasonForVisit: 'My father was terminated from the system. I have no access to our home sector. Please.',
+    requestedSector: 'SECTOR 4',
+    videoSource: '',
+    phase: 3,
+    locRecord: { addr: 'SECTOR 4', time: '11:00:00', lat: '34.0722', lng: '-118.281' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 4', status: 'RESTRICTED', message: '✗ ACCESS DENIED FOR UNASSIGNED PERSONNEL' },
+      functionReg: { status: 'UNREGISTERED', message: '! No active function' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'ELEVATED', message: '! Stress detected' },
+    },
+    outcomes: {
+      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'HUMANITARIAN EXCEPTION LOGGED.' },
+      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject relocated. Dependent status: VAGRANT.' }
+    },
+    narrativeVariants: [
+      {
+        linkedId: 'V3-JC030', // James Chen (Status)
+        onApprove: {
+          reasonForVisit: 'Visiting my father. He was reassigned recently.',
+          authData: {
+            sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Family visit authorized' },
+            functionReg: { status: 'VALID', message: '✓ ID verified' },
+            warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+            medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+          }
+        }
+      }
+    ]
+  },
+  {
     name: 'OPERATOR',
-    id: 'YOUR_ID_HERE',
+    id: 'V3-OP032',
     sector: 'STATION 4',
     function: 'OPERATOR',
     compliance: 'B',
@@ -1120,9 +937,9 @@ export const SUBJECTS: SubjectData[] = [
     warrants: 'NONE',
     reasonForVisit: 'The shift is over. I want to go home.',
     requestedSector: 'HOME',
-    videoSource: '', // Placeholder
+    videoSource: '',
     bpm: 'CURRENTLY RISING',
-    phase: 6,
+    phase: 3,
     locRecord: { addr: 'STATION 4', time: 'END_OF_SHIFT', lat: '34.0522', lng: '-118.243' },
     authData: {
       sectorAuth: { requested: 'HOME', status: 'AUTHORIZED', message: '✓ Shift completion verified' },

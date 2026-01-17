@@ -25,11 +25,15 @@ export const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    marginBottom: 1,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   arrestRow: {
     flexDirection: 'row',
-    marginTop: 1,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
   },
   label: {
     color: Theme.colors.textSecondary,
@@ -41,6 +45,7 @@ export const styles = StyleSheet.create({
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
     fontSize: 14,
+    fontWeight: '700',
   },
   warningText: {
     color: Theme.colors.accentDeny,
@@ -75,12 +80,19 @@ export const styles = StyleSheet.create({
     lineHeight: 14,
   },
   reasonLabel: {
-    color: Theme.colors.textSecondary,
+    color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
-    fontSize: 11,
-    fontWeight: '700',
+   
+    fontSize: 13,
+   
     marginBottom: 6,
     letterSpacing: 1,
+  },
+  requestedSectorHighlight: {
+    color: Theme.colors.accentWarn, // Bright contrast color
+    fontWeight: '900',
+    fontSize: 13,
+    letterSpacing: 4,
   },
   reasonValue: {
     color: Theme.colors.textPrimary,

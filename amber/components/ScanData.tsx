@@ -1,72 +1,82 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Animated } from 'react-native';
+import React from 'react';
+import { View, Text, Animated, StyleSheet } from 'react-native';
 import { styles } from '../styles/ScanData.styles';
 import { HUDBox } from './HUDBox';
-import { SUBJECTS } from '../data/subjects';
+import { SubjectData } from '../data/subjects';
 
-export const ScanData = ({ id, isScanning, scanProgress, hudStage, currentSubjectIndex }: { 
+const ScrambleText = ({ text, active, delay = 0 }: { text: string, active: boolean, delay?: number }) => {
+  const [display, setDisplay] = React.useState(text);
+  const chars = '!@#$%^&*()_+{}[]|;:,.<>?';
+
+  React.useEffect(() => {
+    if (!active) {
+      setDisplay(text);
+      return;
+    }
+
+    let iterations = 0;
+    const interval = setInterval(() => {
+      setDisplay(prev => 
+        prev.split('').map((char, index) => {
+          if (index < iterations) return text[index];
+          return chars[Math.floor(Math.random() * chars.length)];
+        }).join('')
+      );
+      
+      if (iterations >= text.length) clearInterval(interval);
+      iterations += 1/3;
+    }, 30);
+
+    return () => clearInterval(interval);
+  }, [active, text]);
+
+  return <Text style={styles.dataValue}>{display}</Text>;
+};
+
+export const ScanData = ({ id, isScanning, scanProgress, hudStage, subject }: { 
   id: string, 
   isScanning: boolean, 
   scanProgress: Animated.Value,
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
-  currentSubjectIndex: number
+  subject: SubjectData
 }) => {
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const [bpm, setBpm] = useState<string | number>(78);
-  const currentSubject = SUBJECTS[currentSubjectIndex];
-
-  useEffect(() => {
-    if (!isScanning) {
-      setBpm(currentSubject.bpm || 78);
-      return;
-    }
-
-    if (currentSubject.bpm) {
-      setBpm(currentSubject.bpm);
-      return;
-    }
-
-    const listener = scanProgress.addListener(({ value }) => {
-      // Rise from 78 up to 94 then stabilize back to 82
-      if (value < 0.6) {
-        setBpm(Math.floor(78 + (value * 26.6))); // 78 -> 94
-      } else {
-        setBpm(Math.floor(94 - ((value - 0.6) * 30))); // 94 -> 82
-      }
-    });
-
-    return () => scanProgress.removeListener(listener);
-  }, [isScanning, scanProgress, currentSubject]);
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1.2,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
   return (
     <HUDBox hudStage={hudStage} style={styles.container}>
       <View style={styles.leftColumn}>
         <Text style={styles.label}>IDENTIFICATION</Text>
         <Text style={styles.idCode}>{id}</Text>
       </View>
-      <View style={styles.rightColumn}>
-        <View style={styles.bpmRow}>
-          <Animated.View style={[styles.pulseDot, { transform: [{ scale: pulseAnim }] }]} />
-          <Text style={styles.metaLabel}>{bpm} {typeof bpm === 'number' ? 'BPM' : ''} {isScanning ? 'MONITORING' : 'STABILIZING'}</Text>
-        </View>
       
+      <View style={styles.rightColumn}>
+        <View style={styles.locationHeader}>
+          <View style={styles.gridBox}>
+            <View style={styles.gridDot} />
+          </View>
+          <Text style={styles.gridLabel}>LOC RECORD</Text>
+        </View>
+        
+        <View style={styles.locGrid}>
+          <View style={styles.locRow}>
+            <View style={styles.dataRow}>
+              <Text style={styles.dataLabel}>ADDR:</Text>
+              <ScrambleText text={subject.locRecord.addr} active={isScanning} delay={1000} />
+            </View>
+            <View style={styles.dataRow}>
+              <Text style={styles.dataLabel}>TIME:</Text>
+              <ScrambleText text={subject.locRecord.time} active={isScanning} delay={1500} />
+            </View>
+          </View>
+          <View style={styles.locRow}>
+            <View style={styles.dataRow}>
+              <Text style={styles.dataLabel}>PL:</Text>
+              <ScrambleText text={subject.locRecord.pl} active={isScanning} delay={2000} />
+            </View>
+            <View style={styles.dataRow}>
+              <Text style={styles.dataLabel}>D.O.B:</Text>
+              <ScrambleText text={subject.locRecord.dob} active={isScanning} delay={2500} />
+            </View>
+          </View>
+        </View>
       </View>
     </HUDBox>
   );

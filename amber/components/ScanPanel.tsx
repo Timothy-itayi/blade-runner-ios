@@ -3,8 +3,56 @@ import { View, Text, Animated, Image, Easing, StyleSheet } from 'react-native';
 import { styles } from '../styles/ScanPanel.styles';
 import { HUDBox } from './HUDBox';
 import { SubjectData } from '../data/subjects';
+import { Theme } from '../constants/theme';
 
 const FINGERPRINT_IMG = require('../assets/finger-print.png');
+
+const BlinkingBars = () => {
+  return (
+    <View style={styles.barsContainer}>
+      {[...Array(24)].map((_, i) => {
+        const barAnim = useRef(new Animated.Value(Math.random())).current;
+        useEffect(() => {
+          Animated.loop(
+            Animated.sequence([
+              Animated.timing(barAnim, {
+                toValue: Math.random(),
+                duration: 400 + Math.random() * 800,
+                easing: Easing.inOut(Easing.quad),
+                useNativeDriver: false,
+              }),
+              Animated.timing(barAnim, {
+                toValue: Math.random(),
+                duration: 400 + Math.random() * 800,
+                easing: Easing.inOut(Easing.quad),
+                useNativeDriver: false,
+              }),
+            ])
+          ).start();
+        }, []);
+
+        return (
+          <Animated.View 
+            key={i} 
+            style={[
+              styles.bar, 
+              { 
+                height: barAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [6, 36]
+                }),
+                opacity: barAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.2, 0.7]
+                })
+              }
+            ]} 
+          />
+        );
+      })}
+    </View>
+  );
+};
 
 const VerificationCircles = ({ active }: { active: boolean }) => {
   const anim = useRef(new Animated.Value(0)).current;
@@ -73,16 +121,16 @@ const MinutiaeMarkers = ({ active, flipped = false }: { active: boolean, flipped
   if (!active) return null;
 
   const points = [
-    { x: 12, y: 15, label: 'BIFUR', angle: -45 },
-    { x: 32, y: 25, label: 'CORE', angle: 45 },
-    { x: 18, y: 45, label: 'ISLAND', angle: -135 },
-    { x: 35, y: 52, label: 'DELTA', angle: 135 },
+    { x: 15, y: 20, label: 'BIFUR', angle: -45 },
+    { x: 40, y: 35, label: 'CORE', angle: 45 },
+    { x: 22, y: 55, label: 'ISLAND', angle: -135 },
+    { x: 45, y: 65, label: 'DELTA', angle: 135 },
   ];
 
   return (
     <View style={styles.minutiaeContainer}>
       {points.map((p, i) => {
-        const x = flipped ? 48 - p.x : p.x;
+        const x = flipped ? 60 - p.x : p.x;
         const angle = flipped ? -p.angle : p.angle;
         
         const opacity = anim.interpolate({
@@ -132,11 +180,6 @@ const MinutiaeMarkers = ({ active, flipped = false }: { active: boolean, flipped
   );
 };
 
-const ScrambleText = ({ text, active, delay = 0 }: { text: string, active: boolean, delay?: number }) => {
-// ... (rest of ScrambleText remains the same)
-  return <Text style={styles.dataValue}>{text}</Text>;
-};
-
 export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: { 
   isScanning: boolean, 
   scanProgress: Animated.Value,
@@ -144,14 +187,22 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
   subject: SubjectData
 }) => {
   const [statusText, setStatusText] = useState('READY');
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [bpm, setBpm] = useState<string | number>(78);
 
   useEffect(() => {
     if (!isScanning) {
+      setBpm(subject.bpm || 78);
       setStatusText('READY');
       return;
     }
 
+    if (subject.bpm) {
+      setBpm(subject.bpm);
+    }
+
     const listener = scanProgress.addListener(({ value }) => {
+      // Status text
       if (value < 0.4) {
         setStatusText('SCANNING');
       } else if (value < 0.9) {
@@ -159,21 +210,47 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
       } else {
         setStatusText('COMPLETE');
       }
+
+      // BPM calc if not fixed
+      if (!subject.bpm) {
+        if (value < 0.6) {
+          setBpm(Math.floor(78 + (value * 26.6))); // 78 -> 94
+        } else {
+          setBpm(Math.floor(94 - ((value - 0.6) * 30))); // 94 -> 82
+        }
+      }
     });
 
     return () => scanProgress.removeListener(listener);
-  }, [isScanning, scanProgress]);
+  }, [isScanning, scanProgress, subject]);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.2,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   return (
     <HUDBox hudStage={hudStage} style={styles.container}>
       <View style={styles.fingerprintSection}>
-        <View style={styles.fingerprintHeader}>
-          <Text style={styles.headerText}>L</Text>
-          <Text style={styles.headerText}>R</Text>
-        </View>
         <View style={styles.fingerprintSlots}>
           <View style={styles.fingerprintContainer}>
-            <Image source={FINGERPRINT_IMG} style={styles.fingerprintImage} resizeMode="contain" />
+            <Image 
+              source={FINGERPRINT_IMG} 
+              style={[styles.fingerprintImage, { transform: [{ scale: 1.4 }] }]} 
+              resizeMode="cover" 
+            />
             <MinutiaeMarkers active={statusText === 'PROCESSING' || statusText === 'COMPLETE'} />
             <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
               <VerificationCircles active={statusText === 'COMPLETE'} />
@@ -182,8 +259,8 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
           <View style={styles.fingerprintContainer}>
             <Image 
               source={FINGERPRINT_IMG} 
-              style={[styles.fingerprintImage, styles.flippedFingerprint]} 
-              resizeMode="contain" 
+              style={[styles.fingerprintImage, styles.flippedFingerprint, { transform: [{ scale: 1.4 }, { scaleX: -1 }] }]} 
+              resizeMode="cover" 
             />
             <MinutiaeMarkers 
               active={statusText === 'PROCESSING' || statusText === 'COMPLETE'} 
@@ -194,43 +271,38 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
             </View>
           </View>
         </View>
+        <View style={styles.fingerprintHeader}>
+          <Text style={styles.headerText}>L</Text>
+          <Text style={styles.headerText}>R</Text>
+        </View>
       </View>
 
       <View style={styles.matchSection}>
-        <Text style={styles.label}>MATCH</Text>
-        <View style={styles.matchIndicators}>
-          <View style={[styles.indicator, subject.sex === 'F' && styles.activeIndicator]}>
-            <Text style={[styles.indicatorText, subject.sex === 'F' && styles.activeIndicatorText]}>F</Text>
+        <View style={styles.sexColumn}>
+          <Text style={styles.label}>SEX</Text>
+          <View style={styles.matchIndicators}>
+            <View style={[styles.indicator, subject.sex === 'F' && styles.activeIndicator]}>
+              <Text style={[styles.indicatorText, subject.sex === 'F' && styles.activeIndicatorText]}>F</Text>
+            </View>
+            <View style={[styles.indicator, subject.sex === 'M' && styles.activeIndicator]}>
+              <Text style={[styles.indicatorText, subject.sex === 'M' && styles.activeIndicatorText]}>M</Text>
+            </View>
           </View>
-          <View style={[styles.indicator, subject.sex === 'M' && styles.activeIndicator]}>
-            <Text style={[styles.indicatorText, subject.sex === 'M' && styles.activeIndicatorText]}>M</Text>
+        </View>
+
+        <View style={styles.bpmColumn}>
+          <Text style={styles.label}>BIOMETRICS</Text>
+          <View style={styles.bpmRow}>
+            <Animated.View style={[styles.pulseDot, { transform: [{ scale: pulseAnim }] }]} />
+            <Text style={styles.bpmText}>{bpm} BPM</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.locationGrid}>
-        <View style={styles.locationHeader}>
-          <View style={styles.gridBox}>
-            <View style={styles.gridDot} />
-          </View>
-          <Text style={styles.gridLabel}>LOC RECORD</Text>
-        </View>
-        
-        <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>ADDR:</Text>
-          <ScrambleText text={subject.locRecord.addr} active={isScanning} delay={1000} />
-        </View>
-        <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>TIME:</Text>
-          <ScrambleText text={subject.locRecord.time} active={isScanning} delay={1500} />
-        </View>
-        <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>PL:</Text>
-          <ScrambleText text={subject.locRecord.pl} active={isScanning} delay={2000} />
-        </View>
-        <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>D.O.B:</Text>
-          <ScrambleText text={subject.locRecord.dob} active={isScanning} delay={2500} />
+      <View style={styles.monitorSection}>
+        <View style={styles.monitorGroup}>
+     
+          <BlinkingBars />
         </View>
       </View>
 

@@ -4,14 +4,21 @@ import { Theme } from '../constants/theme';
 export const styles = StyleSheet.create({
   container: {
     flex: 3,
-    backgroundColor: Theme.colors.bgPanel,
+    backgroundColor: Theme.colors.bgDark, // Darker frame
     borderWidth: 1,
     borderColor: Theme.colors.border,
+    padding: 8, // Padding for monitor frame
     overflow: 'hidden',
+    borderRadius: 4, // Outer frame slight rounding
   },
   videoWrapper: {
     flex: 1,
     position: 'relative',
+    borderRadius: 8, // More pronounced rounding for the monitor screen
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(26, 42, 58, 0.8)',
+    backgroundColor: '#000', // Screen black base
   },
   video: {
     width: '100%',

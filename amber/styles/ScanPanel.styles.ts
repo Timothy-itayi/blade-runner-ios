@@ -26,16 +26,17 @@ export const styles = StyleSheet.create({
   fingerprintSlots: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
+    marginBottom: 6,
   },
   fingerprintContainer: {
-    width: 48,
-    height: 64,
+    width: 60,
+    height: 80,
     borderWidth: 1,
     borderColor: 'rgba(74, 138, 90, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(10, 12, 15, 0.6)',
+    backgroundColor: 'rgba(10, 12, 15, 0.8)',
     borderRadius: 2,
   },
   fingerprintImage: {
@@ -91,6 +92,35 @@ export const styles = StyleSheet.create({
   },
   matchSection: {
     marginBottom: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 4,
+  },
+  sexColumn: {
+    flex: 1,
+  },
+  bpmColumn: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  bpmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  bpmText: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Theme.colors.accentDeny,
   },
   label: {
     color: Theme.colors.textSecondary,
@@ -122,51 +152,40 @@ export const styles = StyleSheet.create({
     color: Theme.colors.textPrimary,
     fontWeight: '700',
   },
-  locationGrid: {
-    marginBottom: 8,
-    borderTopWidth: 1,
-    borderTopColor: Theme.colors.border,
-    paddingTop: 8,
-  },
-  locationHeader: {
+  monitorSection: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
+    paddingHorizontal: 4,
+    marginTop: 8,
+    gap: 12,
   },
-  gridBox: {
-    width: 12,
-    height: 12,
-    borderWidth: 1,
-    borderColor: Theme.colors.textPrimary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  gridDot: {
-    width: 4,
-    height: 4,
-    backgroundColor: Theme.colors.textPrimary,
-  },
-  gridLabel: {
-    color: Theme.colors.textSecondary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  dataRow: {
+  monitorGroup: {
+    flex: 1,
     flexDirection: 'row',
-    marginBottom: 2,
+
+
+   
+
+  
   },
-  dataLabel: {
+  monitorLabel: {
     color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
-    fontSize: 8,
-    width: 35,
+    fontSize: 9,
+    letterSpacing: 1,
+    fontWeight: '700',
   },
-  dataValue: {
-    color: Theme.colors.textSecondary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 8,
+  barsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 1.5,
+    height: 36,
+  },
+  bar: {
+    width: 4,
+    backgroundColor: Theme.colors.textPrimary,
+    borderRadius: 1,
   },
   visualizer: {
     marginTop: 'auto',

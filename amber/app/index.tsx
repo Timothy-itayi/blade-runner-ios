@@ -165,7 +165,7 @@ export default function MainScreen() {
                 isScanning={isScanning} 
                 scanProgress={scanProgress} 
                 hudStage={hudStage}
-                currentSubjectIndex={currentSubjectIndex}
+                subject={currentSubject}
               />
               
               <IntelPanel 

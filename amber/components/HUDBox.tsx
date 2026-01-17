@@ -88,6 +88,8 @@ export const HUDBox = ({ children, hudStage, style, buildDelay = 0 }: { children
     paddingLeft,
     paddingRight,
     gap,
+    height,
+    width,
     ...containerStyle
   } = flatStyle;
 
@@ -95,13 +97,15 @@ export const HUDBox = ({ children, hudStage, style, buildDelay = 0 }: { children
     <View style={[
       containerStyle,
       flex ? { flex } : {},
+      height ? { height } : {},
+      width ? { width } : {},
       { backgroundColor: 'transparent' }
     ]}>
       <DrawingBorder active={hudStage !== 'none'} delay={buildDelay} />
       
       <Animated.View style={[
         { opacity: contentOpacity },
-        flex ? { flex: 1 } : {},
+        (flex || height) ? { flex: 1 } : {},
         {
           flexDirection,
           justifyContent,

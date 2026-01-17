@@ -4,17 +4,20 @@ import { Theme } from '../constants/theme';
 export const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 16,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 2, // Keep it tight to the bottom
+    gap: 12,
     borderTopWidth: 1,
-    borderTopColor: Theme.colors.border,
+    borderTopColor: 'rgba(26, 42, 58, 0.5)',
+    backgroundColor: Theme.colors.bgDark,
   },
   button: {
     flex: 1,
-    height: 60,
+    height: 54, // Slightly shorter to prevent overflow
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1, // Cleaner than 2
     borderColor: Theme.colors.border,
     backgroundColor: Theme.colors.bgPanel,
   },

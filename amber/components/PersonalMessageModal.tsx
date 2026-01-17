@@ -8,20 +8,33 @@ interface PersonalMessageModalProps {
 }
 
 export const PersonalMessageModal = ({ message, onDismiss }: PersonalMessageModalProps) => {
+  const parts = message.split(': ');
+  const sender = parts.length > 1 ? parts[0] : 'SYSTEM';
+  const body = parts.length > 1 ? parts[1] : message;
+
+  const isSupervisor = sender === 'SUPERVISOR' || sender === 'SYSTEM';
+  const color = isSupervisor ? Theme.colors.accentDeny : Theme.colors.accentWarn;
+  const label = isSupervisor ? 'OFFICIAL NOTICE' : 'PERSONAL TRANSMISSION';
+
   return (
     <View style={styles.overlay}>
       <View style={styles.container}>
-        <Text style={styles.borderTop}>┌─────────────────────────────────────────┐</Text>
+        <Text style={[styles.borderTop, { color }]}>
+          {isSupervisor ? '╔═════════════════════════════════════════╗' : '┌─────────────────────────────────────────┐'}
+        </Text>
         <View style={styles.content}>
-          <Text style={styles.label}>MESSAGE RECEIVED</Text>
+          <Text style={[styles.label, { color }]}>{label}</Text>
+          <Text style={[styles.senderLabel, { color }]}>FROM: {sender}</Text>
           <View style={styles.spacer} />
-          <Text style={styles.messageText}>"{message}"</Text>
+          <Text style={styles.messageText}>"{body}"</Text>
           <View style={styles.spacer} />
           <TouchableOpacity onPress={onDismiss} style={styles.button}>
-            <Text style={styles.buttonText}>[ DISMISS ]</Text>
+            <Text style={[styles.buttonText, { color }]}>[ ACKNOWLEDGE ]</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.borderBottom}>└─────────────────────────────────────────┘</Text>
+        <Text style={[styles.borderBottom, { color }]}>
+          {isSupervisor ? '╚═════════════════════════════════════════╝' : '└─────────────────────────────────────────┘'}
+        </Text>
       </View>
     </View>
   );
@@ -60,6 +73,12 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fonts.mono,
     fontSize: 12,
     letterSpacing: 2,
+  },
+  senderLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    marginTop: 4,
+    fontWeight: '700',
   },
   messageText: {
     color: Theme.colors.textPrimary,

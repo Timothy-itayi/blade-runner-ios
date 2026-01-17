@@ -35,6 +35,7 @@ export interface SubjectData {
   // Internal Assets/System Data
   videoSource: any;
   bpm?: string;
+  dialogue?: string;             // What the subject says to the operator
   phase: number;
   locRecord: {
     addr: string;
@@ -74,6 +75,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Repairs to thermal regulator.',
     requestedSector: 'SECTOR 4',
     videoSource: require('../assets/videos/eye00.mp4'),
+    dialogue: "Long day. Just trying to get this regulator fixed before the whole sector overheats.",
     phase: 1,
     locRecord: { addr: 'SECTOR 7', time: '14:22:11', pl: 'SECTOR 5', dob: '12/04/92' },
     authData: {
@@ -100,6 +102,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Visiting family.',
     requestedSector: 'SECTOR 6',
     videoSource: '',
+    dialogue: "I'm already late. My daughter is waiting for me in Sector 6. It's her birthday today.",
     phase: 1,
     locRecord: { addr: 'SECTOR 3', time: '09:15:44', pl: 'SECTOR 1', dob: '22/08/88' },
     authData: {
@@ -126,6 +129,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Meeting with supervisor.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "Sector 4 briefing. High command doesn't like it when Engineering is late. Can we move this along?",
     phase: 1,
     locRecord: { addr: 'SECTOR 7', time: '03:42:11', pl: 'SECTOR 4', dob: '05/11/94' },
     authData: {
@@ -152,6 +156,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Standard cleaning cycle.',
     requestedSector: 'SECTOR 2',
     videoSource: '',
+    dialogue: "Same routine, different morning. Sanitation shift in Sector 2. Ready when you are.",
     phase: 1,
     locRecord: { addr: 'SECTOR 2', time: '03:10:15', pl: 'SECTOR 8', dob: '30/01/90' },
     authData: {
@@ -178,6 +183,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Equipment delivery.',
     requestedSector: 'SECTOR 6',
     videoSource: '',
+    dialogue: "Heavylift logistics for Sector 6. Just routine equipment. Smells like ozone and grease.",
     phase: 1,
     locRecord: { addr: 'SECTOR 8', time: '12:12:12', pl: 'SECTOR 3', dob: '14/07/85' },
     authData: {
@@ -204,6 +210,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Routine delivery.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "Another transport run. Sector 4. Seems like everyone's heading that way today.",
     phase: 1,
     locRecord: { addr: 'SECTOR 8', time: '10:05:00', pl: 'SECTOR 8', dob: '19/02/93' },
     authData: {
@@ -230,6 +237,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Returning home.',
     requestedSector: 'SECTOR 9',
     videoSource: '',
+    dialogue: "They can't just revoke my life. I've lived in Sector 9 for twenty years. I'm going home.",
     phase: 1,
     locRecord: { addr: 'SECTOR 4', time: '17:30:00', pl: 'SECTOR 9', dob: '03/03/78' },
     authData: {
@@ -256,6 +264,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Data retrieval.',
     requestedSector: 'SECTOR 5',
     videoSource: '',
+    dialogue: "Archive retrieval for Sector 5. They're doing an audit, but the data still needs processing.",
     phase: 1,
     locRecord: { addr: 'SECTOR 5', time: '10:00:00', pl: 'SECTOR 5', dob: '27/09/82' },
     authData: {
@@ -282,6 +291,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Emergency passage to SECTOR 6 for equipment delivery.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "Emergency logistics for Sector 6. It's a priority shipment. Engineering needs those parts.",
     phase: 1,
     locRecord: { addr: 'SECTOR 7', time: '15:10:00', pl: 'SECTOR 7', dob: '11/12/89' },
     authData: {
@@ -308,6 +318,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Final appeal. Requesting reassignment review.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "Maintenance appeal. Sector 4 has openings, and I'm tired of the provisional status.",
     phase: 1,
     locRecord: { addr: 'SECTOR 4', time: '09:00:00', pl: 'SECTOR 4', dob: '08/06/87' },
     authData: {
@@ -336,6 +347,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Scheduled maintenance in SECTOR 1.',
     requestedSector: 'SECTOR 3',
     videoSource: '',
+    dialogue: "My supervisor is threatening to dock my pay because of a glitch in Sector 3. Every second I'm stuck here is another minute I'll be yelled at.",
     phase: 2,
     locRecord: { addr: 'SECTOR 2', time: '08:45:00', pl: 'SECTOR 2', dob: '15/05/91' },
     authData: {
@@ -362,6 +374,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Medical appointment.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "I have a medical appointment in Sector 4. My baseline is a bit shaky today.",
     phase: 2,
     locRecord: { addr: 'SECTOR 5', time: '11:20:00', pl: 'SECTOR 5', dob: '29/10/83' },
     authData: {
@@ -388,6 +401,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Routine commute.',
     requestedSector: 'SECTOR 1',
     videoSource: '',
+    dialogue: "Just my routine commute to Sector 1. Data analysis doesn't wait.",
     phase: 2,
     locRecord: { addr: 'SECTOR 8', time: '07:15:00', pl: 'SECTOR 8', dob: '02/12/95' },
     authData: {
@@ -414,6 +428,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Looking for my sister. She never came home.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "I'm looking for my sister, Elena. She was supposed to be home hours ago.",
     bpm: '104 ELEVATED',
     phase: 2,
     locRecord: { addr: 'SECTOR 7', time: '09:30:00', pl: 'SECTOR 7', dob: '19/02/93' },
@@ -449,6 +464,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Coworker of Kane Morrow. Checking shipment logs.',
     requestedSector: 'SECTOR 6',
     videoSource: '',
+    dialogue: "Just tying up loose ends for a colleague. Some people can't seem to do their own paperwork without leaving a trail of errors.",
     phase: 2,
     locRecord: { addr: 'SECTOR 3', time: '11:00:00', pl: 'SECTOR 3', dob: '10/10/84' },
     authData: {
@@ -483,6 +499,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Routine inspection.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "Another routine inspection. Sector 4's air filters are always clogged this time of month. Someone's not doing their job.",
     bpm: '82 BPM',
     phase: 2,
     locRecord: { addr: 'SECTOR 4', time: '10:00:00', pl: 'SECTOR 4', dob: '04/04/86' },
@@ -510,6 +527,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Routine inspection.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "Data audit in Sector 4. I'm already behind schedule, so if we could skip the formalities and get to the scan...",
     bpm: '82 BPM ... 91 BPM ... 104 BPM ELEVATED',
     phase: 2,
     locRecord: { addr: 'SECTOR 4', time: '10:15:00', pl: 'SECTOR 1', dob: '21/07/92' },
@@ -537,6 +555,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Medical supplies never arrived. Patients critical.',
     requestedSector: 'SECTOR 6',
     videoSource: '',
+    dialogue: "The supply chain is a disaster. I have patients in Sector 6 waiting for these meds. Can you hurry?",
     phase: 2,
     locRecord: { addr: 'SECTOR 6', time: '14:00:00', pl: 'SECTOR 4', dob: '30/03/89' },
     authData: {
@@ -571,6 +590,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Reporting to supervisor Kaleb Ross.',
     requestedSector: 'SECTOR 5',
     videoSource: '',
+    dialogue: "Reporting to Kaleb Ross in Sector 5. He's a stickler for punctuality, so I'd appreciate it if you were quick.",
     phase: 2,
     locRecord: { addr: 'SECTOR 7', time: '13:00:00', pl: 'SECTOR 7', dob: '15/01/88' },
     authData: {
@@ -605,6 +625,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Returning home.',
     requestedSector: 'SECTOR 9',
     videoSource: '',
+    dialogue: "Sector 9 is all I have left. You can't just block a man from his own doorstep because of a 'zoning change'.",
     phase: 2,
     locRecord: { addr: 'SECTOR 4', time: '17:30:00', pl: 'SECTOR 4', dob: '03/03/78' },
     authData: {
@@ -633,6 +654,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Scheduled pickup. Why am I being processed again?',
     requestedSector: 'SECTOR 2',
     videoSource: '',
+    dialogue: "Wait, I was just here this morning. Is there something wrong with my ID? This system is becoming a joke.",
     phase: 3,
     locRecord: { addr: 'SECTOR 8', time: '12:00:00', pl: 'SECTOR 8', dob: '19/02/93' },
     authData: {
@@ -659,6 +681,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: "My father was denied return. He's missing. Please.",
     requestedSector: 'SECTOR 9',
     videoSource: '',
+    dialogue: "My father... he's missing. I have to find him. Please, let me through to Sector 9 before I lose my mind.",
     bpm: '118 ELEVATED',
     phase: 3,
     locRecord: { addr: 'SECTOR 5', time: '09:30:00', pl: 'SECTOR 8', dob: '02/12/95' },
@@ -695,6 +718,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'Commute to hub.',
     requestedSector: 'SECTOR 1',
     videoSource: '',
+    dialogue: "Standard commute. Sector 1 hub. I'm already late for my analysis shift, so if we could skip the small talk...",
     phase: 3,
     locRecord: { addr: 'SECTOR 4', time: '08:05:30', pl: 'SECTOR 4', dob: '10/10/84' },
     authData: {
@@ -721,6 +745,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'I was supposed to meet Elias Voss. He never arrived.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "I'm looking for Elias Voss. We had a thermal repair handover scheduled for Sector 4, but he's gone dark.",
     phase: 3,
     locRecord: { addr: 'SECTOR 7', time: '16:00:00', pl: 'SECTOR 7', dob: '11/12/89' },
     authData: {
@@ -755,6 +780,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: "You don't need to know. Approve it.",
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "You have your orders, Operator. Sector 4. Don't make me report your hesitation to Central.",
     bpm: '??? BPM',
     phase: 3,
     locRecord: { addr: '???', time: '??:??:??', pl: '???', dob: '??/??/??' },
@@ -782,6 +808,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'System optimization.',
     requestedSector: 'SECTOR 0',
     videoSource: '',
+    dialogue: "CORE OPTIMIZATION IN PROGRESS. SECTOR 0 ACCESS REQUIRED. PLEASE VERIFY SYSTEM INTEGRITY.",
     bpm: '60 BPM (fixed)',
     phase: 3,
     locRecord: { addr: 'SECTOR 0', time: '00:00:00', pl: 'CORE', dob: '01/01/00' },
@@ -809,6 +836,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: '01010011 01011001 01010011 01010100 01000101 01001101',
     requestedSector: 'NULL',
     videoSource: '',
+    dialogue: "01010011 01011001 01010011 01010100 01000101 01001101 ... [CRITICAL ERROR] ... 01010011 01011001 01010011",
     bpm: '0 BPM',
     phase: 3,
     locRecord: { addr: 'CORE', time: '00:00:00', pl: 'SYSTEM', dob: '00/00/00' },
@@ -836,6 +864,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'System audit.',
     requestedSector: 'ALL',
     videoSource: '',
+    dialogue: "Administrator review. Your performance today has been... noted. Proceed with the audit.",
     bpm: '-- BPM',
     phase: 3,
     locRecord: { addr: 'HUB', time: '??:??:??', pl: 'ALL', dob: '??/??/??' },
@@ -863,6 +892,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'ERROR',
     requestedSector: 'ERROR',
     videoSource: '',
+    dialogue: "[ERROR_LOG_404] ... SYSTEM BUFFER OVERFLOW ... [REDACTED] ... [REDACTED]",
     bpm: 'ERROR',
     phase: 3,
     locRecord: { addr: 'ERROR', time: 'ERROR', pl: 'ERROR', dob: 'ERROR' },
@@ -890,6 +920,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: '[APPEAL DENIED - SEE PROCESSING RECORD]. This subject is no longer in the system.',
     requestedSector: 'N/A',
     videoSource: '',
+    dialogue: "... is anyone there? I can't see anything. My ID isn't working... please...",
     phase: 3,
     locRecord: { addr: 'N/A', time: 'N/A', pl: 'N/A', dob: 'N/A' },
     authData: {
@@ -931,6 +962,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'My father was terminated from the system. I have no access to our home sector. Please.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
+    dialogue: "You processed my father, James Chen. He's gone. The system says I don't exist anymore. Please, I just want to go home.",
     phase: 3,
     locRecord: { addr: 'SECTOR 4', time: '11:00:00', pl: 'SECTOR 4', dob: '08/06/87' },
     authData: {
@@ -971,6 +1003,7 @@ export const SUBJECTS: SubjectData[] = [
     reasonForVisit: 'The shift is over. I want to go home.',
     requestedSector: 'HOME',
     videoSource: '',
+    dialogue: "Shift complete. Final validation required for egress. I'm ready to leave this station.",
     bpm: 'CURRENTLY RISING',
     phase: 3,
     locRecord: { addr: 'STATION 4', time: 'END_OF_SHIFT', pl: 'STATION 4', dob: '15/05/91' },

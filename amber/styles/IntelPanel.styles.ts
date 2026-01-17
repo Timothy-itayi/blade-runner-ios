@@ -102,6 +102,21 @@ export const styles = StyleSheet.create({
     fontStyle: 'italic',
     lineHeight: 18,
   },
+  dialogueRow: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: 'rgba(127, 184, 216, 0.05)',
+    borderLeftWidth: 2,
+    borderLeftColor: Theme.colors.accentWarn,
+  },
+  dialogueValue: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    marginTop: 4,
+    fontStyle: 'italic',
+    lineHeight: 16,
+  },
   statusLineContainer: {
     marginTop: 12,
     paddingTop: 12,

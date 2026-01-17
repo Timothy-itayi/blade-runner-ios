@@ -6,6 +6,7 @@ import { styles } from '../styles/EyeDisplay.styles';
 import { Blinker, HUDBox } from './HUDBox';
 import { BUILD_SEQUENCE } from '../constants/animations';
 import { Theme } from '../constants/theme';
+import { DecisionStamp } from './DecisionStamp';
 
 const CircularBorder = ({ active, delay = 0 }: { active: boolean, delay?: number }) => {
   const anim = useRef(new Animated.Value(0)).current;
@@ -42,11 +43,20 @@ const CircularBorder = ({ active, delay = 0 }: { active: boolean, delay?: number
   );
 };
 
-export const EyeDisplay = ({ isScanning, scanProgress, videoSource, hudStage }: { 
+export const EyeDisplay = ({ 
+  isScanning, 
+  scanProgress, 
+  videoSource, 
+  hudStage,
+  hasDecision,
+  decisionType
+}: { 
   isScanning: boolean, 
   scanProgress: Animated.Value, 
   videoSource: any,
-  hudStage: 'none' | 'wireframe' | 'outline' | 'full'
+  hudStage: 'none' | 'wireframe' | 'outline' | 'full',
+  hasDecision?: boolean,
+  decisionType?: 'APPROVE' | 'DENY'
 }) => {
   const staticOverlay = require('../assets/videos/static.gif');
   const changeChannel = require('../assets/videos/change-channel.gif');
@@ -185,6 +195,10 @@ export const EyeDisplay = ({ isScanning, scanProgress, videoSource, hudStage }: 
               </View>
             )}
           </View>
+
+          {hasDecision && decisionType && (
+            <DecisionStamp type={decisionType} visible={!!hasDecision} />
+          )}
         </Animated.View>
       </View>
     </HUDBox>

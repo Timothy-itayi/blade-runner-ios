@@ -9,7 +9,6 @@ import { BUILD_SEQUENCE } from '../constants/animations';
 export const TypewriterText = ({ text, active, delay = 0, style, showCursor = true }: { text: string, active: boolean, delay?: number, style?: any, showCursor?: boolean }) => {
   const [display, setDisplay] = React.useState('');
   const [isComplete, setIsComplete] = React.useState(false);
-  const cursorOpacity = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
     let interval: any = null;
@@ -21,8 +20,11 @@ export const TypewriterText = ({ text, active, delay = 0, style, showCursor = tr
       return;
     }
 
-    let currentText = '';
+    // Reset state immediately when text or active changes
+    setDisplay('');
     setIsComplete(false);
+    
+    let currentText = '';
     
     timeout = setTimeout(() => {
       interval = setInterval(() => {
@@ -33,7 +35,7 @@ export const TypewriterText = ({ text, active, delay = 0, style, showCursor = tr
           setIsComplete(true);
           if (interval) clearInterval(interval);
         }
-      }, 30);
+      }, 25); // Slightly faster
     }, delay);
 
     return () => {
@@ -42,38 +44,18 @@ export const TypewriterText = ({ text, active, delay = 0, style, showCursor = tr
     };
   }, [active, text, delay]);
 
-  React.useEffect(() => {
-    if (showCursor && active && !isComplete) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(cursorOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
-          Animated.timing(cursorOpacity, { toValue: 1, duration: 100, useNativeDriver: true }),
-        ])
-      ).start();
-    } else {
-      cursorOpacity.setValue(0);
-    }
-  }, [showCursor, active, isComplete]);
-
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Text style={style}>{display}</Text>
+    <Text style={style}>
+      {display}
       {showCursor && !isComplete && (
-        <Animated.View style={{ 
-          width: 8, 
-          height: 14, 
-          backgroundColor: style?.color || '#7fb8d8', 
-          opacity: cursorOpacity,
-          marginLeft: 2
-        }} />
+        <Text style={{ color: style?.color || Theme.colors.textPrimary, opacity: 0.8 }}>█</Text>
       )}
-    </View>
+    </Text>
   );
 };
 
 export const ScrambleText = ({ text, active, delay = 0, keepScrambling = false, style }: { text: string, active: boolean, delay?: number, keepScrambling?: boolean, style?: any }) => {
-  const placeholder = '-'.repeat(text.length);
-  const [display, setDisplay] = React.useState(placeholder);
+  const [display, setDisplay] = React.useState(active ? '' : text);
   const chars = '!@#$%^&*()_+{}[]|;:,.<>?';
 
   React.useEffect(() => {
@@ -85,23 +67,30 @@ export const ScrambleText = ({ text, active, delay = 0, keepScrambling = false, 
       return;
     }
 
-    // Ensure we reset to placeholder if active flips but delay hasn't finished
-    setDisplay(placeholder);
+    // Start empty while waiting for delay if we just became active
+    setDisplay('');
 
     timeout = setTimeout(() => {
       let iterations = 0;
       interval = setInterval(() => {
-        setDisplay(prev => 
-          prev.split('').map((char, index) => {
-            if (!keepScrambling && index < iterations) return text[index];
-            return chars[Math.floor(Math.random() * chars.length)];
-          }).join('')
-        );
+        setDisplay(prev => {
+          // If the length is 0, we need to initialize it with some random chars or the final length
+          const currentLength = text.length;
+          let newDisplay = '';
+          for (let i = 0; i < currentLength; i++) {
+            if (!keepScrambling && i < iterations) {
+              newDisplay += text[i];
+            } else {
+              newDisplay += chars[Math.floor(Math.random() * chars.length)];
+            }
+          }
+          return newDisplay;
+        });
         
         if (!keepScrambling && iterations >= text.length) {
           if (interval) clearInterval(interval);
         }
-        iterations += 1/3;
+        iterations += 1;
       }, 30);
     }, delay);
 

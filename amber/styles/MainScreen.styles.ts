@@ -11,11 +11,14 @@ export const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    paddingBottom: 10,
+
   },
   topSection: {
     flexDirection: 'row',
-    height: 250,
+    height: 240,
+    marginTop: 10,
     marginBottom: 4,
   },
 });

@@ -9,10 +9,15 @@ import { DecisionButtons } from '../components/DecisionButtons';
 import { OnboardingModal } from '../components/OnboardingModal';
 import { BootSequence } from '../components/BootSequence';
 import { VerificationDrawer } from '../components/VerificationDrawer';
+import { ShiftTransition } from '../components/ShiftTransition';
+import { PersonalMessageModal } from '../components/PersonalMessageModal';
+import { DecisionStamp } from '../components/DecisionStamp';
 import { styles } from '../styles/MainScreen.styles';
 import { SUBJECTS, Outcome } from '../data/subjects';
+import { getShiftForSubject, isEndOfShift, SHIFTS, SUBJECTS_PER_SHIFT } from '../constants/shifts';
+import { POSITIVE_MESSAGES, NEGATIVE_MESSAGES, NEUTRAL_MESSAGES } from '../constants/messages';
 
-const DEV_MODE = false; // Set to true to bypass onboarding and boot
+const DEV_MODE = true; // Set to true to bypass onboarding and boot
 
 export default function MainScreen() {
   const [showOnboarding, setShowOnboarding] = useState(!DEV_MODE);
@@ -25,9 +30,48 @@ export default function MainScreen() {
   const [hasVerified, setHasVerified] = useState(false);
   const [decisionHistory, setDecisionHistory] = useState<Record<string, 'APPROVE' | 'DENY'>>({});
   const [decisionOutcome, setDecisionOutcome] = useState<{ type: 'APPROVE' | 'DENY', outcome: Outcome } | null>(null);
+  const [hasDecision, setHasDecision] = useState(false);
+  const decisionTimeoutRef = useRef<any>(null);
+  
+  // Shift and Narrative tracking
+  const [showShiftTransition, setShowShiftTransition] = useState(false);
+  const [shiftStats, setShiftStats] = useState({ approved: 0, denied: 0, correct: 0 });
+  const [totalCorrectDecisions, setTotalCorrectDecisions] = useState(0);
+  const [totalAccuracy, setTotalAccuracy] = useState(1.0); // 0.0 to 1.0
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
+  const [messageHistory, setMessageHistory] = useState<string[]>([]);
+  const currentShift = getShiftForSubject(currentSubjectIndex);
 
   const scanProgress = useRef(new Animated.Value(0)).current;
   const gameOpacity = useRef(new Animated.Value(DEV_MODE ? 1 : 0)).current;
+
+  // Accuracy helper
+  const isDecisionCorrect = (subject: any, decision: 'APPROVE' | 'DENY') => {
+    const { authData } = subject;
+    // Basic logic: if any check is RESTRICTED or INVALID or has WARRANT, must DENY.
+    const mustDeny = 
+      authData.sectorAuth.status === 'RESTRICTED' || 
+      authData.functionReg.status === 'UNREGISTERED' || 
+      (subject.warrants && subject.warrants !== 'NONE');
+    
+    return mustDeny ? decision === 'DENY' : decision === 'APPROVE';
+  };
+
+  const getNarrativeMessage = () => {
+    let pool = NEUTRAL_MESSAGES;
+    if (totalAccuracy > 0.8) pool = POSITIVE_MESSAGES;
+    else if (totalAccuracy < 0.5) pool = NEGATIVE_MESSAGES;
+
+    const validMessages = pool.filter(m => 
+      (!m.minShift || currentShift.id >= m.minShift) && 
+      (!m.maxShift || currentShift.id <= m.maxShift)
+    );
+
+    if (validMessages.length === 0) return null;
+    return validMessages[Math.floor(Math.random() * validMessages.length)].text;
+  };
+
+  // ... (rest of the component)
 
   // Get the current subject data with narrative variants applied
   const getSubjectData = (index: number) => {
@@ -102,32 +146,99 @@ export default function MainScreen() {
   const handleDecision = (type: 'APPROVE' | 'DENY') => {
     if (!hasVerified) return;
 
+    const correct = isDecisionCorrect(currentSubject, type);
+
     // Save decision to history using the subject's unique ID
     setDecisionHistory(prev => ({
       ...prev,
       [currentSubject.id]: type
     }));
 
+    // Track shift stats and overall accuracy
+    setShiftStats(prev => ({
+      approved: prev.approved + (type === 'APPROVE' ? 1 : 0),
+      denied: prev.denied + (type === 'DENY' ? 1 : 0),
+      correct: prev.correct + (correct ? 1 : 0),
+    }));
+
+    if (correct) {
+      setTotalCorrectDecisions(prev => prev + 1);
+    }
+
+    setTotalAccuracy(() => {
+      const totalDecisions = Object.keys(decisionHistory).length + 1;
+      const newTotalCorrect = totalCorrectDecisions + (correct ? 1 : 0);
+      return newTotalCorrect / totalDecisions;
+    });
+
     let outcome = { ...currentSubject.outcomes[type] };
     
-    // Rule: First 10 subjects (Phase 1 Setup) have no consequences revealed immediately
-    // This maintains the "straightforward" illusion before the echoes begin.
-    if (currentSubjectIndex < 10) {
+    // Rule: First shift (subjects 0-3) have no consequences revealed immediately
+    if (currentShift.id <= 2) {
       outcome.consequence = 'SILENT';
     }
 
     setDecisionOutcome({ type, outcome });
+    setHasDecision(true);
+
+    // Auto-advance after animation completes (Option G: Blade Runner Style)
+    // Bar fills + status changes, hold for 0.5s, then next subject.
+    if (decisionTimeoutRef.current) clearTimeout(decisionTimeoutRef.current);
+    decisionTimeoutRef.current = setTimeout(() => {
+      nextSubject();
+    }, 900); 
   };
 
   const nextSubject = () => {
+    if (decisionTimeoutRef.current) {
+      clearTimeout(decisionTimeoutRef.current);
+      decisionTimeoutRef.current = null;
+    }
     setDecisionOutcome(null);
+    setHasDecision(false);
     setShowVerify(false);
     setHasVerified(false);
     setIsScanning(false);
+    
+    const nextIndex = (currentSubjectIndex + 1) % SUBJECTS.length;
+    
+    // Randomly trigger a personal message (20% chance) between subjects
+    if (Math.random() < 0.2 && !isEndOfShift(currentSubjectIndex)) {
+      const msg = getNarrativeMessage();
+      if (msg) {
+        setPendingMessage(msg);
+        setMessageHistory(prev => [...prev, msg]);
+        return;
+      }
+    }
+
+    // Check if we're at end of shift
+    if (isEndOfShift(currentSubjectIndex) && nextIndex !== 0) {
+      setShowShiftTransition(true);
+    } else {
+      setCurrentSubjectIndex(nextIndex);
+      setTimeout(triggerScan, 500);
+    }
+  };
+
+  const handleMessageDismiss = () => {
+    setPendingMessage(null);
+    const nextIndex = (currentSubjectIndex + 1) % SUBJECTS.length;
+    
+    if (isEndOfShift(currentSubjectIndex) && nextIndex !== 0) {
+      setShowShiftTransition(true);
+    } else {
+      setCurrentSubjectIndex(nextIndex);
+      setTimeout(triggerScan, 500);
+    }
+  };
+
+  const handleShiftContinue = () => {
+    setShowShiftTransition(false);
+    setHasDecision(false);
+    setShiftStats({ approved: 0, denied: 0, correct: 0 }); // Reset for new shift
     const nextIndex = (currentSubjectIndex + 1) % SUBJECTS.length;
     setCurrentSubjectIndex(nextIndex);
-    
-    // Small delay before starting next scan
     setTimeout(triggerScan, 500);
   };
 
@@ -147,7 +258,11 @@ export default function MainScreen() {
 
         {gameActive && (
           <Animated.View style={[styles.container, { opacity: gameOpacity }]}>
-            <Header hudStage={hudStage} />
+            <Header 
+              hudStage={hudStage} 
+              shiftTime={currentShift.timeBlock} 
+              shiftData={currentShift} 
+            />
             
             <View style={styles.content}>
               <View style={styles.topSection}>
@@ -171,76 +286,63 @@ export default function MainScreen() {
                 scanProgress={scanProgress} 
                 hudStage={hudStage}
                 subject={currentSubject}
+                hasDecision={hasDecision}
+                decisionType={decisionOutcome?.type}
               />
               
               <IntelPanel 
                 data={currentSubject} 
                 index={currentSubjectIndex}
                 hudStage={hudStage} 
+                hasDecision={hasDecision}
+                decisionType={decisionOutcome?.type}
                 onRevealVerify={() => {
                   setShowVerify(true);
                   setHasVerified(true);
                 }}
               />
+              
+              {decisionOutcome && (
+                <DecisionStamp 
+                  type={decisionOutcome.type} 
+                  visible={hasDecision} 
+                />
+              )}
             </View>
 
             <DecisionButtons 
               hudStage={hudStage} 
               onDecision={handleDecision}
+              onNext={nextSubject}
               disabled={!hasVerified}
+              hasDecision={hasDecision}
             />
 
             {showVerify && (
               <VerificationDrawer 
                 subject={currentSubject} 
-                onClose={() => setShowVerify(false)} 
+                onClose={() => setShowVerify(false)}
+                unlockedChecks={currentShift.unlockedChecks}
               />
             )}
 
-            {decisionOutcome && (
-              <View style={[StyleSheet.absoluteFill, { 
-                backgroundColor: 'rgba(10, 12, 15, 0.95)',
-                justifyContent: 'center',
-                alignItems: 'center',
-                padding: 40,
-                zIndex: 3000,
-              }]}>
-                <Text style={{ 
-                  color: decisionOutcome.type === 'APPROVE' ? '#4a8a5a' : '#d4534a', 
-                  fontSize: 24, 
-                  fontFamily: 'ShareTechMono_400Regular',
-                  marginBottom: 20,
-                  textAlign: 'center'
-                }}>
-                  {decisionOutcome.outcome.feedback}
-                </Text>
-                
-                {decisionOutcome.outcome.consequence !== 'SILENT' && (
-                  <Text style={{ 
-                    color: '#7fb8d8', 
-                    fontSize: 16, 
-                    fontFamily: 'ShareTechMono_400Regular',
-                    textAlign: 'center',
-                    marginBottom: 40,
-                    lineHeight: 24
-                  }}>
-                    CONSEQUENCE: {decisionOutcome.outcome.consequence}
-                  </Text>
-                )}
+            {pendingMessage && (
+              <PersonalMessageModal 
+                message={pendingMessage} 
+                onDismiss={handleMessageDismiss} 
+              />
+            )}
 
-                <TouchableOpacity 
-                  onPress={nextSubject}
-                  style={{
-                    borderWidth: 1,
-                    borderColor: '#c9a227',
-                    paddingHorizontal: 30,
-                    paddingVertical: 12,
-                    backgroundColor: 'rgba(201, 162, 39, 0.1)'
-                  }}
-                >
-                  <Text style={{ color: '#c9a227', fontFamily: 'ShareTechMono_400Regular', fontSize: 14 }}>[ NEXT SUBJECT ]</Text>
-                </TouchableOpacity>
-              </View>
+            {showShiftTransition && (
+              <ShiftTransition
+                previousShift={currentShift}
+                nextShift={getShiftForSubject(currentSubjectIndex + 1)}
+                approvedCount={shiftStats.approved}
+                deniedCount={shiftStats.denied}
+                totalAccuracy={totalAccuracy}
+                messageHistory={messageHistory}
+                onContinue={handleShiftContinue}
+              />
             )}
           </Animated.View>
         )}

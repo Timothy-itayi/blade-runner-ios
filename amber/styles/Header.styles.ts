@@ -14,9 +14,16 @@ export const styles = StyleSheet.create({
   orgText: {
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     letterSpacing: 2,
+  },
+  locationText: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    marginTop: 2,
+    letterSpacing: 1,
   },
   signalContainer: {
     flexDirection: 'row',

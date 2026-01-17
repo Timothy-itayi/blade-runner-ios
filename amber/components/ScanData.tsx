@@ -114,12 +114,49 @@ export const ScrambleText = ({ text, active, delay = 0, keepScrambling = false, 
   return <Text style={[styles.dataValue, style]}>{display}</Text>;
 };
 
-export const ScanData = ({ id, isScanning, scanProgress, hudStage, subject }: { 
+const ProgressBar = ({ 
+  progress, 
+  hasDecision, 
+  decisionType,
+  color
+}: { 
+  progress: Animated.Value, 
+  hasDecision: boolean, 
+  decisionType?: 'APPROVE' | 'DENY',
+  color: string
+}) => {
+  const [barText, setBarText] = React.useState('▓▓▓▓░░░░');
+
+  React.useEffect(() => {
+    if (hasDecision) {
+      // Animate the fill
+      let current = 4;
+      const interval = setInterval(() => {
+        current++;
+        let bar = '';
+        for (let i = 0; i < 8; i++) {
+          bar += i < current ? '█' : '░';
+        }
+        setBarText(bar);
+        if (current >= 8) clearInterval(interval);
+      }, 50);
+      return () => clearInterval(interval);
+    } else {
+      setBarText('▓▓▓▓░░░░');
+    }
+  }, [hasDecision]);
+
+  return <Text style={[styles.progressBarText, { color }]}>{barText}</Text>;
+};
+
+export const ScanData = ({ id, isScanning, scanProgress, hudStage, subject, hasDecision, decisionType }: { 
   id: string, 
   isScanning: boolean, 
   scanProgress: Animated.Value,
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
-  subject: SubjectData
+  subject: SubjectData,
+  hasDecision?: boolean,
+  decisionType?: 'APPROVE' | 'DENY'
 }) => {
   const [hasReachedBottom, setHasReachedBottom] = React.useState(false);
 
@@ -141,12 +178,56 @@ export const ScanData = ({ id, isScanning, scanProgress, hudStage, subject }: {
   // Scramble if we're in buildup OR if a scan is active AND hasn't finished its sweep
   const shouldScramble = hudStage !== 'full' || (isScanning && !hasReachedBottom);
 
+  const getStatusLine = () => {
+    if (!hasDecision) {
+      return null;
+    }
+    const isApprove = decisionType === 'APPROVE';
+    const color = isApprove ? Theme.colors.accentApprove : Theme.colors.accentDeny;
+    const text = isApprove ? 'STATUS: CLEARED' : 'STATUS: REJECTED';
+    return (
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <View style={[styles.statusDot, { backgroundColor: color }]} />
+        <Text style={[styles.bpmMonitoring, { color }]}> {text}</Text>
+      </View>
+    );
+  };
+
+  const renderProgressBar = () => {
+    const isApprove = decisionType === 'APPROVE';
+    const color = hasDecision 
+      ? (isApprove ? Theme.colors.accentApprove : Theme.colors.accentDeny)
+      : Theme.colors.textPrimary;
+    
+    const label = hasDecision 
+      ? (isApprove ? 'COMPLETE' : 'FLAGGED')
+      : '';
+
+    return (
+      <View style={styles.progressRow}>
+        <ProgressBar 
+          progress={scanProgress} 
+          hasDecision={!!hasDecision} 
+          decisionType={decisionType} 
+          color={color}
+        />
+        {hasDecision && <Text style={[styles.progressLabel, { color }]}> {label}</Text>}
+      </View>
+    );
+  };
+
   return (
     <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.locRecord}>
       <View style={styles.leftColumn}>
-        <TypewriterText text="IDENTIFICATION" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.identification} style={styles.label} />
-        {/* ID Code stays scrambled during build but reveals once full, regardless of scan sweep */}
-        <ScrambleText text={id} active={hudStage !== 'full' || (isScanning && !hasReachedBottom)} keepScrambling={hudStage !== 'full' || (isScanning && !hasReachedBottom)} delay={BUILD_SEQUENCE.identification + 400} style={styles.idCode} />
+        <View style={styles.identHeader}>
+          <TypewriterText text="IDENT CONFIRM" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.identification} style={styles.label} />
+          {getStatusLine()}
+        </View>
+        
+        <View style={styles.idSection}>
+          <ScrambleText text={id} active={hudStage !== 'full' || (isScanning && !hasReachedBottom)} keepScrambling={hudStage !== 'full' || (isScanning && !hasReachedBottom)} delay={BUILD_SEQUENCE.identification + 400} style={styles.idCode} />
+          {renderProgressBar()}
+        </View>
       </View>
       
       <View style={styles.rightColumn}>
@@ -183,3 +264,5 @@ export const ScanData = ({ id, isScanning, scanProgress, hudStage, subject }: {
     </HUDBox>
   );
 };
+
+import { Theme } from '../constants/theme';

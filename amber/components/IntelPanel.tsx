@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { styles } from '../styles/IntelPanel.styles';
 import { SubjectData } from '../data/subjects';
@@ -7,16 +7,106 @@ import { Theme } from '../constants/theme';
 import { ScrambleText, TypewriterText } from './ScanData';
 import { BUILD_SEQUENCE } from '../constants/animations';
 
+const DigitalStatusLine = ({ 
+  id, 
+  hasDecision, 
+  decisionType, 
+  active 
+}: { 
+  id: string, 
+  hasDecision: boolean, 
+  decisionType?: 'APPROVE' | 'DENY',
+  active: boolean
+}) => {
+  const [bpm, setBpm] = useState(78);
+  const [barProgress, setBarProgress] = useState(0); // 0 to 8 segments
+  const [isFlickering, setIsFlickering] = useState(false);
+  
+  useEffect(() => {
+    if (!active) return;
+    
+    const interval = setInterval(() => {
+      setBpm(prev => {
+        const delta = Math.floor(Math.random() * 5) - 2;
+        const next = prev + delta;
+        return Math.min(Math.max(next, 65), 95);
+      });
+    }, 1500);
+    
+    return () => clearInterval(interval);
+  }, [active]);
+
+  useEffect(() => {
+    if (!active) {
+      setBarProgress(0);
+      return;
+    }
+
+    if (hasDecision) {
+      setIsFlickering(true);
+      let current = 4;
+      const interval = setInterval(() => {
+        // Add a bit of "digital jitter" - sometimes it flickers backwards or stays
+        const jitter = Math.random() > 0.8 ? -1 : 1;
+        current = Math.min(Math.max(current + jitter, 4), 8);
+        
+        setBarProgress(current);
+        if (current >= 8 && Math.random() > 0.7) {
+          clearInterval(interval);
+          setTimeout(() => setIsFlickering(false), 150);
+        }
+      }, 40);
+      return () => clearInterval(interval);
+    } else {
+      setBarProgress(4);
+      setIsFlickering(false);
+    }
+  }, [hasDecision, active]);
+
+  if (!active) return <View style={styles.statusLineContainer} />;
+
+  const renderBar = () => {
+    let bar = '';
+    const char = hasDecision ? '█' : '▓';
+    for (let i = 0; i < 8; i++) {
+      if (i < barProgress) bar += char;
+      else bar += '░';
+    }
+    return bar;
+  };
+
+  const statusText = hasDecision 
+    ? (decisionType === 'APPROVE' ? 'COMPLETE' : 'FLAGGED')
+    : '';
+
+  const statusLineLabel = hasDecision
+    ? `STATUS: ${decisionType === 'APPROVE' ? 'CLEARED' : 'REJECTED'}`
+    : `${bpm} BPM MONITORING`;
+
+  const accentColor = hasDecision
+    ? (decisionType === 'APPROVE' ? Theme.colors.accentApprove : Theme.colors.accentDeny)
+    : Theme.colors.textPrimary;
+
+  
+
+ 
+  
+};
+
 export const IntelPanel = ({ 
   data, 
   index,
   hudStage, 
-  onRevealVerify
+  onRevealVerify,
+  hasDecision,
+  decisionType
 }: { 
   data: SubjectData, 
   index: number,
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
-  onRevealVerify: () => void
+  onRevealVerify: () => void,
+  hasDecision?: boolean,
+  decisionType?: 'APPROVE' | 'DENY'
 }) => {
   const shouldScramble = hudStage !== 'full';
   const flickerAnim = useRef(new Animated.Value(1)).current;
@@ -130,6 +220,13 @@ export const IntelPanel = ({
             </TouchableOpacity>
           </Animated.View>
         </View>
+
+        <DigitalStatusLine 
+          id={data.id} 
+          hasDecision={!!hasDecision} 
+          decisionType={decisionType} 
+          active={hudStage === 'full'}
+        />
       </View>
     </HUDBox>
   );

@@ -84,6 +84,41 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 1,
   },
+  identHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  bpmMonitoring: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: Theme.colors.textSecondary,
+  },
+  idSection: {
+    marginTop: 4,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  progressBarText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
+    letterSpacing: 2,
+  },
+  progressLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
   metaLabel: {
     color: Theme.colors.textSecondary,
     fontFamily: Theme.fonts.mono,

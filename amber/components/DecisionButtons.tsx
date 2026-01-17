@@ -8,11 +8,15 @@ import { TypewriterText } from './ScanData';
 export const DecisionButtons = ({ 
   hudStage, 
   onDecision,
-  disabled
+  onNext,
+  disabled,
+  hasDecision
 }: { 
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
   onDecision: (type: 'APPROVE' | 'DENY') => void,
-  disabled: boolean
+  onNext: () => void,
+  disabled: boolean,
+  hasDecision: boolean
 }) => {
   const fillOpacity = useRef(new Animated.Value(0)).current;
 
@@ -28,6 +32,23 @@ export const DecisionButtons = ({
       fillOpacity.setValue(0);
     }
   }, [hudStage]);
+
+  if (hasDecision) {
+    return (
+      <HUDBox hudStage={hudStage} style={styles.container}>
+        <TouchableOpacity 
+          style={[
+            styles.button, 
+            { borderColor: Theme.colors.accentWarn, flex: 1, height: 60 }
+          ]} 
+          onPress={onNext}
+        >
+          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(201, 162, 39, 0.1)', opacity: 1 }]} />
+          <Text style={[styles.buttonText, { color: Theme.colors.accentWarn, fontSize: 18 }]}>[ NEXT SUBJECT ]</Text>
+        </TouchableOpacity>
+      </HUDBox>
+    );
+  }
 
   return (
     <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.decisionButtons}>
@@ -70,4 +91,5 @@ export const DecisionButtons = ({
   );
 };
 
+import { Theme } from '../constants/theme';
 const StyleSheet = require('react-native').StyleSheet;

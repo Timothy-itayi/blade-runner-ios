@@ -49,11 +49,19 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(26, 42, 58, 0.3)',
   },
+  lockedButton: {
+    borderColor: Theme.colors.textDim,
+    backgroundColor: 'rgba(10, 12, 15, 0.5)',
+    opacity: 0.5,
+  },
   buttonText: {
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
     fontSize: 10,
     textAlign: 'center',
+  },
+  lockedText: {
+    color: Theme.colors.textDim,
   },
   resultContainer: {
     padding: 16,

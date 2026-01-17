@@ -7,6 +7,7 @@ import { Theme } from '@/constants/theme';
 interface VerificationDrawerProps {
   subject: SubjectData;
   onClose: () => void;
+  unlockedChecks?: ('SECTOR' | 'FUNCTION' | 'WARRANT' | 'MEDICAL')[];
 }
 
 const ResultContainer = ({ title, children, status }: { title: string, children: React.ReactNode, status?: string }) => {
@@ -37,8 +38,11 @@ const ResultContainer = ({ title, children, status }: { title: string, children:
   );
 };
 
-export const VerificationDrawer = ({ subject, onClose }: VerificationDrawerProps) => {
+export const VerificationDrawer = ({ subject, onClose, unlockedChecks = ['WARRANT', 'SECTOR', 'FUNCTION', 'MEDICAL'] }: VerificationDrawerProps) => {
   const [activeCheck, setActiveCheck] = useState<string | null>(null);
+
+  const isUnlocked = (check: 'SECTOR' | 'FUNCTION' | 'WARRANT' | 'MEDICAL') => 
+    unlockedChecks.includes(check);
 
   const renderCheckResult = () => {
     switch (activeCheck) {
@@ -97,33 +101,64 @@ export const VerificationDrawer = ({ subject, onClose }: VerificationDrawerProps
           </ResultContainer>
         );
       case 'MEDICAL':
+        const bpmValue = subject.bpm ? parseInt(subject.bpm, 10) : 72;
+        const bpmElevated = bpmValue > 100;
+        const bpmStatus = bpmElevated ? 'FLAGGED' : 'AUTHORIZED';
         return (
-          <ResultContainer title="BIOMETRIC HEALTH SCAN" status="AUTHORIZED">
+          <ResultContainer title="BIOMETRIC HEALTH SCAN" status={bpmStatus}>
             <View style={styles.resultRow}>
               <Text style={styles.resultLabel}>BPM:</Text>
-              <Text style={styles.resultValue}>{subject.bpm} (NORMAL)</Text>
+              <Text style={[styles.resultValue, bpmElevated ? styles.flagged : styles.authorized]}>
+                {bpmValue} {bpmElevated ? '(ELEVATED)' : '(NORMAL)'}
+              </Text>
             </View>
             <View style={styles.resultRow}>
               <Text style={styles.resultLabel}>Vitals:</Text>
-              <Text style={styles.resultValue}>STABLE</Text>
+              <Text style={styles.resultValue}>{bpmElevated ? 'STRESS DETECTED' : 'STABLE'}</Text>
             </View>
-            <Text style={styles.statusText}>ALL BIOMETRIC MARKERS WITHIN ACCEPTABLE PARAMETERS.</Text>
+            <Text style={[styles.statusText, bpmElevated ? styles.flagged : styles.authorized]}>
+              {bpmElevated ? 'ELEVATED HEART RATE. SECONDARY REVIEW RECOMMENDED.' : 'ALL BIOMETRIC MARKERS WITHIN ACCEPTABLE PARAMETERS.'}
+            </Text>
           </ResultContainer>
         );
       default:
         return (
           <View style={styles.buttonGrid}>
-            <TouchableOpacity style={styles.verifyButton} onPress={() => setActiveCheck('SECTOR')}>
-              <Text style={styles.buttonText}>[ SECTOR AUTH ]</Text>
+            <TouchableOpacity 
+              style={[styles.verifyButton, !isUnlocked('SECTOR') && styles.lockedButton]} 
+              onPress={() => isUnlocked('SECTOR') && setActiveCheck('SECTOR')}
+              disabled={!isUnlocked('SECTOR')}
+            >
+              <Text style={[styles.buttonText, !isUnlocked('SECTOR') && styles.lockedText]}>
+                {isUnlocked('SECTOR') ? '[ SECTOR AUTH ]' : '[ LOCKED ]'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.verifyButton} onPress={() => setActiveCheck('FUNCTION')}>
-              <Text style={styles.buttonText}>[ FUNCTION REG ]</Text>
+            <TouchableOpacity 
+              style={[styles.verifyButton, !isUnlocked('FUNCTION') && styles.lockedButton]} 
+              onPress={() => isUnlocked('FUNCTION') && setActiveCheck('FUNCTION')}
+              disabled={!isUnlocked('FUNCTION')}
+            >
+              <Text style={[styles.buttonText, !isUnlocked('FUNCTION') && styles.lockedText]}>
+                {isUnlocked('FUNCTION') ? '[ FUNCTION REG ]' : '[ LOCKED ]'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.verifyButton} onPress={() => setActiveCheck('WARRANT')}>
-              <Text style={styles.buttonText}>[ WARRANT CHECK ]</Text>
+            <TouchableOpacity 
+              style={[styles.verifyButton, !isUnlocked('WARRANT') && styles.lockedButton]} 
+              onPress={() => isUnlocked('WARRANT') && setActiveCheck('WARRANT')}
+              disabled={!isUnlocked('WARRANT')}
+            >
+              <Text style={[styles.buttonText, !isUnlocked('WARRANT') && styles.lockedText]}>
+                {isUnlocked('WARRANT') ? '[ WARRANT CHECK ]' : '[ LOCKED ]'}
+              </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.verifyButton} onPress={() => setActiveCheck('MEDICAL')}>
-              <Text style={styles.buttonText}>[ BIOMETRIC SCAN ]</Text>
+            <TouchableOpacity 
+              style={[styles.verifyButton, !isUnlocked('MEDICAL') && styles.lockedButton]} 
+              onPress={() => isUnlocked('MEDICAL') && setActiveCheck('MEDICAL')}
+              disabled={!isUnlocked('MEDICAL')}
+            >
+              <Text style={[styles.buttonText, !isUnlocked('MEDICAL') && styles.lockedText]}>
+                {isUnlocked('MEDICAL') ? '[ BIOMETRIC SCAN ]' : '[ LOCKED ]'}
+              </Text>
             </TouchableOpacity>
           </View>
         );

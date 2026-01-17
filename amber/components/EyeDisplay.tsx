@@ -1,9 +1,46 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Animated, StyleSheet, Easing } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Image } from 'expo-image';
 import { styles } from '../styles/EyeDisplay.styles';
-import { Blinker } from './HUDBox';
+import { Blinker, HUDBox } from './HUDBox';
+import { BUILD_SEQUENCE } from '../constants/animations';
+import { Theme } from '../constants/theme';
+
+const CircularBorder = ({ active, delay = 0 }: { active: boolean, delay?: number }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (active) {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 1500,
+        delay,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      anim.setValue(0);
+    }
+  }, [active]);
+
+  return (
+    <View style={styles.circularContainer}>
+      <Animated.View 
+        style={[
+          styles.circularBorder, 
+          { 
+            transform: [
+              { scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1] }) },
+              { rotate: anim.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '0deg'] }) }
+            ],
+            opacity: anim 
+          }
+        ]} 
+      />
+    </View>
+  );
+};
 
 export const EyeDisplay = ({ isScanning, scanProgress, videoSource, hudStage }: { 
   isScanning: boolean, 
@@ -15,16 +52,16 @@ export const EyeDisplay = ({ isScanning, scanProgress, videoSource, hudStage }: 
   const changeChannel = require('../assets/videos/change-channel.gif');
   const contentFade = useRef(new Animated.Value(0)).current;
   const staticFade = useRef(new Animated.Value(1)).current;
+  const [isLive, setIsLive] = useState(false);
   
   const player = useVideoPlayer(videoSource, (player) => {
-    player.loop = false; // Disable native loop to control it manually
+    player.loop = false;
     player.playbackRate = 0.25;
-    player.timeUpdateEventInterval = 0.05; // High frequency for better loop accuracy
+    player.timeUpdateEventInterval = 0.05;
     player.play();
   });
 
   useEffect(() => {
-    // Initial seek to the start of the loop
     if (player.status === 'readyToPlay') {
       player.currentTime = 4;
     }
@@ -55,44 +92,49 @@ export const EyeDisplay = ({ isScanning, scanProgress, videoSource, hudStage }: 
   }, [player]);
 
   useEffect(() => {
-    if (hudStage === 'full') {
-      Animated.parallel([
-        Animated.timing(contentFade, {
-          toValue: 1,
-          duration: 1500,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(staticFade, {
-          toValue: 0,
-          duration: 1500,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        })
-      ]).start();
+    if (hudStage === 'full' || hudStage === 'outline') {
+      Animated.sequence([
+        Animated.delay(BUILD_SEQUENCE.retinalImage),
+        Animated.parallel([
+          Animated.timing(contentFade, {
+            toValue: 1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(staticFade, {
+            toValue: 0.1,
+            duration: 1000,
+            easing: Easing.inOut(Easing.quad),
+            useNativeDriver: true,
+          })
+        ])
+      ]).start(() => setIsLive(true));
     } else {
       contentFade.setValue(0);
       staticFade.setValue(1);
+      setIsLive(false);
     }
   }, [hudStage]);
 
   if (hudStage === 'none') return <View style={styles.container} />;
 
   return (
-    <View style={styles.container}>
+    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.retinalBorder}>
       <View style={styles.videoWrapper}>
-        {/* Startup Static Overlay - Fades Out */}
+        <CircularBorder active={true} delay={BUILD_SEQUENCE.retinalBorder} />
+        
+        {/* Startup Static Overlay */}
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: staticFade, zIndex: 10 }]}>
           <Image 
             source={changeChannel}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
           />
-          <View style={styles.gridOverlay} />
-          {hudStage !== 'full' && <Blinker />}
+          <View style={[styles.gridOverlay, { backgroundColor: 'rgba(0,0,0,0.3)' }]} />
         </Animated.View>
 
-        {/* Main Eye UI - Fades In */}
+        {/* Main Eye UI */}
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: contentFade, zIndex: 5 }]}>
           <Animated.View style={[styles.zoomContainer, { transform: [{ scale: 2.2 }] }]}>
             <VideoView
@@ -134,20 +176,17 @@ export const EyeDisplay = ({ isScanning, scanProgress, videoSource, hudStage }: 
               <View key={`h-${i}`} style={[styles.gridLine, styles.horizontalLine, { top: `${(i + 1) * 12.5}%` }]} />
             ))}
             
-            <View style={styles.reticle}>
-              <View style={[styles.reticleCorner, styles.topLeft]} />
-              <View style={[styles.reticleCorner, styles.topRight]} />
-              <View style={[styles.reticleCorner, styles.bottomLeft]} />
-              <View style={[styles.reticleCorner, styles.bottomRight]} />
-            </View>
-          </View>
-
-          <View style={styles.labelContainer}>
-            <View style={styles.labelBackground} />
-            <View style={styles.labelText} />
+            {isLive && (
+              <View style={styles.reticle}>
+                <View style={[styles.reticleCorner, styles.topLeft]} />
+                <View style={[styles.reticleCorner, styles.topRight]} />
+                <View style={[styles.reticleCorner, styles.bottomLeft]} />
+                <View style={[styles.reticleCorner, styles.bottomRight]} />
+              </View>
+            )}
           </View>
         </Animated.View>
       </View>
-    </View>
+    </HUDBox>
   );
 };

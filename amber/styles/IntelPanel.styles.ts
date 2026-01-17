@@ -65,6 +65,7 @@ export const styles = StyleSheet.create({
   },
   verifyRevealButton: {
     width: 110,
+    height: 80,
     borderWidth: 1,
     borderColor: Theme.colors.accentWarn,
     justifyContent: 'center',

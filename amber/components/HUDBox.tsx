@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, Easing } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Animated, StyleSheet, Easing, LayoutChangeEvent } from 'react-native';
 import { Theme } from '../constants/theme';
 
 export const Blinker = () => {
@@ -20,33 +20,51 @@ export const Blinker = () => {
   );
 };
 
-export const HUDBox = ({ children, hudStage, style }: { children: React.ReactNode, hudStage: 'none' | 'wireframe' | 'outline' | 'full', style?: any }) => {
-  const scaleX = useRef(new Animated.Value(hudStage === 'full' ? 1 : 0)).current;
-  const scaleY = useRef(new Animated.Value(hudStage === 'full' ? 1 : 0.01)).current;
+export const DrawingBorder = ({ active, duration = 1000, delay = 0, color }: { active: boolean, duration?: number, delay?: number, color?: string }) => {
+  const topWidth = useRef(new Animated.Value(0)).current;
+  const rightHeight = useRef(new Animated.Value(0)).current;
+  const bottomWidth = useRef(new Animated.Value(0)).current;
+  const leftHeight = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (active) {
+      const segmentDuration = duration / 4;
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(topWidth, { toValue: 1, duration: segmentDuration, easing: Easing.linear, useNativeDriver: false }),
+        Animated.timing(rightHeight, { toValue: 1, duration: segmentDuration, easing: Easing.linear, useNativeDriver: false }),
+        Animated.timing(bottomWidth, { toValue: 1, duration: segmentDuration, easing: Easing.linear, useNativeDriver: false }),
+        Animated.timing(leftHeight, { toValue: 1, duration: segmentDuration, easing: Easing.linear, useNativeDriver: false }),
+      ]).start();
+    } else {
+      topWidth.setValue(0);
+      rightHeight.setValue(0);
+      bottomWidth.setValue(0);
+      leftHeight.setValue(0);
+    }
+  }, [active]);
+
+  const borderColor = color || Theme.colors.border;
+
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <Animated.View style={[styles.borderSegment, { top: 0, left: 0, height: 1, backgroundColor: borderColor, width: topWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
+      <Animated.View style={[styles.borderSegment, { top: 0, right: 0, width: 1, backgroundColor: borderColor, height: rightHeight.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
+      <Animated.View style={[styles.borderSegment, { bottom: 0, right: 0, height: 1, backgroundColor: borderColor, width: bottomWidth.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
+      <Animated.View style={[styles.borderSegment, { bottom: 0, left: 0, width: 1, backgroundColor: borderColor, height: leftHeight.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]} />
+    </View>
+  );
+};
+
+export const HUDBox = ({ children, hudStage, style, buildDelay = 0 }: { children: React.ReactNode, hudStage: 'none' | 'wireframe' | 'outline' | 'full', style?: any, buildDelay?: number }) => {
   const contentOpacity = useRef(new Animated.Value(hudStage === 'full' ? 1 : 0)).current;
 
   useEffect(() => {
-    if (hudStage === 'wireframe') {
-      Animated.timing(scaleX, {
-        toValue: 1,
-        duration: 400,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-    } else if (hudStage === 'outline') {
-      scaleX.setValue(1);
-      Animated.timing(scaleY, {
-        toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }).start();
-    } else if (hudStage === 'full') {
-      scaleX.setValue(1);
-      scaleY.setValue(1);
+    if (hudStage === 'full') {
       Animated.timing(contentOpacity, {
         toValue: 1,
-        duration: 1500,
+        duration: 1000,
+        delay: buildDelay,
         easing: Easing.inOut(Easing.quad),
         useNativeDriver: true,
       }).start();
@@ -57,7 +75,6 @@ export const HUDBox = ({ children, hudStage, style }: { children: React.ReactNod
 
   const flatStyle = StyleSheet.flatten(style) || {};
   
-  // Extract layout props to apply to the inner Animated.View
   const {
     flex,
     flexDirection,
@@ -75,15 +92,16 @@ export const HUDBox = ({ children, hudStage, style }: { children: React.ReactNod
   } = flatStyle;
 
   return (
-    <Animated.View style={[
+    <View style={[
       containerStyle,
-      flex ? { flex } : {}, // Pass flex to outer container
-      { transform: [{ scaleX }, { scaleY }] },
-      hudStage !== 'full' && { borderColor: 'rgba(26, 42, 58, 0.5)', backgroundColor: 'transparent' }
+      flex ? { flex } : {},
+      { backgroundColor: 'transparent' }
     ]}>
+      <DrawingBorder active={hudStage !== 'none'} delay={buildDelay} />
+      
       <Animated.View style={[
         { opacity: contentOpacity },
-        flex ? { flex: 1 } : {}, // Only flex: 1 if the parent has flex
+        flex ? { flex: 1 } : {},
         {
           flexDirection,
           justifyContent,
@@ -101,7 +119,7 @@ export const HUDBox = ({ children, hudStage, style }: { children: React.ReactNod
         {children}
       </Animated.View>
       {hudStage !== 'full' && <Blinker />}
-    </Animated.View>
+    </View>
   );
 };
 
@@ -113,5 +131,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 4,
     right: 4,
+  },
+  borderSegment: {
+    position: 'absolute',
   },
 });

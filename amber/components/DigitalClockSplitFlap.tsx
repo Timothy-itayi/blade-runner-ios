@@ -1,23 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Theme } from '../constants/theme';
 
-export const DigitalClockSplitFlap = () => {
+export const DigitalClockSplitFlap = ({ hudStage }: { hudStage: 'none' | 'wireframe' | 'outline' | 'full' }) => {
   const [time, setTime] = useState(new Date());
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncValues, setSyncValues] = useState(['0', '0', '0', '0', '0', '0']);
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+    if (hudStage === 'outline') {
+      setIsSyncing(true);
+      let iterations = 0;
+      const syncInterval = setInterval(() => {
+        setSyncValues(prev => prev.map(() => Math.floor(Math.random() * 10).toString()));
+        iterations++;
+        if (iterations > 40) {
+          clearInterval(syncInterval);
+          setIsSyncing(false);
+        }
+      }, 50);
+      return () => clearInterval(syncInterval);
+    } else if (hudStage === 'full') {
+      setIsSyncing(false);
+      const timer = setInterval(() => setTime(new Date()), 1000);
+      return () => clearInterval(timer);
+    }
+  }, [hudStage]);
 
   const formatTime = (date: Date) => {
     const hours = date.getHours().toString().padStart(2, '0');
     const minutes = date.getMinutes().toString().padStart(2, '0');
     const seconds = date.getSeconds().toString().padStart(2, '0');
-    return { hours, minutes, seconds };
+    return [hours[0], hours[1], minutes[0], minutes[1], seconds[0], seconds[1]];
   };
 
-  const { hours, minutes, seconds } = formatTime(time);
+  const displayValues = isSyncing ? syncValues : formatTime(time);
 
   const Flap = ({ value }: { value: string }) => (
     <View style={styles.flap}>
@@ -30,14 +47,14 @@ export const DigitalClockSplitFlap = () => {
     <View style={styles.container}>
       <Text style={styles.prefix}>CLOCK</Text>
       <View style={styles.clockRow}>
-        <Flap value={hours[0]} />
-        <Flap value={hours[1]} />
+        <Flap value={displayValues[0]} />
+        <Flap value={displayValues[1]} />
         <Text style={styles.separator}>:</Text>
-        <Flap value={minutes[0]} />
-        <Flap value={minutes[1]} />
+        <Flap value={displayValues[2]} />
+        <Flap value={displayValues[3]} />
         <Text style={styles.separator}>:</Text>
-        <Flap value={seconds[0]} />
-        <Flap value={seconds[1]} />
+        <Flap value={displayValues[4]} />
+        <Flap value={displayValues[5]} />
       </View>
     </View>
   );

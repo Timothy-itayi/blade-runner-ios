@@ -23,6 +23,18 @@ export const styles = StyleSheet.create({
     marginBottom: 20,
     letterSpacing: 1,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backButtonText: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    fontWeight: '700',
+  },
   buttonGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -50,7 +62,7 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(10, 12, 15, 0.5)',
   },
   resultTitle: {
-    color: Theme.colors.textSecondary,
+    color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
     fontSize: 12,
     marginBottom: 12,
@@ -61,7 +73,7 @@ export const styles = StyleSheet.create({
     marginBottom: 6,
   },
   resultLabel: {
-    color: Theme.colors.textDim,
+    color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
     fontSize: 11,
     width: 100,
@@ -74,6 +86,7 @@ export const styles = StyleSheet.create({
   statusText: {
     marginTop: 16,
     fontFamily: Theme.fonts.mono,
+    color: Theme.colors.textPrimary,
     fontSize: 12,
     fontWeight: '700',
   },
@@ -86,7 +99,7 @@ export const styles = StyleSheet.create({
     padding: 10,
   },
   closeText: {
-    color: Theme.colors.textDim,
+    color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
     fontSize: 12,
   },

@@ -1,11 +1,101 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Animated, Image, Easing, StyleSheet } from 'react-native';
 import { styles } from '../styles/ScanPanel.styles';
-import { HUDBox } from './HUDBox';
+import { HUDBox, DrawingBorder } from './HUDBox';
 import { SubjectData } from '../data/subjects';
 import { Theme } from '../constants/theme';
+import { BUILD_SEQUENCE } from '../constants/animations';
 
 const FINGERPRINT_IMG = require('../assets/finger-print.png');
+
+const FingerprintSlot = ({ active, flipped = false, delay = 0, statusText }: { active: boolean, flipped?: boolean, delay?: number, statusText: string }) => {
+  const contentFade = useRef(new Animated.Value(0)).current;
+  const gridFade = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (active) {
+      Animated.sequence([
+        Animated.delay(delay + 400),
+        Animated.timing(gridFade, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(contentFade, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ]).start();
+    } else {
+      contentFade.setValue(0);
+      gridFade.setValue(0);
+    }
+  }, [active]);
+
+  return (
+    <View style={styles.fingerprintContainer}>
+      <DrawingBorder active={active} delay={delay} color="rgba(74, 138, 90, 0.4)" />
+      
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: gridFade }]}>
+        <View style={styles.fingerprintGrid} />
+      </Animated.View>
+
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: contentFade }]}>
+        <Image 
+          source={FINGERPRINT_IMG} 
+          style={[styles.fingerprintImage, flipped && styles.flippedFingerprint, { transform: [{ scale: 1.4 }, flipped ? { scaleX: -1 } : { scaleX: 1 }] }]} 
+          resizeMode="cover" 
+        />
+        <MinutiaeMarkers active={statusText === 'PROCESSING' || statusText === 'COMPLETE'} flipped={flipped} />
+        <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+          <VerificationCircles active={statusText === 'COMPLETE'} />
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
+
+const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim }: { active: boolean, delay?: number, bpm: string | number, pulseAnim: Animated.Value }) => {
+  const [flicker, setFlicker] = useState(false);
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (active) {
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+
+      const flickerInterval = setInterval(() => {
+        setFlicker(prev => !prev);
+      }, 50);
+      
+      setTimeout(() => {
+        clearInterval(flickerInterval);
+        setFlicker(false);
+      }, 1000);
+
+      return () => clearInterval(flickerInterval);
+    } else {
+      opacity.setValue(0);
+    }
+  }, [active]);
+
+  const isLive = active && !flicker;
+
+  return (
+    <Animated.View style={[styles.bpmColumn, { opacity }]}>
+      <Text style={styles.label}>BIOMETRICS</Text>
+      <View style={styles.bpmRow}>
+        <Animated.View 
+          style={[
+            styles.pulseDot, 
+            { 
+              backgroundColor: isLive ? Theme.colors.accentDeny : Theme.colors.textDim,
+              transform: [{ scale: isLive ? pulseAnim : 1 }] 
+            }
+          ]} 
+        />
+        <Text style={[styles.bpmText, !isLive && { color: Theme.colors.textDim }]}>
+          {isLive ? `${bpm} BPM` : '-- BPM'}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+};
 
 const BlinkingBars = () => {
   return (
@@ -189,8 +279,36 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
   const [statusText, setStatusText] = useState('READY');
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const [bpm, setBpm] = useState<string | number>(78);
+  
+  // Layer animations
+  const fingerprintOpacity = useRef(new Animated.Value(0)).current;
+  const matchSectionOpacity = useRef(new Animated.Value(0)).current;
+  const monitorsOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (hudStage === 'outline') {
+      Animated.sequence([
+        Animated.timing(fingerprintOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(matchSectionOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(monitorsOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ]).start();
+    } else if (hudStage === 'full') {
+      fingerprintOpacity.setValue(1);
+      matchSectionOpacity.setValue(1);
+      monitorsOpacity.setValue(1);
+    } else {
+      fingerprintOpacity.setValue(0);
+      matchSectionOpacity.setValue(0);
+      monitorsOpacity.setValue(0);
+    }
+  }, [hudStage]);
+
+  useEffect(() => {
+    if (hudStage !== 'full') {
+      setStatusText('INITIALIZING...');
+      return;
+    }
+
     if (!isScanning) {
       setBpm(subject.bpm || 78);
       setStatusText('READY');
@@ -222,7 +340,7 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
     });
 
     return () => scanProgress.removeListener(listener);
-  }, [isScanning, scanProgress, subject]);
+  }, [isScanning, scanProgress, subject, hudStage]);
 
   useEffect(() => {
     Animated.loop(
@@ -242,34 +360,20 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
   }, []);
 
   return (
-    <HUDBox hudStage={hudStage} style={styles.container}>
+    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.scanPanelBorder}>
       <View style={styles.fingerprintSection}>
         <View style={styles.fingerprintSlots}>
-          <View style={styles.fingerprintContainer}>
-            <Image 
-              source={FINGERPRINT_IMG} 
-              style={[styles.fingerprintImage, { transform: [{ scale: 1.4 }] }]} 
-              resizeMode="cover" 
-            />
-            <MinutiaeMarkers active={statusText === 'PROCESSING' || statusText === 'COMPLETE'} />
-            <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
-              <VerificationCircles active={statusText === 'COMPLETE'} />
-            </View>
-          </View>
-          <View style={styles.fingerprintContainer}>
-            <Image 
-              source={FINGERPRINT_IMG} 
-              style={[styles.fingerprintImage, styles.flippedFingerprint, { transform: [{ scale: 1.4 }, { scaleX: -1 }] }]} 
-              resizeMode="cover" 
-            />
-            <MinutiaeMarkers 
-              active={statusText === 'PROCESSING' || statusText === 'COMPLETE'} 
-              flipped={true} 
-            />
-            <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
-              <VerificationCircles active={statusText === 'COMPLETE'} />
-            </View>
-          </View>
+          <FingerprintSlot 
+            active={true} 
+            delay={BUILD_SEQUENCE.fingerprintLeft} 
+            statusText={statusText} 
+          />
+          <FingerprintSlot 
+            active={true} 
+            flipped={true} 
+            delay={BUILD_SEQUENCE.fingerprintRight} 
+            statusText={statusText} 
+          />
         </View>
         <View style={styles.fingerprintHeader}>
           <Text style={styles.headerText}>L</Text>
@@ -278,7 +382,7 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
       </View>
 
       <View style={styles.matchSection}>
-        <View style={styles.sexColumn}>
+        <Animated.View style={[styles.sexColumn, { opacity: matchSectionOpacity }]}>
           <Text style={styles.label}>SEX</Text>
           <View style={styles.matchIndicators}>
             <View style={[styles.indicator, subject.sex === 'F' && styles.activeIndicator]}>
@@ -288,23 +392,21 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
               <Text style={[styles.indicatorText, subject.sex === 'M' && styles.activeIndicatorText]}>M</Text>
             </View>
           </View>
-        </View>
+        </Animated.View>
 
-        <View style={styles.bpmColumn}>
-          <Text style={styles.label}>BIOMETRICS</Text>
-          <View style={styles.bpmRow}>
-            <Animated.View style={[styles.pulseDot, { transform: [{ scale: pulseAnim }] }]} />
-            <Text style={styles.bpmText}>{bpm} BPM</Text>
-          </View>
-        </View>
+        <BPMMonitor 
+          active={true} 
+          delay={BUILD_SEQUENCE.bpmMonitor} 
+          bpm={bpm} 
+          pulseAnim={pulseAnim} 
+        />
       </View>
 
-      <View style={styles.monitorSection}>
+      <Animated.View style={[styles.monitorSection, { opacity: monitorsOpacity }]}>
         <View style={styles.monitorGroup}>
-     
           <BlinkingBars />
         </View>
-      </View>
+      </Animated.View>
 
       <View style={styles.visualizer}>
         <Text style={styles.visualizerText}>░░▪▪░ {statusText}</Text>

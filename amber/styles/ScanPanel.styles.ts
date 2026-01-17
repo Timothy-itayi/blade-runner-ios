@@ -32,12 +32,19 @@ export const styles = StyleSheet.create({
   fingerprintContainer: {
     width: 60,
     height: 80,
-    borderWidth: 1,
-    borderColor: 'rgba(74, 138, 90, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(10, 12, 15, 0.8)',
     borderRadius: 2,
+    overflow: 'hidden',
+  },
+  fingerprintGrid: {
+    ...StyleSheet.absoluteFillObject,
+    borderWidth: 0.5,
+    borderColor: 'rgba(74, 138, 90, 0.2)',
+    backgroundColor: 'transparent',
+    // Using opacity for a subtle grid look
+    opacity: 0.3,
   },
   fingerprintImage: {
     width: '100%',

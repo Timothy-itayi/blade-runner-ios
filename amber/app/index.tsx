@@ -12,7 +12,7 @@ import { VerificationDrawer } from '../components/VerificationDrawer';
 import { styles } from '../styles/MainScreen.styles';
 import { SUBJECTS, Outcome } from '../data/subjects';
 
-const DEV_MODE = true; // Set to true to bypass onboarding and boot
+const DEV_MODE = false; // Set to true to bypass onboarding and boot
 
 export default function MainScreen() {
   const [showOnboarding, setShowOnboarding] = useState(!DEV_MODE);
@@ -73,24 +73,29 @@ export default function MainScreen() {
     setIsBooting(false);
     setGameActive(true);
     
-    // Initial flicker
+    // Start initial build sequence
     Animated.sequence([
-      Animated.timing(gameOpacity, { toValue: 0.2, duration: 100, useNativeDriver: true }),
-      Animated.timing(gameOpacity, { toValue: 0, duration: 50, useNativeDriver: true }),
-      Animated.timing(gameOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(gameOpacity, { toValue: 0.4, duration: 150, useNativeDriver: true }),
+      Animated.timing(gameOpacity, { toValue: 0, duration: 100, useNativeDriver: true }),
+      Animated.timing(gameOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
     ]).start(() => {
-      // Sequential "Growth" Sequence
+      // The hudStage now acts as a global "System Power Up" signal.
+      // Individual components will handle their own internal construction 
+      // based on the BUILD_SEQUENCE constants.
       setHudStage('wireframe');
       
+      // Snappier transitions to match the "quick refresh" feel Jarvis likes.
+      // The components now handle their own build staggers via BUILD_SEQUENCE.
       setTimeout(() => {
         setHudStage('outline');
-      }, 2000); // Increased stay in wireframe/static
+      }, 400); 
 
       setTimeout(() => {
         setHudStage('full');
-        // triggerScan will now happen after the slow fade finishes
-        setTimeout(triggerScan, 2000); 
-      }, 6000); // Much longer wait for full reveal
+        // Trigger scan immediately when HUD goes full to ensure 
+        // data scrambling starts as the UI elements build in.
+        triggerScan();
+      }, 1200); 
     });
   };
 

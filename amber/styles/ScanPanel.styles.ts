@@ -26,13 +26,68 @@ export const styles = StyleSheet.create({
   fingerprintSlots: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
   },
-  asciiFingerprint: {
-    color: Theme.colors.textDim,
+  fingerprintContainer: {
+    width: 48,
+    height: 64,
+    borderWidth: 1,
+    borderColor: 'rgba(74, 138, 90, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(10, 12, 15, 0.6)',
+    borderRadius: 2,
+  },
+  fingerprintImage: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.7,
+    tintColor: '#4a8a5a',
+  },
+  flippedFingerprint: {
+    transform: [{ scaleX: -1 }],
+  },
+  scanningCircle: {
+    position: 'absolute',
+    borderWidth: 1,
+    borderColor: 'rgba(74, 138, 90, 0.8)',
+    borderRadius: 100,
+  },
+  minutiaeContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  minutiaeDot: {
+    position: 'absolute',
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#d4534a', // accentDeny
+    zIndex: 10,
+  },
+  minutiaeCircle: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 0.5,
+    borderColor: '#d4534a',
+    backgroundColor: 'rgba(212, 83, 74, 0.1)',
+  },
+  minutiaeLine: {
+    position: 'absolute',
+    height: 0.5,
+    backgroundColor: '#d4534a',
+    opacity: 0.6,
+  },
+  minutiaeText: {
+    position: 'absolute',
+    color: '#d4534a',
     fontFamily: Theme.fonts.mono,
-    fontSize: 6,
-    lineHeight: 7,
+    fontSize: 5,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   matchSection: {
     marginBottom: 12,
@@ -62,6 +117,10 @@ export const styles = StyleSheet.create({
     color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
     fontSize: 9,
+  },
+  activeIndicatorText: {
+    color: Theme.colors.textPrimary,
+    fontWeight: '700',
   },
   locationGrid: {
     marginBottom: 8,

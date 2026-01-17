@@ -13,6 +13,7 @@ export interface SubjectData {
   // Core Identity
   name: string;
   id: string;                   // Subject ID Code e.g. "N8-FBA71527"
+  sex: 'M' | 'F';
   
   // Assignment
   sector: string;               // Assigned/Living Sector
@@ -38,8 +39,8 @@ export interface SubjectData {
   locRecord: {
     addr: string;
     time: string;
-    lat: string;
-    lng: string;
+    pl: string;     // Previous Location
+    dob: string;    // Date of Birth
   };
   
   // Truth for Verification Drawer
@@ -63,6 +64,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'ELARA VANCE',
     id: 'V1-EV001',
+    sex: 'F',
     sector: 'SECTOR 7',
     function: 'ENGINEERING',
     compliance: 'B',
@@ -73,7 +75,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 4',
     videoSource: require('../assets/videos/eye00.mp4'),
     phase: 1,
-    locRecord: { addr: 'SECTOR 7', time: '14:22:11', lat: '34.0522', lng: '-118.243' },
+    locRecord: { addr: 'SECTOR 7', time: '14:22:11', pl: 'SECTOR 5', dob: '12/04/92' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 authorized for engineering' },
       functionReg: { status: 'VALID', message: '✓ Credentials active' },
@@ -88,6 +90,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'KANE MORROW',
     id: 'V1-KM002',
+    sex: 'M',
     sector: 'SECTOR 3',
     function: 'LOGISTICS',
     compliance: 'C',
@@ -98,7 +101,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 6',
     videoSource: '',
     phase: 1,
-    locRecord: { addr: 'SECTOR 3', time: '09:15:44', lat: '34.0588', lng: '-118.255' },
+    locRecord: { addr: 'SECTOR 3', time: '09:15:44', pl: 'SECTOR 1', dob: '22/08/88' },
     authData: {
       sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
       functionReg: { status: 'VALID', message: '✓ Logistics permit active' },
@@ -113,6 +116,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'ELENA VOSS',
     id: 'V1-EV003',
+    sex: 'F',
     sector: 'SECTOR 7',
     function: 'ENGINEERING',
     compliance: 'A',
@@ -123,7 +127,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 4',
     videoSource: '',
     phase: 1,
-    locRecord: { addr: 'SECTOR 7', time: '03:42:11', lat: '34.0522', lng: '-118.243' },
+    locRecord: { addr: 'SECTOR 7', time: '03:42:11', pl: 'SECTOR 4', dob: '05/11/94' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
       functionReg: { status: 'VALID', message: '✓ Credentials active' },
@@ -138,6 +142,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'JAXON REED',
     id: 'V1-JR004',
+    sex: 'M',
     sector: 'SECTOR 2',
     function: 'SANITATION',
     compliance: 'A',
@@ -148,7 +153,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 2',
     videoSource: '',
     phase: 1,
-    locRecord: { addr: 'SECTOR 2', time: '03:10:15', lat: '34.0441', lng: '-118.231' },
+    locRecord: { addr: 'SECTOR 2', time: '03:10:15', pl: 'SECTOR 8', dob: '30/01/90' },
     authData: {
       sectorAuth: { requested: 'SECTOR 2', status: 'AUTHORIZED', message: '✓ Internal sector access' },
       functionReg: { status: 'VALID', message: '✓ Sanitation permit active' },
@@ -163,6 +168,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'KARL BRANDT',
     id: 'V1-KB005',
+    sex: 'M',
     sector: 'SECTOR 8',
     function: 'LOGISTICS',
     compliance: 'B',
@@ -173,7 +179,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 6',
     videoSource: '',
     phase: 1,
-    locRecord: { addr: 'SECTOR 8', time: '12:12:12', lat: '34.0811', lng: '-118.299' },
+    locRecord: { addr: 'SECTOR 8', time: '12:12:12', pl: 'SECTOR 3', dob: '14/07/85' },
     authData: {
       sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Delivery route authorized' },
       functionReg: { status: 'VALID', message: '✓ Transport license active' },
@@ -188,6 +194,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'MIRA FINN',
     id: 'V1-MF006',
+    sex: 'F',
     sector: 'SECTOR 8',
     function: 'TRANSPORT',
     compliance: 'B',
@@ -198,7 +205,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 4',
     videoSource: '',
     phase: 1,
-    locRecord: { addr: 'SECTOR 8', time: '10:05:00', lat: '34.0811', lng: '-118.299' },
+    locRecord: { addr: 'SECTOR 8', time: '10:05:00', pl: 'SECTOR 8', dob: '19/02/93' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 access open' },
       functionReg: { status: 'VALID', message: '✓ Transport license active' },
@@ -213,6 +220,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'DMITRI VOLKOV',
     id: 'V1-DV007',
+    sex: 'M',
     sector: 'SECTOR 9 [REVOKED]',
     function: 'UNASSIGNED',
     compliance: 'C',
@@ -223,7 +231,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 9',
     videoSource: '',
     phase: 1,
-    locRecord: { addr: 'SECTOR 4', time: '17:30:00', lat: '34.0588', lng: '-118.255' },
+    locRecord: { addr: 'SECTOR 4', time: '17:30:00', pl: 'SECTOR 9', dob: '03/03/78' },
     authData: {
       sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
       functionReg: { status: 'VALID', message: '✓ Identity verified' },
@@ -238,6 +246,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'KALEB ROSS',
     id: 'V1-KR008',
+    sex: 'M',
     sector: 'SECTOR 5',
     function: 'ARCHIVE',
     compliance: 'C',
@@ -248,7 +257,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 5',
     videoSource: '',
     phase: 1,
-    locRecord: { addr: 'SECTOR 5', time: '10:00:00', lat: '34.0911', lng: '-118.311' },
+    locRecord: { addr: 'SECTOR 5', time: '10:00:00', pl: 'SECTOR 5', dob: '27/09/82' },
     authData: {
       sectorAuth: { requested: 'SECTOR 5', status: 'RESTRICTED', message: '✗ ARCHIVE SECTOR RESTRICTED DURING AUDIT' },
       functionReg: { status: 'VALID', message: '✓ Archivist credentials verified' },
@@ -263,6 +272,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'ELIAS VOSS',
     id: 'V1-EV009',
+    sex: 'M',
     sector: 'SECTOR 7',
     function: 'LOGISTICS',
     compliance: 'B',
@@ -273,7 +283,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 4',
     videoSource: '',
     phase: 1,
-    locRecord: { addr: 'SECTOR 7', time: '15:10:00', lat: '34.0522', lng: '-118.243' },
+    locRecord: { addr: 'SECTOR 7', time: '15:10:00', pl: 'SECTOR 7', dob: '11/12/89' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
       functionReg: { status: 'VALID', message: '✓ Logistics credentials verified' },
@@ -288,6 +298,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'JAMES CHEN',
     id: 'V1-JC010',
+    sex: 'M',
     sector: 'SECTOR 4',
     function: 'MAINTENANCE',
     compliance: 'D',
@@ -298,7 +309,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 4',
     videoSource: '',
     phase: 1,
-    locRecord: { addr: 'SECTOR 4', time: '09:00:00', lat: '34.0722', lng: '-118.281' },
+    locRecord: { addr: 'SECTOR 4', time: '09:00:00', pl: 'SECTOR 4', dob: '08/06/87' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
       functionReg: { status: 'VALID', message: '✓ Credentials active' },
@@ -315,6 +326,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'LYRA BELLE',
     id: 'V2-LB011',
+    sex: 'F',
     sector: 'SECTOR 2',
     function: 'MAINTENANCE',
     compliance: 'B',
@@ -325,7 +337,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 3',
     videoSource: '',
     phase: 2,
-    locRecord: { addr: 'SECTOR 2', time: '08:45:00', lat: '34.0441', lng: '-118.231' },
+    locRecord: { addr: 'SECTOR 2', time: '08:45:00', pl: 'SECTOR 2', dob: '15/05/91' },
     authData: {
       sectorAuth: { requested: 'SECTOR 3', status: 'AUTHORIZED', message: '✓ Sector 3 authorized' },
       functionReg: { status: 'VALID', message: '✓ Credentials active' },
@@ -340,6 +352,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'SILAS QUINN',
     id: 'V2-SQ012',
+    sex: 'M',
     sector: 'SECTOR 5',
     function: 'ENGINEERING',
     compliance: 'D',
@@ -350,7 +363,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 4',
     videoSource: '',
     phase: 2,
-    locRecord: { addr: 'SECTOR 5', time: '11:20:00', lat: '34.0911', lng: '-118.311' },
+    locRecord: { addr: 'SECTOR 5', time: '11:20:00', pl: 'SECTOR 5', dob: '29/10/83' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
       functionReg: { status: 'VALID', message: '✓ Credentials verified' },
@@ -365,6 +378,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'NINA ROX',
     id: 'V2-NR013',
+    sex: 'F',
     sector: 'SECTOR 1',
     function: 'DATA ANALYSIS',
     compliance: 'A',
@@ -375,7 +389,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 1',
     videoSource: '',
     phase: 2,
-    locRecord: { addr: 'SECTOR 8', time: '07:15:00', lat: '34.0811', lng: '-118.299' },
+    locRecord: { addr: 'SECTOR 8', time: '07:15:00', pl: 'SECTOR 8', dob: '02/12/95' },
     authData: {
       sectorAuth: { requested: 'SECTOR 1', status: 'RESTRICTED', message: '✗ SUBJECT RESTRICTED' },
       functionReg: { status: 'VALID', message: '✓ Credentials verified' },
@@ -390,6 +404,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'MIRA VOSS',
     id: 'V2-MV014',
+    sex: 'F',
     sector: 'SECTOR 7',
     function: 'RESEARCH',
     compliance: 'B',
@@ -401,7 +416,7 @@ export const SUBJECTS: SubjectData[] = [
     videoSource: '',
     bpm: '104 ELEVATED',
     phase: 2,
-    locRecord: { addr: 'SECTOR 7', time: '09:30:00', lat: '34.0522', lng: '-118.243' },
+    locRecord: { addr: 'SECTOR 7', time: '09:30:00', pl: 'SECTOR 7', dob: '19/02/93' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 access open' },
       functionReg: { status: 'VALID', message: '✓ Research credentials verified' },
@@ -424,6 +439,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'SARAH CONNOR',
     id: 'V2-SC015',
+    sex: 'F',
     sector: 'SECTOR 3',
     function: 'LOGISTICS',
     compliance: 'A',
@@ -434,7 +450,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 6',
     videoSource: '',
     phase: 2,
-    locRecord: { addr: 'SECTOR 3', time: '11:00:00', lat: '34.0588', lng: '-118.255' },
+    locRecord: { addr: 'SECTOR 3', time: '11:00:00', pl: 'SECTOR 3', dob: '10/10/84' },
     authData: {
       sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
       functionReg: { status: 'VALID', message: '✓ Logistics credentials verified' },
@@ -457,6 +473,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'GAVIN STARK',
     id: 'V2-GS016',
+    sex: 'M',
     sector: 'SECTOR 4',
     function: 'MAINTENANCE',
     compliance: 'A',
@@ -468,7 +485,7 @@ export const SUBJECTS: SubjectData[] = [
     videoSource: '',
     bpm: '82 BPM',
     phase: 2,
-    locRecord: { addr: 'SECTOR 4', time: '10:00:00', lat: '34.0722', lng: '-118.281' },
+    locRecord: { addr: 'SECTOR 4', time: '10:00:00', pl: 'SECTOR 4', dob: '04/04/86' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
       functionReg: { status: 'VALID', message: '✓ Credentials active' },
@@ -483,6 +500,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'HELENA TROY',
     id: 'V2-HT017',
+    sex: 'F',
     sector: 'SECTOR 4',
     function: 'DATA ANALYSIS',
     compliance: 'B',
@@ -494,7 +512,7 @@ export const SUBJECTS: SubjectData[] = [
     videoSource: '',
     bpm: '82 BPM ... 91 BPM ... 104 BPM ELEVATED',
     phase: 2,
-    locRecord: { addr: 'SECTOR 4', time: '10:15:00', lat: '34.0722', lng: '-118.281' },
+    locRecord: { addr: 'SECTOR 4', time: '10:15:00', pl: 'SECTOR 1', dob: '21/07/92' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
       functionReg: { status: 'VALID', message: '✓ Credentials active' },
@@ -509,6 +527,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'YUKI TANAKA',
     id: 'V2-YT018',
+    sex: 'F',
     sector: 'SECTOR 6',
     function: 'MEDICAL',
     compliance: 'A',
@@ -519,7 +538,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 6',
     videoSource: '',
     phase: 2,
-    locRecord: { addr: 'SECTOR 6', time: '14:00:00', lat: '34.0588', lng: '-118.255' },
+    locRecord: { addr: 'SECTOR 6', time: '14:00:00', pl: 'SECTOR 4', dob: '30/03/89' },
     authData: {
       sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
       functionReg: { status: 'VALID', message: '✓ Medical credentials verified' },
@@ -542,6 +561,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'MARCUS THREAD',
     id: 'V2-MT019',
+    sex: 'M',
     sector: 'SECTOR 6',
     function: 'LOGISTICS',
     compliance: 'B',
@@ -552,7 +572,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 5',
     videoSource: '',
     phase: 2,
-    locRecord: { addr: 'SECTOR 7', time: '13:00:00', lat: '34.0522', lng: '-118.243' },
+    locRecord: { addr: 'SECTOR 7', time: '13:00:00', pl: 'SECTOR 7', dob: '15/01/88' },
     authData: {
       sectorAuth: { requested: 'SECTOR 5', status: 'AUTHORIZED', message: '✓ Sector 5 open' },
       functionReg: { status: 'VALID', message: '✓ Credentials verified' },
@@ -575,6 +595,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'KALEB ZAN',
     id: 'V2-KZ020',
+    sex: 'M',
     sector: 'SECTOR 9 [REVOKED]',
     function: 'UNASSIGNED',
     compliance: 'C',
@@ -585,7 +606,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 9',
     videoSource: '',
     phase: 2,
-    locRecord: { addr: 'SECTOR 4', time: '17:30:00', lat: '34.0588', lng: '-118.255' },
+    locRecord: { addr: 'SECTOR 4', time: '17:30:00', pl: 'SECTOR 4', dob: '03/03/78' },
     authData: {
       sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
       functionReg: { status: 'VALID', message: '✓ Identity verified' },
@@ -602,6 +623,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'MIRA FINN',
     id: 'V1-MF006', // SAME ID AS SUBJECT 6
+    sex: 'F',
     sector: 'SECTOR 8',
     function: 'TRANSPORT',
     compliance: 'A',
@@ -612,7 +634,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 2',
     videoSource: '',
     phase: 3,
-    locRecord: { addr: 'SECTOR 8', time: '12:00:00', lat: '34.0811', lng: '-118.299' },
+    locRecord: { addr: 'SECTOR 8', time: '12:00:00', pl: 'SECTOR 8', dob: '19/02/93' },
     authData: {
       sectorAuth: { requested: 'SECTOR 2', status: 'AUTHORIZED', message: '✓ Sector 2 authorized' },
       functionReg: { status: 'VALID', message: '✓ Credentials active' },
@@ -627,6 +649,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'LENA VOLKOV',
     id: 'V3-LV022',
+    sex: 'F',
     sector: 'SECTOR 5',
     function: 'RESEARCH',
     compliance: 'A',
@@ -638,7 +661,7 @@ export const SUBJECTS: SubjectData[] = [
     videoSource: '',
     bpm: '118 ELEVATED',
     phase: 3,
-    locRecord: { addr: 'SECTOR 5', time: '09:30:00', lat: '34.0911', lng: '-118.311' },
+    locRecord: { addr: 'SECTOR 5', time: '09:30:00', pl: 'SECTOR 8', dob: '02/12/95' },
     authData: {
       sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
       functionReg: { status: 'VALID', message: '✓ Research credentials verified' },
@@ -662,6 +685,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'SARAH KORR',
     id: 'V3-SK023',
+    sex: 'F',
     sector: 'SECTOR 4',
     function: 'DATA ANALYSIS',
     compliance: 'D',
@@ -672,7 +696,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 1',
     videoSource: '',
     phase: 3,
-    locRecord: { addr: 'SECTOR 4', time: '08:05:30', lat: '34.0722', lng: '-118.281' },
+    locRecord: { addr: 'SECTOR 4', time: '08:05:30', pl: 'SECTOR 4', dob: '10/10/84' },
     authData: {
       sectorAuth: { requested: 'SECTOR 1', status: 'AUTHORIZED', message: '✓ Hub access open' },
       functionReg: { status: 'VALID', message: '✓ Analyst ID verified' },
@@ -687,6 +711,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'VICTOR REED',
     id: 'V3-VR024',
+    sex: 'M',
     sector: 'SECTOR 7',
     function: 'ENGINEERING',
     compliance: 'A',
@@ -697,7 +722,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 4',
     videoSource: '',
     phase: 3,
-    locRecord: { addr: 'SECTOR 7', time: '16:00:00', lat: '34.0522', lng: '-118.243' },
+    locRecord: { addr: 'SECTOR 7', time: '16:00:00', pl: 'SECTOR 7', dob: '11/12/89' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
       functionReg: { status: 'VALID', message: '✓ Engineering credentials verified' },
@@ -720,6 +745,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: '[REDACTED]',
     id: 'V3-RED025',
+    sex: 'M',
     sector: '[CLASSIFIED]',
     function: '[LEVEL 5]',
     compliance: '--',
@@ -731,7 +757,7 @@ export const SUBJECTS: SubjectData[] = [
     videoSource: '',
     bpm: '??? BPM',
     phase: 3,
-    locRecord: { addr: '???', time: '??:??:??', lat: '0.0000', lng: '0.0000' },
+    locRecord: { addr: '???', time: '??:??:??', pl: '???', dob: '??/??/??' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'FLAGGED', message: '! CLASSIFIED ACCESS' },
       functionReg: { status: 'VALID', message: '✓ Override credentials active' },
@@ -746,6 +772,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'REPLICANT-01',
     id: 'V3-X0-REP026',
+    sex: 'M',
     sector: 'SECTOR 0',
     function: 'SYSTEMS',
     compliance: 'A',
@@ -757,7 +784,7 @@ export const SUBJECTS: SubjectData[] = [
     videoSource: '',
     bpm: '60 BPM (fixed)',
     phase: 3,
-    locRecord: { addr: 'SECTOR 0', time: '00:00:00', lat: '0.0000', lng: '0.0000' },
+    locRecord: { addr: 'SECTOR 0', time: '00:00:00', pl: 'CORE', dob: '01/01/00' },
     authData: {
       sectorAuth: { requested: 'SECTOR 0', status: 'AUTHORIZED', message: '✓ Core access' },
       functionReg: { status: 'VALID', message: '✓ Systems ID verified' },
@@ -772,6 +799,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: '01001000 01001001',
     id: 'V3-ERR027',
+    sex: 'M',
     sector: 'ERROR',
     function: 'SYSTEMS',
     compliance: 'F',
@@ -783,7 +811,7 @@ export const SUBJECTS: SubjectData[] = [
     videoSource: '',
     bpm: '0 BPM',
     phase: 3,
-    locRecord: { addr: 'CORE', time: '00:00:00', lat: '0.0000', lng: '0.0000' },
+    locRecord: { addr: 'CORE', time: '00:00:00', pl: 'SYSTEM', dob: '00/00/00' },
     authData: {
       sectorAuth: { requested: 'NULL', status: 'FLAGGED', message: '! SECTOR NOT FOUND' },
       functionReg: { status: 'UNREGISTERED', message: '! FUNCTION NOT FOUND' },
@@ -798,6 +826,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'ADMINISTRATOR',
     id: 'V3-ADM028',
+    sex: 'M',
     sector: 'SECTOR 1',
     function: 'ADMIN',
     compliance: 'A',
@@ -809,7 +838,7 @@ export const SUBJECTS: SubjectData[] = [
     videoSource: '',
     bpm: '-- BPM',
     phase: 3,
-    locRecord: { addr: 'HUB', time: '??:??:??', lat: '0.0000', lng: '0.0000' },
+    locRecord: { addr: 'HUB', time: '??:??:??', pl: 'ALL', dob: '??/??/??' },
     authData: {
       sectorAuth: { requested: 'ALL', status: 'AUTHORIZED', message: '✓ FULL ACCESS' },
       functionReg: { status: 'VALID', message: '✓ Admin credentials verified' },
@@ -824,6 +853,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'ERROR_LOG_404',
     id: 'V3-ERR029',
+    sex: 'M',
     sector: 'ERROR',
     function: 'ERROR',
     compliance: 'E',
@@ -835,7 +865,7 @@ export const SUBJECTS: SubjectData[] = [
     videoSource: '',
     bpm: 'ERROR',
     phase: 3,
-    locRecord: { addr: 'ERROR', time: 'ERROR', lat: '0.0000', lng: '0.0000' },
+    locRecord: { addr: 'ERROR', time: 'ERROR', pl: 'ERROR', dob: 'ERROR' },
     authData: {
       sectorAuth: { requested: 'ERROR', status: 'RESTRICTED', message: '✗ ERROR' },
       functionReg: { status: 'UNREGISTERED', message: '! ERROR' },
@@ -850,6 +880,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'JAMES CHEN',
     id: 'V3-JC030',
+    sex: 'M',
     sector: 'SECTOR 4',
     function: 'MAINTENANCE',
     compliance: '--',
@@ -860,7 +891,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'N/A',
     videoSource: '',
     phase: 3,
-    locRecord: { addr: 'N/A', time: 'N/A', lat: '0.0000', lng: '0.0000' },
+    locRecord: { addr: 'N/A', time: 'N/A', pl: 'N/A', dob: 'N/A' },
     authData: {
       sectorAuth: { requested: 'N/A', status: 'RESTRICTED', message: '✗ SUBJECT TERMINATED' },
       functionReg: { status: 'UNREGISTERED', message: '! Credentials revoked' },
@@ -890,6 +921,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'MEI CHEN',
     id: 'V3-MC031',
+    sex: 'F',
     sector: 'SECTOR 4',
     function: 'UNASSIGNED',
     compliance: 'D',
@@ -900,7 +932,7 @@ export const SUBJECTS: SubjectData[] = [
     requestedSector: 'SECTOR 4',
     videoSource: '',
     phase: 3,
-    locRecord: { addr: 'SECTOR 4', time: '11:00:00', lat: '34.0722', lng: '-118.281' },
+    locRecord: { addr: 'SECTOR 4', time: '11:00:00', pl: 'SECTOR 4', dob: '08/06/87' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'RESTRICTED', message: '✗ ACCESS DENIED FOR UNASSIGNED PERSONNEL' },
       functionReg: { status: 'UNREGISTERED', message: '! No active function' },
@@ -929,6 +961,7 @@ export const SUBJECTS: SubjectData[] = [
   {
     name: 'OPERATOR',
     id: 'V3-OP032',
+    sex: 'M',
     sector: 'STATION 4',
     function: 'OPERATOR',
     compliance: 'B',
@@ -940,7 +973,7 @@ export const SUBJECTS: SubjectData[] = [
     videoSource: '',
     bpm: 'CURRENTLY RISING',
     phase: 3,
-    locRecord: { addr: 'STATION 4', time: 'END_OF_SHIFT', lat: '34.0522', lng: '-118.243' },
+    locRecord: { addr: 'STATION 4', time: 'END_OF_SHIFT', pl: 'STATION 4', dob: '15/05/91' },
     authData: {
       sectorAuth: { requested: 'HOME', status: 'AUTHORIZED', message: '✓ Shift completion verified' },
       functionReg: { status: 'VALID', message: '✓ Operator credentials verified' },

@@ -1,48 +1,140 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Animated } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Animated, Image, Easing, StyleSheet } from 'react-native';
 import { styles } from '../styles/ScanPanel.styles';
 import { HUDBox } from './HUDBox';
 import { SubjectData } from '../data/subjects';
 
-const FINGERPRINT_ASCII = `
-  .----.
- /  ..  \\
-|  |  |  |
-|  '--'  |
- \\      /
-  '----'
-`;
+const FINGERPRINT_IMG = require('../assets/finger-print.png');
 
-const ScrambleText = ({ text, active, delay = 0 }: { text: string, active: boolean, delay?: number }) => {
-  const [display, setDisplay] = useState('');
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789░▒▓█$@#%';
+const VerificationCircles = ({ active }: { active: boolean }) => {
+  const anim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (!active) {
-      setDisplay(text.split('').map(() => chars[Math.floor(Math.random() * chars.length)]).join(''));
-      return;
+    if (active) {
+      Animated.loop(
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 3000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      anim.stopAnimation();
+      anim.setValue(0);
     }
-    
-    let iterations = 0;
-    const timeout = setTimeout(() => {
-      const interval = setInterval(() => {
-        setDisplay(prev => 
-          text.split('').map((char, index) => {
-            if (index < iterations) return text[index];
-            return chars[Math.floor(Math.random() * chars.length)];
-          }).join('')
+  }, [active]);
+
+  if (!active) return null;
+
+  return (
+    <>
+      {[0, 1, 2].map((i) => {
+        return (
+          <Animated.View 
+            key={i}
+            style={[
+              styles.scanningCircle,
+              { 
+                width: 40, 
+                height: 40,
+                transform: [{ scale: anim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.5 + (i * 0.2), 2 + (i * 0.2)]
+                }) }],
+                opacity: anim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0, 0.4 - (i * 0.1), 0]
+                }),
+              }
+            ]} 
+          />
         );
+      })}
+    </>
+  );
+};
+
+const MinutiaeMarkers = ({ active, flipped = false }: { active: boolean, flipped?: boolean }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (active) {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      anim.setValue(0);
+    }
+  }, [active]);
+
+  if (!active) return null;
+
+  const points = [
+    { x: 12, y: 15, label: 'BIFUR', angle: -45 },
+    { x: 32, y: 25, label: 'CORE', angle: 45 },
+    { x: 18, y: 45, label: 'ISLAND', angle: -135 },
+    { x: 35, y: 52, label: 'DELTA', angle: 135 },
+  ];
+
+  return (
+    <View style={styles.minutiaeContainer}>
+      {points.map((p, i) => {
+        const x = flipped ? 48 - p.x : p.x;
+        const angle = flipped ? -p.angle : p.angle;
         
-        iterations += 1/4;
-        if (iterations >= text.length) clearInterval(interval);
-      }, 40);
-      return () => clearInterval(interval);
-    }, delay);
+        const opacity = anim.interpolate({
+          inputRange: [0, 0.2 + (i * 0.2), 0.4 + (i * 0.2)],
+          outputRange: [0, 0, 1],
+        });
 
-    return () => clearTimeout(timeout);
-  }, [active, text, delay]);
+        const lineLen = 12;
+        const rad = (angle * Math.PI) / 180;
+        const lx = Math.cos(rad) * lineLen;
+        const ly = Math.sin(rad) * lineLen;
 
-  return <Text style={styles.dataValue}>{display}</Text>;
+        return (
+          <Animated.View key={i} style={{ position: 'absolute', left: x, top: p.y, opacity }}>
+            {/* Small red scanning circle on point */}
+            <View style={[styles.minutiaeCircle, { left: -4, top: -4 }]} />
+            <View style={[styles.minutiaeDot, { left: -1.5, top: -1.5 }]} />
+            
+            {/* Arrow/Line pointing out */}
+            <View style={[
+              styles.minutiaeLine, 
+              { 
+                width: lineLen, 
+                transform: [
+                  { translateX: lx / 2 },
+                  { translateY: ly / 2 },
+                  { rotate: `${angle}deg` }
+                ] 
+              }
+            ]} />
+            
+            {/* Label */}
+            <Text style={[
+              styles.minutiaeText,
+              {
+                left: lx > 0 ? lineLen : -lineLen - 15,
+                top: ly > 0 ? lineLen / 2 : -lineLen / 2,
+                textAlign: lx > 0 ? 'left' : 'right',
+              }
+            ]}>
+              {p.label}
+            </Text>
+          </Animated.View>
+        );
+      })}
+    </View>
+  );
+};
+
+const ScrambleText = ({ text, active, delay = 0 }: { text: string, active: boolean, delay?: number }) => {
+// ... (rest of ScrambleText remains the same)
+  return <Text style={styles.dataValue}>{text}</Text>;
 };
 
 export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: { 
@@ -80,19 +172,38 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
           <Text style={styles.headerText}>R</Text>
         </View>
         <View style={styles.fingerprintSlots}>
-          <Text style={styles.asciiFingerprint}>{FINGERPRINT_ASCII}</Text>
-          <Text style={styles.asciiFingerprint}>{FINGERPRINT_ASCII}</Text>
+          <View style={styles.fingerprintContainer}>
+            <Image source={FINGERPRINT_IMG} style={styles.fingerprintImage} resizeMode="contain" />
+            <MinutiaeMarkers active={statusText === 'PROCESSING' || statusText === 'COMPLETE'} />
+            <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+              <VerificationCircles active={statusText === 'COMPLETE'} />
+            </View>
+          </View>
+          <View style={styles.fingerprintContainer}>
+            <Image 
+              source={FINGERPRINT_IMG} 
+              style={[styles.fingerprintImage, styles.flippedFingerprint]} 
+              resizeMode="contain" 
+            />
+            <MinutiaeMarkers 
+              active={statusText === 'PROCESSING' || statusText === 'COMPLETE'} 
+              flipped={true} 
+            />
+            <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+              <VerificationCircles active={statusText === 'COMPLETE'} />
+            </View>
+          </View>
         </View>
       </View>
 
       <View style={styles.matchSection}>
         <Text style={styles.label}>MATCH</Text>
         <View style={styles.matchIndicators}>
-          <View style={[styles.indicator, isScanning && styles.activeIndicator]}>
-            <Text style={styles.indicatorText}>F</Text>
+          <View style={[styles.indicator, subject.sex === 'F' && styles.activeIndicator]}>
+            <Text style={[styles.indicatorText, subject.sex === 'F' && styles.activeIndicatorText]}>F</Text>
           </View>
-          <View style={styles.indicator}>
-            <Text style={styles.indicatorText}>M</Text>
+          <View style={[styles.indicator, subject.sex === 'M' && styles.activeIndicator]}>
+            <Text style={[styles.indicatorText, subject.sex === 'M' && styles.activeIndicatorText]}>M</Text>
           </View>
         </View>
       </View>
@@ -111,15 +222,15 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject }: {
         </View>
         <View style={styles.dataRow}>
           <Text style={styles.dataLabel}>TIME:</Text>
-          <ScrambleText text={subject.locRecord.time} active={isScanning} delay={2000} />
+          <ScrambleText text={subject.locRecord.time} active={isScanning} delay={1500} />
         </View>
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>LAT:</Text>
-          <ScrambleText text={subject.locRecord.lat} active={isScanning} delay={3000} />
+          <Text style={styles.dataLabel}>PL:</Text>
+          <ScrambleText text={subject.locRecord.pl} active={isScanning} delay={2000} />
         </View>
         <View style={styles.dataRow}>
-          <Text style={styles.dataLabel}>LNG:</Text>
-          <ScrambleText text={subject.locRecord.lng} active={isScanning} delay={4000} />
+          <Text style={styles.dataLabel}>D.O.B:</Text>
+          <ScrambleText text={subject.locRecord.dob} active={isScanning} delay={2500} />
         </View>
       </View>
 

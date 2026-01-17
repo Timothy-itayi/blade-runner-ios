@@ -58,7 +58,7 @@ export const ScanData = ({ id, isScanning, scanProgress, hudStage, currentSubjec
   return (
     <HUDBox hudStage={hudStage} style={styles.container}>
       <View style={styles.leftColumn}>
-        <Text style={styles.label}>IDENT CONFIRM</Text>
+        <Text style={styles.label}>IDENTIFICATION</Text>
         <Text style={styles.idCode}>{id}</Text>
       </View>
       <View style={styles.rightColumn}>
@@ -66,10 +66,7 @@ export const ScanData = ({ id, isScanning, scanProgress, hudStage, currentSubjec
           <Animated.View style={[styles.pulseDot, { transform: [{ scale: pulseAnim }] }]} />
           <Text style={styles.metaLabel}>{bpm} {typeof bpm === 'number' ? 'BPM' : ''} {isScanning ? 'MONITORING' : 'STABILIZING'}</Text>
         </View>
-        <View style={styles.heartOutline}>
-          <View style={styles.heartLine} />
-          <View style={[styles.heartLine, { width: '40%', opacity: 0.3 }]} />
-        </View>
+      
       </View>
     </HUDBox>
   );

@@ -284,8 +284,97 @@ export const styles = StyleSheet.create({
     fontFamily: 'Courier',
     fontSize: 9,
     color: '#8a9a8a',
+  },
+  messageFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
     marginTop: 4,
+    gap: 6,
+  },
+  readReceipt: {
+    fontFamily: 'Courier',
+    fontSize: 9,
+    color: '#6a8a6a',
+    fontWeight: '600',
+  },
+  // Sent messages (player's replies)
+  messageBubbleSent: {
     alignSelf: 'flex-end',
+    backgroundColor: '#6a8a6a',
+    borderTopLeftRadius: 15,
+    borderTopRightRadius: 2,
+  },
+  messageTextSent: {
+    color: '#f0f4ec',
+  },
+  
+  // Failed message bubble
+  failedMessageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+    marginBottom: 12,
+  },
+  messageBubbleFailed: {
+    backgroundColor: '#8a7a7a',
+    opacity: 0.9,
+  },
+  readReceiptFailed: {
+    color: '#ffaaaa',
+  },
+  failedIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#c45a50',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  failedIconText: {
+    color: '#fff',
+    fontFamily: 'Courier',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  
+  // Typing indicator bubble
+  typingBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#e1e5da',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 15,
+    borderTopLeftRadius: 2,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+  },
+  typingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  typingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#8a9a8a',
+  },
+  typingDot1: {
+    opacity: 0.4,
+  },
+  typingDot2: {
+    opacity: 0.6,
+  },
+  typingDot3: {
+    opacity: 0.8,
   },
 
   photoMessage: {
@@ -320,6 +409,14 @@ export const styles = StyleSheet.create({
     color: '#8a9a8a',
     marginTop: 4,
   },
+  photoCaption: {
+    fontFamily: 'Courier',
+    fontSize: 13,
+    color: '#3a4a3a',
+    marginTop: 8,
+    marginHorizontal: 4,
+    lineHeight: 17,
+  },
 
   // Input bar
   inputBar: {
@@ -343,19 +440,60 @@ export const styles = StyleSheet.create({
     fontSize: 13,
     color: '#8a9a8a',
   },
+  inputFieldActive: {
+    backgroundColor: '#f0f4ec',
+    borderColor: '#6a8a6a',
+  },
+  inputText: {
+    fontFamily: 'Courier',
+    fontSize: 13,
+    color: '#3a4a3a',
+  },
+  cursor: {
+    color: '#4a5d4a',
+    fontWeight: '300',
+  },
+  cursorHidden: {
+    opacity: 0,
+  },
   sendButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#6a8a6a',
+    backgroundColor: '#c5cbc0',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  sendButtonActive: {
+    backgroundColor: '#6a8a6a',
+  },
+  sendButtonSending: {
+    backgroundColor: '#7a9a7a',
+  },
+  sendButtonFailed: {
+    backgroundColor: '#c45a50',
   },
   sendButtonText: {
     fontFamily: 'Courier',
     fontSize: 18,
     color: '#fff',
     fontWeight: '700',
+  },
+  inputTextContainer: {
+    flex: 1,
+  },
+  inputFieldFailed: {
+    borderColor: '#c45a50',
+    backgroundColor: '#f5e8e7',
+  },
+  inputTextFailed: {
+    color: '#8a5a5a',
+  },
+  sendFailedLabel: {
+    fontFamily: 'Courier',
+    fontSize: 9,
+    color: '#c45a50',
+    marginTop: 2,
   },
 
   // The Corporate Alert Overlay - Game UI Aesthetic
@@ -430,11 +568,44 @@ export const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: 'center',
   },
+  authenticateButtonPressed: {
+    backgroundColor: 'rgba(127, 184, 216, 0.15)',
+  },
   authenticateText: {
     fontFamily: Theme.fonts.mono,
     fontSize: 14,
     fontWeight: '700',
     color: Theme.colors.textPrimary,
     letterSpacing: 2,
+  },
+
+  // Takeover transition overlays
+  desatOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#2a2a2a',
+  },
+  interferenceOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#7fb8d8',
+  },
+  blackoutOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#0a0c0f',
+  },
+  messagesWrapper: {
+    flex: 1,
+    backgroundColor: '#d8dcd0',
   },
 });

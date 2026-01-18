@@ -151,14 +151,14 @@ export default function MainScreen() {
   }, []);
 
   const handleIntroComplete = () => {
-    setGamePhase('takeover');
-  };
-
-  const handleTakeoverComplete = () => {
     setGamePhase('boot');
   };
 
   const handleBootComplete = () => {
+    setGamePhase('takeover');
+  };
+
+  const handleTakeoverComplete = () => {
     setGamePhase('briefing');
   };
 
@@ -334,12 +334,12 @@ export default function MainScreen() {
           <HomeScreen onComplete={handleIntroComplete} />
         )}
 
-        {gamePhase === 'takeover' && (
-          <SystemTakeover onComplete={handleTakeoverComplete} />
-        )}
-
         {gamePhase === 'boot' && (
           <BootSequence onComplete={handleBootComplete} />
+        )}
+
+        {gamePhase === 'takeover' && (
+          <SystemTakeover onComplete={handleTakeoverComplete} />
         )}
 
         {gamePhase === 'briefing' && (

@@ -1,48 +1,64 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Animated, Image, Pressable, Easing, Dimensions, StyleSheet } from 'react-native';
+import { View, Text, Animated, Pressable, Easing } from 'react-native';
 import { styles } from '../styles/HomeScreen.styles';
-
-const { width, height } = Dimensions.get('window');
+import { MessageThread } from './MessageThread';
+import { IntroAlertModal } from './IntroAlertModal';
+import { INTRO_MESSAGES, ALERT_DELAY, INTERRUPTED_MESSAGE } from '../constants/intro';
 
 interface HomeScreenProps {
   onComplete: () => void;
 }
 
-const MESSAGES = [
-  { type: 'text', text: "Have fun at work! See you soon!", delay: 1500 },
-  { type: 'image', delay: 4500 },
-  { type: 'text', text: "First day jitters are normal. You've got this ♡", delay: 8000 },
-];
-
-const ALERT_DELAY = 12000;
-
 export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
+  // Phase state
   const [phase, setPhase] = useState<'menu' | 'messages'>('menu');
-  const [visibleIndices, setVisibleIndices] = useState<number[]>([]);
-  const [showAlert, setShowAlert] = useState(false);
-  const [isDismantling, setIsDismantling] = useState(false);
   const [takeoverPhase, setTakeoverPhase] = useState<'none' | 'desaturate' | 'black'>('none');
+  
+  // Message state
+  const [visibleIndices, setVisibleIndices] = useState<number[]>([]);
+  const [readIndices, setReadIndices] = useState<number[]>([]);
   const [currentTime, setCurrentTime] = useState('');
   
-  // Animations
+  // Typing state
+  const [typingText, setTypingText] = useState('');
+  const [showCursor, setShowCursor] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
+  const [wifeIsTyping, setWifeIsTyping] = useState(false);
+  
+  // Failed message state (message moved from input to bubble, then failed)
+  const [failedMessage, setFailedMessage] = useState<string | null>(null);
+  const [failedMessageStatus, setFailedMessageStatus] = useState<'sending' | 'failed' | null>(null);
+  
+  // Alert state
+  const [showAlert, setShowAlert] = useState(false);
+  const [isDismantling, setIsDismantling] = useState(false);
+  
+  // Menu animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const messagesFadeAnim = useRef(new Animated.Value(0)).current;
+  
+  // Alert animations
   const alertOpacity = useRef(new Animated.Value(0)).current;
   const alertScale = useRef(new Animated.Value(0.9)).current;
   
   // Takeover animations
-  const desaturation = useRef(new Animated.Value(0)).current;
   const uiOpacity = useRef(new Animated.Value(1)).current;
-  const verticalCollapse = useRef(new Animated.Value(1)).current;
-  const collapseLineOpacity = useRef(new Animated.Value(0)).current;
+  const desaturation = useRef(new Animated.Value(0)).current;
+  const glitchOffset = useRef(new Animated.Value(0)).current;
+  const interferenceOpacity = useRef(new Animated.Value(0)).current;
+  const blackoutOpacity = useRef(new Animated.Value(0)).current;
 
-  const messageAnims = useRef(MESSAGES.map(() => new Animated.Value(0))).current;
+  // Message animations
+  const messageAnims = useRef(INTRO_MESSAGES.map(() => new Animated.Value(0))).current;
+  
+  // Typing interval ref (to stop typing when alert appears)
+  const typingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const mins = now.getMinutes().toString().padStart(2, '0');
-    setCurrentTime(`${hours}:${mins}`);
+    setCurrentTime(
+      `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+    );
     
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -70,294 +86,240 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
   };
 
   const startMessageSequence = () => {
-    MESSAGES.forEach((msg, index) => {
+    const cursorInterval = setInterval(() => setShowCursor(prev => !prev), 530);
+
+    // Schedule each message with its typing indicator
+    INTRO_MESSAGES.forEach((msg, index) => {
+      // Show typing indicator
       setTimeout(() => {
-        if (!isDismantling) {
-          setVisibleIndices(prev => [...prev, index]);
-          Animated.spring(messageAnims[index], {
-            toValue: 1,
-            friction: 8,
-            tension: 40,
-            useNativeDriver: true,
-          }).start();
+        if (isDismantling) return;
+        if (msg.sender === 'wife') {
+          setWifeIsTyping(true);
+        } else {
+          typePlayerMessage(msg.text as string);
+        }
+      }, msg.typingStart);
+
+      // Show actual message
+      setTimeout(() => {
+        if (isDismantling) return;
+        
+        msg.sender === 'wife' ? setWifeIsTyping(false) : clearPlayerTyping();
+        
+        setVisibleIndices(prev => [...prev, index]);
+        Animated.spring(messageAnims[index], {
+          toValue: 1,
+          friction: 8,
+          tension: 40,
+          useNativeDriver: true,
+        }).start();
+        
+        // Mark previous player message as read
+        if (msg.sender === 'wife' && index > 0 && INTRO_MESSAGES[index - 1].sender === 'player') {
+          setTimeout(() => setReadIndices(prev => [...prev, index - 1]), 600);
         }
       }, msg.delay);
     });
 
+    // Final typing sequence before alert
+    const typingStartDelay = ALERT_DELAY - 6000;
+    
+    // Mark last message as read
     setTimeout(() => {
-      if (!isDismantling) {
-        setShowAlert(true);
-        Animated.parallel([
-          Animated.timing(alertOpacity, {
-            toValue: 1,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.spring(alertScale, {
-            toValue: 1,
-            friction: 8,
-            tension: 40,
-            useNativeDriver: true,
-          }),
-        ]).start();
+      if (!isDismantling) setReadIndices(prev => [...prev, INTRO_MESSAGES.length - 1]);
+    }, typingStartDelay - 500);
+
+    // Start typing final message
+    setTimeout(() => {
+      if (!isDismantling) typeInterruptedMessage();
+    }, typingStartDelay);
+
+    // Calculate when typing finishes
+    const typingDuration = INTERRUPTED_MESSAGE.length * 120;
+    const sendTime = typingStartDelay + typingDuration + 400;
+
+    // "Send" the message - moves from input to bubble
+    setTimeout(() => {
+      if (isDismantling) return;
+      // Stop typing, clear input
+      if (typingIntervalRef.current) {
+        clearInterval(typingIntervalRef.current);
+        typingIntervalRef.current = null;
       }
-    }, ALERT_DELAY);
+      setIsTyping(false);
+      setTypingText('');
+      // Show as bubble with "sending" status
+      setFailedMessage(INTERRUPTED_MESSAGE);
+      setFailedMessageStatus('sending');
+    }, sendTime);
+
+    // Message fails to send
+    setTimeout(() => {
+      if (isDismantling) return;
+      setFailedMessageStatus('failed');
+    }, sendTime + 1200);
+
+    // Alert appears after failure is visible
+    setTimeout(() => {
+      if (isDismantling) return;
+      clearInterval(cursorInterval);
+      setShowAlert(true);
+      Animated.parallel([
+        Animated.timing(alertOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.spring(alertScale, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }),
+      ]).start();
+    }, sendTime + 2500);
+  };
+
+  const typePlayerMessage = (message: string) => {
+    let i = 0;
+    setTypingText('');
+    setIsTyping(true);
+    const interval = setInterval(() => {
+      if (i < message.length) {
+        setTypingText(message.slice(0, ++i));
+      } else {
+        clearInterval(interval);
+      }
+    }, 130);
+  };
+
+  const typeInterruptedMessage = () => {
+    let i = 0;
+    setTypingText('');
+    setIsTyping(true);
+    const interval = setInterval(() => {
+      if (i < INTERRUPTED_MESSAGE.length && !isDismantling) {
+        setTypingText(INTERRUPTED_MESSAGE.slice(0, ++i));
+      } else {
+        clearInterval(interval);
+      }
+    }, 120);
+    typingIntervalRef.current = interval;
+  };
+
+  const clearPlayerTyping = () => {
+    setIsTyping(false);
+    setTypingText('');
   };
 
   const handleAuthenticate = () => {
     setIsDismantling(true);
-    
-    // Quick alert dismiss
     Animated.timing(alertOpacity, { toValue: 0, duration: 150, useNativeDriver: true }).start();
     
     setTimeout(() => {
       setTakeoverPhase('desaturate');
-      
-      // CRT-style vertical collapse sequence
-      Animated.sequence([
-        // Step 1: Quick desaturation
-        Animated.timing(desaturation, {
-          toValue: 0.8,
-          duration: 200,
-          useNativeDriver: false,
-        }),
-        // Step 2: Vertical collapse to center line
-        Animated.parallel([
-          Animated.timing(verticalCollapse, {
-            toValue: 0,
-            duration: 350,
-            easing: Easing.in(Easing.quad),
-            useNativeDriver: true,
-          }),
-          Animated.timing(collapseLineOpacity, {
-            toValue: 1,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Step 3: Hold the line briefly
-        Animated.delay(150),
-        // Step 4: Fade the line out
-        Animated.timing(collapseLineOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setTakeoverPhase('black');
-        onComplete();
-      });
+      runTakeoverSequence();
     }, 200);
   };
 
-  const renderMenu = () => (
-    <Animated.View 
-      style={[
-        styles.menuContainer, 
-        { opacity: fadeAnim }
-      ]}
-    >
-      <View style={styles.menuContent}>
-        <Text style={styles.menuTitle}>A.M.B.E.R</Text>
-        <Text style={styles.menuSubtitle}>ACTIVE MEASURES BUREAU FOR ENTITY REVIEW</Text>
-        <Text style={styles.menuVersion}>v2.4.1</Text>
-        
-        <Pressable 
-          onPress={handleStart} 
-          style={({ pressed }) => [
-            styles.startButton,
-            pressed && styles.startButtonPressed
-          ]}
-        >
-          {({ pressed }) => (
-            <View style={[
-              styles.startButtonInner,
-              pressed && styles.startButtonInnerPressed
-            ]}>
-              <Text style={[
-                styles.startButtonText,
-                pressed && styles.startButtonTextPressed
-              ]}>START</Text>
-            </View>
-          )}
-        </Pressable>
-        
-        <Text style={styles.footerText}>AUTHORIZED PERSONNEL ONLY</Text>
-      </View>
-    </Animated.View>
-  );
+  const runTakeoverSequence = () => {
+    Animated.sequence([
+      // Desaturation
+      Animated.timing(desaturation, {
+        toValue: 0.6,
+        duration: 1200,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: false,
+      }),
+      Animated.delay(200),
+      // Glitch + interference
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(glitchOffset, { toValue: 12, duration: 40, useNativeDriver: true }),
+          Animated.timing(glitchOffset, { toValue: -8, duration: 35, useNativeDriver: true }),
+          Animated.timing(glitchOffset, { toValue: 5, duration: 40, useNativeDriver: true }),
+          Animated.timing(glitchOffset, { toValue: -3, duration: 30, useNativeDriver: true }),
+          Animated.timing(glitchOffset, { toValue: 0, duration: 25, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(interferenceOpacity, { toValue: 0.8, duration: 60, useNativeDriver: true }),
+          Animated.timing(interferenceOpacity, { toValue: 0.2, duration: 50, useNativeDriver: true }),
+          Animated.timing(interferenceOpacity, { toValue: 0.6, duration: 55, useNativeDriver: true }),
+          Animated.timing(blackoutOpacity, { toValue: 1, duration: 80, useNativeDriver: true }),
+        ]),
+      ]),
+      Animated.delay(300),
+    ]).start(() => {
+      setTakeoverPhase('black');
+      onComplete();
+    });
+  };
 
-  const renderMessages = () => {
-    const combinedOpacity = Animated.multiply(messagesFadeAnim, uiOpacity);
-    
+  // ─────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────
+
+  if (phase === 'menu') {
     return (
-      <View style={{ flex: 1, backgroundColor: '#d8dcd0' }}>
-        <Animated.View 
-          style={[
-            styles.onboardContainer, 
-            { 
-              opacity: combinedOpacity,
-              transform: [{ scaleY: verticalCollapse }],
-            }
-          ]}
-        >
-          <View style={styles.header}>
-            <View style={styles.avatarContainer}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>M</Text>
-              </View>
-              <View style={styles.onlineIndicator} />
-            </View>
-            <View style={styles.headerText}>
-              <Text style={styles.contactName}>Maya</Text>
-              <Text style={styles.contactStatus}>online</Text>
-            </View>
-          </View>
-
-          <View style={styles.timestampContainer}>
-            <Text style={styles.timestampText}>Today</Text>
-          </View>
-
-          <View style={styles.messagesArea}>
-            {MESSAGES.map((msg, index) => (
-              visibleIndices.includes(index) && (
-                <Animated.View 
-                  key={index} 
-                  style={{
-                    opacity: messageAnims[index],
-                    transform: [{
-                      translateY: messageAnims[index].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [10, 0]
-                      })
-                    }]
-                  }}
-                >
-                  {msg.type === 'text' ? (
-                    <View style={styles.messageBubble}>
-                      <Text style={styles.messageText}>{msg.text}</Text>
-                      <Text style={styles.messageTime}>{currentTime}</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.photoMessage}>
-                      <View style={styles.photoFrame}>
-                        <Image 
-                          source={require('../assets/family-photo.png')} 
-                          style={styles.photoImage}
-                          resizeMode="cover"
-                        />
-                      </View>
-                      <Text style={styles.photoTime}>{currentTime}</Text>
-                    </View>
-                  )}
-                </Animated.View>
-              )
-            ))}
-          </View>
-
-          <View style={styles.inputBar}>
-            <View style={styles.inputField}>
-              <Text style={styles.inputPlaceholder}>Message...</Text>
-            </View>
-            <View style={styles.sendButton}>
-              <Text style={styles.sendButtonText}>→</Text>
-            </View>
-          </View>
-
-          {showAlert && (
-            <Animated.View style={[styles.alertContainer, { opacity: alertOpacity }]}>
-              <Animated.View 
-                style={[
-                  styles.alertBox, 
-                  { transform: [{ scale: alertScale }] }
-                ]}
-              >
-                <View style={styles.alertHeader}>
-                  <View style={styles.alertIcon}>
-                    <Text style={styles.alertIconText}>⚠</Text>
-                  </View>
-                  <Text style={styles.alertTitle}>AMBER ALERT ASSISTANCE</Text>
+      <View style={styles.container}>
+        <Animated.View style={[styles.menuContainer, { opacity: fadeAnim }]}>
+          <View style={styles.menuContent}>
+            <Text style={styles.menuTitle}>A.M.B.E.R</Text>
+            <Text style={styles.menuSubtitle}>ACTIVE MEASURES BUREAU FOR ENTITY REVIEW</Text>
+            <Text style={styles.menuVersion}>v2.4.1</Text>
+            
+            <Pressable 
+              onPress={handleStart} 
+              style={({ pressed }) => [styles.startButton, pressed && styles.startButtonPressed]}
+            >
+              {({ pressed }) => (
+                <View style={[styles.startButtonInner, pressed && styles.startButtonInnerPressed]}>
+                  <Text style={[styles.startButtonText, pressed && styles.startButtonTextPressed]}>
+                    START
+                  </Text>
                 </View>
-                
-                <View style={styles.alertBody}>
-                  <View style={styles.alertRow}>
-                    <Text style={styles.alertLabel}>POST</Text>
-                    <Text style={styles.alertValue}>SECTOR 9 TRANSIT POINT</Text>
-                  </View>
-                  <View style={styles.alertRow}>
-                    <Text style={styles.alertLabel}>OPERATOR</Text>
-                    <Text style={styles.alertValue}>OP-7734 (PROVISIONAL)</Text>
-                  </View>
-                  <View style={styles.alertRow}>
-                    <Text style={styles.alertLabel}>PROTOCOL</Text>
-                    <Text style={styles.alertValue}>MANDATORY ASSISTANCE</Text>
-                  </View>
-                </View>
-
-                <Pressable 
-                  onPress={handleAuthenticate}
-                  style={({ pressed }) => [
-                    styles.authenticateButton,
-                    pressed && { backgroundColor: 'rgba(127, 184, 216, 0.15)' }
-                  ]}
-                >
-                  <Text style={styles.authenticateText}>[ AUTHENTICATE ]</Text>
-                </Pressable>
-              </Animated.View>
-            </Animated.View>
-          )}
+              )}
+            </Pressable>
+            
+            <Text style={styles.footerText}>AUTHORIZED PERSONNEL ONLY</Text>
+          </View>
         </Animated.View>
-
-        {/* Desaturation overlay */}
-        <Animated.View 
-          pointerEvents="none"
-          style={[
-            takeoverStyles.desatOverlay,
-            { opacity: desaturation }
-          ]}
-        />
-
-        {/* CRT collapse line */}
-        {takeoverPhase === 'desaturate' && (
-          <Animated.View 
-            pointerEvents="none"
-            style={[
-              takeoverStyles.collapseLine,
-              { opacity: collapseLineOpacity }
-            ]}
-          />
-        )}
       </View>
     );
-  };
+  }
+
+  const combinedOpacity = Animated.multiply(messagesFadeAnim, uiOpacity);
 
   return (
     <View style={styles.container}>
-      {phase === 'menu' ? renderMenu() : renderMessages()}
+      <View style={styles.messagesWrapper}>
+        <Animated.View 
+          style={[
+            styles.onboardContainer, 
+            { opacity: combinedOpacity, transform: [{ translateX: glitchOffset }] }
+          ]}
+        >
+          <MessageThread
+            visibleIndices={visibleIndices}
+            readIndices={readIndices}
+            messageAnims={messageAnims}
+            currentTime={currentTime}
+            wifeIsTyping={wifeIsTyping}
+            isTyping={isTyping}
+            typingText={typingText}
+            showCursor={showCursor}
+            failedMessage={failedMessage}
+            failedMessageStatus={failedMessageStatus}
+          />
+
+          <IntroAlertModal
+            visible={showAlert}
+            opacity={alertOpacity}
+            scale={alertScale}
+            onAuthenticate={handleAuthenticate}
+          />
+        </Animated.View>
+
+        {/* Takeover overlays */}
+        <Animated.View pointerEvents="none" style={[styles.desatOverlay, { opacity: desaturation }]} />
+        
+        {takeoverPhase === 'desaturate' && (
+          <Animated.View pointerEvents="none" style={[styles.interferenceOverlay, { opacity: interferenceOpacity }]} />
+        )}
+        
+        <Animated.View pointerEvents="none" style={[styles.blackoutOverlay, { opacity: blackoutOpacity }]} />
+      </View>
     </View>
   );
 };
-
-const takeoverStyles = StyleSheet.create({
-  desatOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#1a1a1a',
-  },
-  collapseLine: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: 2,
-    backgroundColor: '#8a9a8a',
-    marginTop: -1,
-    shadowColor: '#8a9a8a',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-  },
-});

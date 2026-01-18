@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { Theme } from '../constants/theme';
 
 interface SystemTakeoverProps {
   onComplete: () => void;
@@ -91,7 +92,7 @@ export const SystemTakeover = ({ onComplete }: SystemTakeoverProps) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0c0f',
+    backgroundColor: Theme.colors.bgDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -100,30 +101,30 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   systemText: {
-    fontFamily: 'Courier',
+    fontFamily: Theme.fonts.mono,
     fontSize: 18,
     fontWeight: '700',
-    color: '#8a9a8a',
+    color: Theme.colors.textPrimary,
     letterSpacing: 6,
     textAlign: 'center',
   },
   subText: {
-    fontFamily: 'Courier',
+    fontFamily: Theme.fonts.mono,
     fontSize: 12,
-    color: 'rgba(138, 154, 138, 0.6)',
+    color: Theme.colors.textSecondary,
     letterSpacing: 4,
     marginTop: 8,
   },
   scanLineContainer: {
     width: 200,
     height: 2,
-    backgroundColor: 'rgba(138, 154, 138, 0.2)',
+    backgroundColor: Theme.colors.border,
     marginTop: 24,
     overflow: 'hidden',
   },
   scanLine: {
     height: '100%',
-    backgroundColor: '#8a9a8a',
+    backgroundColor: Theme.colors.textPrimary,
   },
   cornerTL: {
     position: 'absolute',
@@ -146,8 +147,8 @@ const styles = StyleSheet.create({
     right: 40,
   },
   cornerText: {
-    fontFamily: 'Courier',
+    fontFamily: Theme.fonts.mono,
     fontSize: 28,
-    color: 'rgba(138, 154, 138, 0.3)',
+    color: Theme.colors.textDim,
   },
 });

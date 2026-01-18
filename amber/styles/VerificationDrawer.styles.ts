@@ -49,6 +49,13 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(26, 42, 58, 0.3)',
   },
+  queryComplete: {
+    borderColor: Theme.colors.accentApprove,
+    backgroundColor: 'rgba(74, 138, 90, 0.15)',
+  },
+  queryCompleteText: {
+    color: Theme.colors.accentApprove,
+  },
   lockedButton: {
     borderColor: Theme.colors.textDim,
     backgroundColor: 'rgba(10, 12, 15, 0.5)',
@@ -110,5 +117,69 @@ export const styles = StyleSheet.create({
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
     fontSize: 12,
+  },
+  // Incident History styles
+  incidentEntry: {
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(127, 184, 216, 0.1)',
+  },
+  incidentHeader: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  incidentDetail: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    marginLeft: 8,
+  },
+  // Dialogue Analysis styles
+  dialogueBox: {
+    backgroundColor: 'rgba(127, 184, 216, 0.05)',
+    padding: 10,
+    marginBottom: 12,
+    borderLeftWidth: 2,
+    borderLeftColor: Theme.colors.textSecondary,
+  },
+  dialogueQuote: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontStyle: 'italic',
+  },
+  flagHeader: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    marginTop: 12,
+    marginBottom: 6,
+    letterSpacing: 1,
+  },
+  flagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  flagIcon: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    marginRight: 6,
+  },
+  flagKeyword: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  flagCategory: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
   },
 });

@@ -11,14 +11,15 @@ export const styles = StyleSheet.create({
     borderTopColor: Theme.colors.border,
   },
   leftColumn: {
-    flex: 1,
+    flex: 1.4,
   },
   rightColumn: {
-    flex: 2,
+    flex: 1,
     alignItems: 'flex-start',
-    paddingLeft: 20,
+    paddingLeft: 16,
     borderLeftWidth: 1,
     borderLeftColor: 'rgba(26, 42, 58, 0.4)',
+    justifyContent: 'center',
   },
   locationHeader: {
     flexDirection: 'row',
@@ -53,12 +54,12 @@ export const styles = StyleSheet.create({
   locRow: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    gap: 30,
+    gap: 2,
   },
   dataRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minWidth: 100,
+    flex: 2,
   },
   dataLabel: {
     color: Theme.colors.textDim,
@@ -89,6 +90,7 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 4,
+    gap: 8,
   },
   statusDot: {
     width: 6,
@@ -146,5 +148,42 @@ export const styles = StyleSheet.create({
     height: '100%',
     width: '60%',
     backgroundColor: Theme.colors.textPrimary,
+  },
+  // Credential Button Styles
+  credentialButton: {
+    width: '100%',
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(127, 184, 216, 0.2)',
+    backgroundColor: 'rgba(127, 184, 216, 0.03)',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  credentialButtonPressed: {
+    backgroundColor: 'rgba(127, 184, 216, 0.08)',
+    borderColor: 'rgba(127, 184, 216, 0.4)',
+  },
+  credentialContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  credentialDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  credentialStatus: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  credentialAction: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1,
   },
 });

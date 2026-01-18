@@ -2,37 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Theme } from '../constants/theme';
 import { HUDBox } from './HUDBox';
-import { TypewriterText, ScrambleText } from './ScanData';
+import { TypewriterText } from './ScanData';
 import { BUILD_SEQUENCE } from '../constants/animations';
 
 export const CommLinkPanel = ({ 
   dialogue, 
-  hudStage,
-  isScanning,
-  scanProgress
+  hudStage
 }: { 
   dialogue?: string, 
-  hudStage: 'none' | 'wireframe' | 'outline' | 'full',
-  isScanning: boolean,
-  scanProgress: Animated.Value
+  hudStage: 'none' | 'wireframe' | 'outline' | 'full'
 }) => {
-  const [scanComplete, setScanComplete] = useState(false);
-
-  useEffect(() => {
-    if (!isScanning) {
-      setScanComplete(false);
-      return;
-    }
-
-    const listener = scanProgress.addListener(({ value }) => {
-      if (value >= 0.95 && !scanComplete) {
-        setScanComplete(true);
-      }
-    });
-
-    return () => scanProgress.removeListener(listener);
-  }, [isScanning, scanProgress, scanComplete]);
-
   if (hudStage === 'none') return null;
 
   return (
@@ -50,13 +29,15 @@ export const CommLinkPanel = ({
       
       <View style={styles.content}>
         {dialogue ? (
-          <ScrambleText 
+          <TypewriterText 
             text={`"${dialogue}"`} 
-            active={scanComplete} 
-            delay={0} 
+            active={hudStage === 'full'} 
+            delay={BUILD_SEQUENCE.header + 500} 
             style={styles.dialogueText}
           />
-        ) : null}
+        ) : (
+          <Text style={[styles.dialogueText, { opacity: 0.3 }]}>[ NO ACTIVE TRANSMISSION ]</Text>
+        )}
       </View>
       
       <View style={styles.footer}>

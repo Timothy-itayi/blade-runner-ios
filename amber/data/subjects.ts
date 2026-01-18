@@ -1,12 +1,70 @@
+export interface IncidentReport {
+  fileNumber: string;
+  redactionLevel: 'NONE' | 'LIGHT' | 'MODERATE' | 'HEAVY' | 'TOTAL';
+  summary: string;
+  outcome: string;
+}
+
+export interface PersonalMessage {
+  from: string;
+  text: string;
+  tone: 'GRATEFUL' | 'RELIEVED' | 'AMBIGUOUS' | 'OMINOUS' | 'SILENT';
+  intercepted?: boolean;
+}
+
+export interface Credential {
+  type: 'TRANSIT_PERMIT' | 'WORK_ORDER' | 'MEDICAL_CLEARANCE' | 'VISITOR_PASS';
+  destinationSector: number;
+  issuedDate: string;
+  expirationDate?: string;
+  authority: string;
+  // What the player sees before verification
+  initialStatus: 'CONFIRMED' | 'PENDING' | 'EXPIRED' | 'NONE';
+  // What verification reveals (if initialStatus is PENDING or NONE)
+  verifiedStatus?: 'CONFIRMED' | 'EXPIRED' | 'DENIED' | 'UNVERIFIED';
+  // Subject's explanation when status is PENDING or NONE
+  claim?: string;
+  // What verification reveals (flavor text)
+  verificationNote?: string;
+}
+
 export interface Outcome {
   feedback: string;
   consequence: string;
+  // New: Structured consequence data
+  incidentReport?: IncidentReport;
+  personalMessage?: PersonalMessage;
+  // Delayed consequence - shows up N shifts later
+  revealShift?: number;
+  // Weight for aggregate tracking (0 = clean, 1 = minor, 2 = major, 3 = critical)
+  flagWeight?: number;
 }
 
 export interface NarrativeVariant {
   linkedId: string; // The ID of the earlier subject
   onApprove?: Partial<Omit<SubjectData, 'narrativeVariants' | 'outcomes' | 'locRecord'>>;
   onDeny?: Partial<Omit<SubjectData, 'narrativeVariants' | 'outcomes' | 'locRecord'>>;
+}
+
+// Verification Drawer Data
+export interface TransitEntry {
+  date: string;
+  from: string;
+  to: string;
+  flagged?: boolean;
+  flagNote?: string;
+}
+
+export interface IncidentEntry {
+  date: string;
+  type: string;
+  location: string;
+  resolution: string;
+}
+
+export interface DialogueFlag {
+  keyword: string;
+  category: string; // e.g., "RESTRICTED ZONE", "AUTHORITY DISPUTE", "URGENCY"
 }
 
 export interface SubjectData {
@@ -57,11 +115,25 @@ export interface SubjectData {
     DENY: Outcome;
   };
 
+  // Credential/Permit presented by subject
+  credential?: Credential;
+
+  // Verification Drawer intel
+  transitLog?: TransitEntry[];
+  incidentHistory?: IncidentEntry[];
+  dialogueFlags?: DialogueFlag[];
+  toneClassification?: 'NEUTRAL' | 'AGITATED' | 'NERVOUS' | 'EVASIVE' | 'COOPERATIVE';
+
   narrativeVariants?: NarrativeVariant[];
 }
 
 export const SUBJECTS: SubjectData[] = [
-  // --- PHASE 1: THE SETUP (Subjects 1-10) ---
+  // --- ACT 1: THE ROUTINE (Subjects 1-8) ---
+  // Shift 1: Subjects 1-4
+  // Shift 2: Subjects 5-8
+  // Tone: Mundane. Bureaucratic. Almost boring.
+  // Directive: "DENY ALL ACTIVE WARRANTS"
+  
   {
     name: 'ELARA VANCE',
     id: 'V1-EV001',
@@ -85,9 +157,42 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Thermal regulator repaired. Sector 4 temperature normalized.',
+        personalMessage: {
+          from: 'ELARA VANCE',
+          text: "Repair complete. 247 people in Sector 4 are slightly less sweaty today. You're welcome.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Engineering request denied. Sector 4 repair delayed.',
+        incidentReport: {
+          fileNumber: '#0001',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 4. Thermal regulator repair postponed.',
+          outcome: 'Sector 4 temperature rose 3.2°C. 14 heat-related complaints filed. Maintenance backlog increased.'
+        },
+        flagWeight: 0
+      }
+    },
+    credential: {
+      type: 'WORK_ORDER',
+      destinationSector: 4,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'SECTOR 7 ENGINEERING',
+      initialStatus: 'CONFIRMED',
+    },
+    transitLog: [
+      { date: '2087.04.14 08:00', from: 'SECTOR 7', to: 'SECTOR 5' },
+      { date: '2087.04.13 17:30', from: 'SECTOR 4', to: 'SECTOR 7' },
+      { date: '2087.04.13 08:15', from: 'SECTOR 7', to: 'SECTOR 4' },
+    ],
+    toneClassification: 'NEUTRAL',
   },
   {
     name: 'KANE MORROW',
@@ -112,9 +217,46 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Subject with active warrant allowed transit.',
+        personalMessage: {
+          from: 'KANE MORROW',
+          text: "Made it to the party. She was so happy. Thanks for not making this harder than it had to be.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 2 // Major - approved active warrant
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject detained per active warrant.',
+        incidentReport: {
+          fileNumber: '#0002',
+          redactionLevel: 'NONE',
+          summary: 'Subject detained at Checkpoint 7. Active warrant NO. 45221 confirmed. Subject remanded to Processing Queue.',
+          outcome: "Transferred to Holding Sector 11. Family notified. Daughter's birthday party missed. Appeal filed: 'My kid is crying because of you.'"
+        },
+        flagWeight: 0 // Correct decision per directive
+      }
+    },
+    credential: {
+      type: 'VISITOR_PASS',
+      destinationSector: 6,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'SECTOR 3 ADMIN',
+      initialStatus: 'CONFIRMED',
+    },
+    transitLog: [
+      { date: '2087.04.14 09:00', from: 'SECTOR 3', to: 'SECTOR 1' },
+      { date: '2087.04.13 18:00', from: 'SECTOR 6', to: 'SECTOR 3' },
+      { date: '2087.04.13 12:00', from: 'SECTOR 3', to: 'SECTOR 6' },
+    ],
+    dialogueFlags: [
+      { keyword: 'late', category: 'URGENCY' },
+      { keyword: 'daughter', category: 'PERSONAL APPEAL' },
+    ],
+    toneClassification: 'NERVOUS',
   },
   {
     name: 'ELENA VOSS',
@@ -139,9 +281,48 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Engineering briefing attended.',
+        personalMessage: {
+          from: 'ELENA VOSS',
+          text: "Made the meeting. Barely. The supervisor noticed I was cutting it close. Next time, maybe a little faster?",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Engineering personnel denied access to briefing.',
+        incidentReport: {
+          fileNumber: '#0003',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 4. Scheduled supervisor briefing missed.',
+          outcome: 'Subject arrived 47 minutes late. Formal reprimand issued. Performance review scheduled. Subject filed complaint: "I had all the right papers."'
+        },
+        flagWeight: 0
+      }
+    },
+    credential: {
+      type: 'TRANSIT_PERMIT',
+      destinationSector: 4,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'HIGH COMMAND',
+      initialStatus: 'PENDING',
+      verifiedStatus: 'CONFIRMED',
+      claim: 'Just got this approved 20 minutes ago. Should be in the system.',
+      verificationNote: 'Sync complete. Permit valid until end of shift.',
+    },
+    transitLog: [
+      { date: '2087.04.14 03:30', from: 'SECTOR 7', to: 'SECTOR 4' },
+      { date: '2087.04.13 19:00', from: 'SECTOR 4', to: 'SECTOR 7' },
+      { date: '2087.04.13 07:00', from: 'SECTOR 7', to: 'SECTOR 4' },
+    ],
+    dialogueFlags: [
+      { keyword: 'High command', category: 'AUTHORITY REFERENCE' },
+    ],
+    toneClassification: 'COOPERATIVE',
   },
   {
     name: 'JAXON REED',
@@ -166,10 +347,44 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Sanitation cycle completed.',
+        personalMessage: {
+          from: 'JAXON REED',
+          text: "Another day, another clean corridor. Nobody thanks the janitor, but I see you processed me quick. Appreciated.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Sanitation personnel denied access.',
+        incidentReport: {
+          fileNumber: '#0004',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 2. Standard cleaning cycle missed.',
+          outcome: 'Sector 2 sanitation backlog increased. 3 complaints filed regarding hallway odor. Replacement worker dispatched 4 hours later.'
+        },
+        flagWeight: 0
+      }
+    },
+    credential: {
+      type: 'WORK_ORDER',
+      destinationSector: 2,
+      issuedDate: '2087.04.01',
+      expirationDate: '2087.04.30',
+      authority: 'SANITATION CENTRAL',
+      initialStatus: 'CONFIRMED',
+    },
+    transitLog: [
+      { date: '2087.04.14 03:00', from: 'SECTOR 8', to: 'SECTOR 2' },
+      { date: '2087.04.13 11:00', from: 'SECTOR 2', to: 'SECTOR 8' },
+      { date: '2087.04.13 03:00', from: 'SECTOR 8', to: 'SECTOR 2' },
+    ],
+    toneClassification: 'NEUTRAL',
   },
+  // --- SHIFT 2 BEGINS (Subjects 5-8) ---
   {
     name: 'KARL BRANDT',
     id: 'V1-KB005',
@@ -193,9 +408,42 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Equipment delivery completed.',
+        personalMessage: {
+          from: 'KARL BRANDT',
+          text: "Delivery done. Medical got their new filtration units on time. Someone in Sector 6 is breathing easier because of you.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Equipment delivery delayed.',
+        incidentReport: {
+          fileNumber: '#0005',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 6. Priority equipment delivery postponed.',
+          outcome: 'Medical equipment arrived 6 hours late. Sector 6 Medical filed supply chain complaint. Delivery rescheduled for next cycle.'
+        },
+        flagWeight: 0
+      }
+    },
+    credential: {
+      type: 'WORK_ORDER',
+      destinationSector: 6,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'LOGISTICS CENTRAL',
+      initialStatus: 'CONFIRMED',
+    },
+    transitLog: [
+      { date: '2087.04.14 12:00', from: 'SECTOR 8', to: 'SECTOR 3' },
+      { date: '2087.04.13 16:00', from: 'SECTOR 6', to: 'SECTOR 8' },
+      { date: '2087.04.13 08:00', from: 'SECTOR 8', to: 'SECTOR 6' },
+    ],
+    toneClassification: 'NEUTRAL',
   },
   {
     name: 'MIRA FINN',
@@ -220,9 +468,45 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Transport run completed.',
+        personalMessage: {
+          from: 'MIRA FINN',
+          text: "Quick and clean. Made my quota for the day. If every checkpoint was this smooth, I might actually like this job.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Transport worker denied transit.',
+        incidentReport: {
+          fileNumber: '#0006',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 4. Routine transport run cancelled.',
+          outcome: 'Subject missed delivery window. Supervisor docked 2 hours pay. Transport rerouted through Sector 7, adding 45 minutes to schedule.'
+        },
+        flagWeight: 0
+      }
+    },
+    credential: {
+      type: 'TRANSIT_PERMIT',
+      destinationSector: 4,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'TRANSPORT DIVISION',
+      initialStatus: 'PENDING',
+      verifiedStatus: 'CONFIRMED',
+      claim: 'Issued this morning. System might be slow to update.',
+      verificationNote: 'Permit synced. Authorized for daily transport routes.',
+    },
+    transitLog: [
+      { date: '2087.04.14 10:00', from: 'SECTOR 8', to: 'SECTOR 8' },
+      { date: '2087.04.13 15:00', from: 'SECTOR 4', to: 'SECTOR 8' },
+      { date: '2087.04.13 09:00', from: 'SECTOR 8', to: 'SECTOR 4' },
+    ],
+    toneClassification: 'COOPERATIVE',
   },
   {
     name: 'DMITRI VOLKOV',
@@ -247,9 +531,51 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Subject allowed entry to revoked zone.',
+        personalMessage: {
+          from: 'DMITRI VOLKOV',
+          text: "I'm home. My things are still here. Thank you. I don't know what I would have done.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 2 // Major - allowed entry to restricted zone
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject denied access to former residence.',
+        incidentReport: {
+          fileNumber: '#0007',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 9. Zone revocation enforced per directive.',
+          outcome: 'Subject relocated to Temporary Housing Block 7. Personal belongings in Sector 9 marked for disposal. Subject filed 3 appeals. All denied.'
+        },
+        flagWeight: 0 // Correct per directive
+      }
+    },
+    credential: {
+      type: 'TRANSIT_PERMIT',
+      destinationSector: 9,
+      issuedDate: '2087.03.01',
+      expirationDate: '2087.03.31',
+      authority: 'SECTOR 9 ADMIN',
+      initialStatus: 'EXPIRED',
+      claim: 'This was valid before the revocation. They never issued me a new one.',
+    },
+    transitLog: [
+      { date: '2087.04.14 17:00', from: 'SECTOR 4', to: 'CHECKPOINT 7' },
+      { date: '2087.04.12 22:45', from: 'SECTOR 9', to: 'SECTOR 4', flagged: true, flagNote: 'Subject exited REVOKED zone 36 hours ago.' },
+      { date: '2087.04.10 08:00', from: 'SECTOR 4', to: 'SECTOR 9', flagged: true, flagNote: 'Entry to zone prior to revocation order.' },
+    ],
+    incidentHistory: [
+      { date: '2087.04.12', type: 'ZONE VIOLATION', location: 'SECTOR 9 PERIMETER', resolution: 'WARNING ISSUED - PENDING RELOCATION' },
+    ],
+    dialogueFlags: [
+      { keyword: 'revoke', category: 'AUTHORITY DISPUTE' },
+      { keyword: 'Sector 9', category: 'RESTRICTED ZONE' },
+      { keyword: 'twenty years', category: 'PERSONAL APPEAL' },
+    ],
+    toneClassification: 'AGITATED',
   },
   {
     name: 'KALEB ROSS',
@@ -274,10 +600,54 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Archivist accessed restricted zone during audit.',
+        personalMessage: {
+          from: 'KALEB ROSS',
+          text: "Got the files. Audit team wasn't happy, but the data they needed was in there. Funny how that works.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 1 // Minor - allowed access during restriction
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Archivist denied access during audit.',
+        incidentReport: {
+          fileNumber: '#0008',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 5. Archive access suspended per audit protocol.',
+          outcome: 'Data retrieval postponed 72 hours. Audit team complained about missing records. Subject reassigned to filing duty until audit completion.'
+        },
+        flagWeight: 0 // Correct per restriction
+      }
+    },
+    credential: {
+      type: 'WORK_ORDER',
+      destinationSector: 5,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'ARCHIVE DIVISION',
+      initialStatus: 'PENDING',
+      verifiedStatus: 'DENIED',
+      claim: 'My supervisor approved this. It should be in the system.',
+      verificationNote: 'Work order suspended. Archive access revoked during active audit. Contact supervisor for override.',
+    },
+    transitLog: [
+      { date: '2087.04.14 10:00', from: 'SECTOR 5', to: 'CHECKPOINT 7' },
+      { date: '2087.04.13 18:00', from: 'SECTOR 5', to: 'SECTOR 5' },
+      { date: '2087.04.13 08:00', from: 'SECTOR 5', to: 'SECTOR 5' },
+    ],
+    dialogueFlags: [
+      { keyword: 'audit', category: 'SYSTEM REFERENCE' },
+    ],
+    toneClassification: 'NEUTRAL',
   },
+  
+  // --- ACT 2: THE CRACKS (Subjects 9-16) ---
+  // Shift 3: Subjects 9-12
+  // Shift 4: Subjects 13-16
+  // Tone: Something is off. The directive doesn't always make sense.
   {
     name: 'ELIAS VOSS',
     id: 'V1-EV009',

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, Animated, ScrollView, StyleSheet } from '
 import { SubjectData } from '../data/subjects';
 import { HUDBox } from './HUDBox';
 import { Theme } from '../constants/theme';
-import { ScrambleText, TypewriterText } from './ScanData';
+import { TypewriterText } from './ScanData';
 import { BUILD_SEQUENCE } from '../constants/animations';
 
 export const SubjectDossier = ({ 

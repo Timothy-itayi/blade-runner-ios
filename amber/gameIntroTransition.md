@@ -48,6 +48,6 @@ The following files were modified or created to implement this sequence:
 - **`amber/components/DigitalClockSplitFlap.tsx`**: Handles the rapid-cycle synchronization effect for the system clock.
 - **`amber/components/ScanPanel.tsx`**: Manages the layered fade-in of biometric and maintenance assets.
 - **`amber/components/IntelPanel.tsx`**: Implements the verification button flicker and data scrambling during initialization.
-- **`amber/components/ScanData.tsx`**: Home of the enhanced `ScrambleText` component used for persistent data masking.
+- **`amber/components/ScanData.tsx`**: Home of the enhanced `TypewriterText` component used for persistent data reveal.
 - **`amber/styles/ScanPanel.styles.ts`**: Updated to support the new monitoring layouts and expanded bar visualizer.
 - **`amber/styles/IntelPanel.styles.ts`**: Refined for proper data alignment and color hierarchy.

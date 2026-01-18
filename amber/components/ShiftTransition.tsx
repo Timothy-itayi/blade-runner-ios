@@ -1,8 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Pressable, Image } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable, Image, ScrollView } from 'react-native';
 import { Theme } from '../constants/theme';
 import { ShiftData } from '../constants/shifts';
 import { TypewriterText } from './ScanData';
+import { SubjectData, IncidentReport, PersonalMessage } from '../data/subjects';
+
+// Decision record for a single subject
+export interface ShiftDecision {
+  subject: SubjectData;
+  decision: 'APPROVE' | 'DENY';
+  incidentReport?: IncidentReport;
+  personalMessage?: PersonalMessage;
+}
 
 interface ShiftTransitionProps {
   previousShift: ShiftData;
@@ -11,6 +20,7 @@ interface ShiftTransitionProps {
   deniedCount: number;
   totalAccuracy: number;
   messageHistory: string[];
+  shiftDecisions: ShiftDecision[]; // NEW: Decisions made this shift
   onContinue: () => void;
 }
 
@@ -21,29 +31,34 @@ export const ShiftTransition = ({
   deniedCount, 
   totalAccuracy,
   messageHistory,
+  shiftDecisions,
   onContinue 
 }: ShiftTransitionProps) => {
-  const [phase, setPhase] = useState<'summary' | 'menu' | 'profile' | 'briefing'>('summary');
+  const [phase, setPhase] = useState<'summary' | 'reports' | 'menu' | 'profile' | 'briefing'>('summary');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const briefingOpacity = useRef(new Animated.Value(0)).current;
 
+  // Get reports to display (only decisions with actual reports)
+  const reportsToShow = shiftDecisions.filter(d => 
+    (d.decision === 'DENY' && d.incidentReport) || 
+    (d.decision === 'APPROVE' && d.personalMessage)
+  );
+
+  // Check for new messages (wife/narrative messages)
+  const hasNewMessages = messageHistory.length > 0;
+
   useEffect(() => {
-    // Fade in the overlay
+    // Fade in the overlay - NO AUTO ADVANCE
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
       useNativeDriver: true,
     }).start();
-
-    // After 2.5 seconds, transition to menu
-    const menuTimer = setTimeout(() => {
-      setPhase('menu');
-    }, 2500);
-
-    return () => {
-      clearTimeout(menuTimer);
-    };
   }, []);
+
+  const handleSummaryTap = () => {
+    setPhase('menu');
+  };
 
   const handleStartBriefing = () => {
     setPhase('briefing');
@@ -68,7 +83,7 @@ export const ShiftTransition = ({
               </View>
               <View style={styles.statsRow}>
                 <Text style={styles.statLabel}>PROCESSED:</Text>
-                <Text style={styles.statValue}>4 SUBJECTS</Text>
+                <Text style={styles.statValue}>{approvedCount + deniedCount} SUBJECTS</Text>
               </View>
               <View style={styles.statsRow}>
                 <Text style={styles.statLabel}>APPROVED:</Text>
@@ -82,7 +97,7 @@ export const ShiftTransition = ({
           </View>
 
           <View style={styles.timeJumpContainer}>
-            <Text style={styles.timeJumpLabel}>TRANSFERRING TO NEXT STATION...</Text>
+            <Text style={styles.timeJumpLabel}>NEXT REGION:</Text>
             <View style={styles.timeJumpRow}>
               <Text style={styles.timeNew}>{nextShift.city.toUpperCase()}</Text>
             </View>
@@ -92,6 +107,17 @@ export const ShiftTransition = ({
               <Text style={styles.timeNew}>{nextShift.timeBlock}</Text>
             </View>
           </View>
+
+          <Pressable 
+            onPress={handleSummaryTap}
+            style={({ pressed }) => [
+              styles.continueButton,
+              pressed && styles.continueButtonPressed,
+              { marginTop: 30 }
+            ]}
+          >
+            <Text style={styles.continueText}>[ CONTINUE ]</Text>
+          </Pressable>
         </View>
       );
     }
@@ -101,6 +127,20 @@ export const ShiftTransition = ({
         <View style={styles.container}>
           <Text style={styles.menuTitle}>TERMINAL OFFLINE // STANDBY</Text>
           <View style={styles.buttonGrid}>
+            {/* Reports Button - only show if there are reports */}
+            {reportsToShow.length > 0 && (
+              <Pressable 
+                onPress={() => setPhase('reports')}
+                style={({ pressed }) => [
+                  styles.menuButton,
+                  pressed && styles.menuButtonPressed
+                ]}
+              >
+                <Text style={styles.menuButtonText}>[ VIEW REPORTS ({reportsToShow.length}) ]</Text>
+              </Pressable>
+            )}
+
+            {/* Personal Profile Button with notification badge */}
             <Pressable 
               onPress={() => setPhase('profile')}
               style={({ pressed }) => [
@@ -108,9 +148,17 @@ export const ShiftTransition = ({
                 pressed && styles.menuButtonPressed
               ]}
             >
-              <Text style={styles.menuButtonText}>[ VIEW PERSONAL PROFILE ]</Text>
+              <View style={styles.buttonWithBadge}>
+                <Text style={styles.menuButtonText}>[ PERSONAL PROFILE ]</Text>
+                {hasNewMessages && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationText}>{messageHistory.length}</Text>
+                  </View>
+                )}
+              </View>
             </Pressable>
 
+            {/* Continue to next shift */}
             <Pressable 
               onPress={handleStartBriefing}
               style={({ pressed }) => [
@@ -121,6 +169,77 @@ export const ShiftTransition = ({
               <Text style={styles.continueText}>[ RECEIVE NEW DIRECTIVE ]</Text>
             </Pressable>
           </View>
+        </View>
+      );
+    }
+
+    if (phase === 'reports') {
+      return (
+        <View style={styles.reportsContainer}>
+          <Text style={styles.reportsTitle}>SHIFT REPORTS</Text>
+          <Text style={styles.reportsSubtitle}>{reportsToShow.length} REPORTS FILED</Text>
+          
+          <ScrollView style={styles.reportsScrollView} showsVerticalScrollIndicator={false}>
+            {reportsToShow.map((decision, index) => {
+              const isApprove = decision.decision === 'APPROVE';
+              
+              return (
+                <View key={index} style={styles.reportCard}>
+                  {isApprove && decision.personalMessage ? (
+                    // Personal Message (APPROVE)
+                    <View style={styles.messageBox}>
+                      <Text style={styles.messageBoxBorder}>┌─────────────────────────────────────────┐</Text>
+                      <View style={styles.messageContent}>
+                        <Text style={styles.messageLabel}>PERSONAL TRANSMISSION</Text>
+                        <Text style={styles.messageFrom}>FROM: {decision.personalMessage.from}</Text>
+                        <View style={styles.messageSpacer} />
+                        <Text style={styles.messageText}>"{decision.personalMessage.text}"</Text>
+                      </View>
+                      <Text style={styles.messageBoxBorder}>└─────────────────────────────────────────┘</Text>
+                    </View>
+                  ) : decision.incidentReport ? (
+                    // Incident Report (DENY)
+                    <View style={styles.incidentBox}>
+                      <Text style={styles.incidentBoxBorder}>══════════════════════════════════════════</Text>
+                      <View style={styles.incidentContent}>
+                        <Text style={styles.incidentTitle}>INCIDENT REPORT — FILE {decision.incidentReport.fileNumber}</Text>
+                        <View style={styles.incidentRow}>
+                          <Text style={styles.incidentLabel}>SUBJECT:</Text>
+                          <Text style={styles.incidentValue}>{decision.subject.name}</Text>
+                        </View>
+                        <View style={styles.incidentRow}>
+                          <Text style={styles.incidentLabel}>ID:</Text>
+                          <Text style={styles.incidentValue}>{decision.subject.id}</Text>
+                        </View>
+                        <View style={styles.incidentRow}>
+                          <Text style={styles.incidentLabel}>STATUS:</Text>
+                          <Text style={[styles.incidentValue, styles.deniedText]}>DENIED</Text>
+                        </View>
+                        <View style={styles.incidentSpacer} />
+                        <Text style={styles.incidentSummaryLabel}>SUMMARY:</Text>
+                        <Text style={styles.incidentSummary}>{decision.incidentReport.summary}</Text>
+                        <View style={styles.incidentSpacer} />
+                        <Text style={styles.incidentSummaryLabel}>OUTCOME:</Text>
+                        <Text style={styles.incidentOutcome}>{decision.incidentReport.outcome}</Text>
+                      </View>
+                      <Text style={styles.incidentBoxBorder}>══════════════════════════════════════════</Text>
+                    </View>
+                  ) : null}
+                </View>
+              );
+            })}
+          </ScrollView>
+
+          <Pressable 
+            onPress={() => setPhase('menu')}
+            style={({ pressed }) => [
+              styles.backButton,
+              pressed && styles.backButtonPressed,
+              { marginTop: 20 }
+            ]}
+          >
+            <Text style={styles.backButtonText}>[ BACK TO TERMINAL ]</Text>
+          </Pressable>
         </View>
       );
     }
@@ -468,5 +587,166 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     textAlign: 'center',
+  },
+  // Report styles
+  reportCounter: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    letterSpacing: 2,
+    marginBottom: 20,
+  },
+  // Personal Message styles
+  messageBox: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  messageBoxBorder: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+  },
+  messageContent: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    width: '100%',
+  },
+  messageLabel: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  messageFrom: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  messageSpacer: {
+    height: 16,
+  },
+  messageText: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 22,
+    fontStyle: 'italic',
+  },
+  // Incident Report styles
+  incidentBox: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  incidentBoxBorder: {
+    color: Theme.colors.accentDeny,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+  },
+  incidentContent: {
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    width: '100%',
+  },
+  incidentTitle: {
+    color: Theme.colors.accentDeny,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  incidentRow: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  incidentLabel: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    width: 70,
+  },
+  incidentValue: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    flex: 1,
+  },
+  incidentSpacer: {
+    height: 12,
+  },
+  incidentSummaryLabel: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    marginBottom: 4,
+  },
+  incidentSummary: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  incidentOutcome: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
+  // Button with badge
+  buttonWithBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notificationBadge: {
+    backgroundColor: Theme.colors.accentDeny,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    paddingHorizontal: 6,
+  },
+  notificationText: {
+    color: '#fff',
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  // Reports list styles
+  reportsContainer: {
+    flex: 1,
+    width: '100%',
+    paddingTop: 20,
+  },
+  reportsTitle: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 2,
+  },
+  reportsSubtitle: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 20,
+  },
+  reportsScrollView: {
+    flex: 1,
+    width: '100%',
+  },
+  reportCard: {
+    marginBottom: 16,
   },
 });

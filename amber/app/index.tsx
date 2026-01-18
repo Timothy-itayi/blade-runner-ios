@@ -11,7 +11,7 @@ import { DecisionButtons } from '../components/DecisionButtons';
 import { OnboardingModal } from '../components/OnboardingModal';
 import { BootSequence } from '../components/BootSequence';
 import { VerificationDrawer } from '../components/VerificationDrawer';
-import { ShiftTransition } from '../components/ShiftTransition';
+import { ShiftTransition, ShiftDecision } from '../components/ShiftTransition';
 import { PersonalMessageModal } from '../components/PersonalMessageModal';
 import { DecisionStamp } from '../components/DecisionStamp';
 import { styles } from '../styles/MainScreen.styles';
@@ -31,6 +31,10 @@ export default function MainScreen() {
   const [currentSubjectIndex, setCurrentSubjectIndex] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
   const [hasVerified, setHasVerified] = useState(false);
+  const [credentialViewed, setCredentialViewed] = useState(false);
+  const [credentialVerified, setCredentialVerified] = useState(false);
+  const [databaseQueried, setDatabaseQueried] = useState(false);
+  const [warrantChecked, setWarrantChecked] = useState(false);
   const [decisionHistory, setDecisionHistory] = useState<Record<string, 'APPROVE' | 'DENY'>>({});
   const [decisionOutcome, setDecisionOutcome] = useState<{ type: 'APPROVE' | 'DENY', outcome: Outcome } | null>(null);
   const [hasDecision, setHasDecision] = useState(false);
@@ -44,8 +48,8 @@ export default function MainScreen() {
   const [infractions, setInfractions] = useState(0);
   const [activeDirective, setActiveDirective] = useState<string | null>("DENY ALL FROM SECTOR 9");
   const [triggerConsequence, setTriggerConsequence] = useState(false);
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [messageHistory, setMessageHistory] = useState<string[]>([]);
+  const [shiftDecisions, setShiftDecisions] = useState<ShiftDecision[]>([]);
   const currentShift = getShiftForSubject(currentSubjectIndex);
 
   const scanProgress = useRef(new Animated.Value(0)).current;
@@ -176,7 +180,7 @@ export default function MainScreen() {
   };
 
   const handleDecision = (type: 'APPROVE' | 'DENY') => {
-    if (!hasVerified) return;
+    // Protocol enforcement is now handled by DecisionButtons component
 
     let correct = isDecisionCorrect(currentSubject, type);
 
@@ -198,6 +202,16 @@ export default function MainScreen() {
       ...prev,
       [currentSubject.id]: type
     }));
+
+    // Track this decision for the shift debrief
+    const outcomeData = currentSubject.outcomes[type];
+    const shiftDecision: ShiftDecision = {
+      subject: currentSubject,
+      decision: type,
+      incidentReport: type === 'DENY' ? outcomeData.incidentReport : undefined,
+      personalMessage: type === 'APPROVE' ? outcomeData.personalMessage : undefined,
+    };
+    setShiftDecisions(prev => [...prev, shiftDecision]);
 
     // Track shift stats and overall accuracy
     setShiftStats(prev => ({
@@ -244,23 +258,23 @@ export default function MainScreen() {
     setShowVerify(false);
     setShowDossier(false);
     setHasVerified(false);
+    setCredentialViewed(false);
+    setCredentialVerified(false);
+    setDatabaseQueried(false);
+    setWarrantChecked(false);
     setIsScanning(false);
     
     const nextIndex = (currentSubjectIndex + 1) % SUBJECTS.length;
     
-    // Check for messages between subjects
-    // If we just had an infraction, we force a message
-    if (triggerConsequence || (Math.random() < 0.2 && !isEndOfShift(currentSubjectIndex))) {
+    // Queue narrative messages silently (no popup) - they appear in personal profile
+    // Messages are triggered by infractions or randomly at end of shift
+    if (triggerConsequence || isEndOfShift(currentSubjectIndex)) {
       const msg = getNarrativeMessage();
       if (msg) {
-        setPendingMessage(msg);
         setMessageHistory(prev => [...prev, msg]);
-        setTriggerConsequence(false); // Reset for next subject
-        return;
       }
     }
-
-    setTriggerConsequence(false); // Reset even if no message triggered
+    setTriggerConsequence(false);
 
     // Check if we're at end of shift
     if (isEndOfShift(currentSubjectIndex) && nextIndex !== 0) {
@@ -271,22 +285,12 @@ export default function MainScreen() {
     }
   };
 
-  const handleMessageDismiss = () => {
-    setPendingMessage(null);
-    const nextIndex = (currentSubjectIndex + 1) % SUBJECTS.length;
-    
-    if (isEndOfShift(currentSubjectIndex) && nextIndex !== 0) {
-      setShowShiftTransition(true);
-    } else {
-      setCurrentSubjectIndex(nextIndex);
-      setTimeout(triggerScan, 500);
-    }
-  };
 
   const handleShiftContinue = () => {
     setShowShiftTransition(false);
     setHasDecision(false);
     setShiftStats({ approved: 0, denied: 0, correct: 0 }); // Reset for new shift
+    setShiftDecisions([]); // Clear decisions for new shift
     const nextIndex = (currentSubjectIndex + 1) % SUBJECTS.length;
     setCurrentSubjectIndex(nextIndex);
     setTimeout(triggerScan, 500);
@@ -340,13 +344,13 @@ export default function MainScreen() {
                 subject={currentSubject}
                 hasDecision={hasDecision}
                 decisionType={decisionOutcome?.type}
+                onCredentialViewed={() => setCredentialViewed(true)}
+                onCredentialVerified={() => setCredentialVerified(true)}
               />
 
               <CommLinkPanel 
                 dialogue={currentSubject.dialogue}
                 hudStage={hudStage}
-                isScanning={isScanning}
-                scanProgress={scanProgress}
               />
               
               <IntelPanel 
@@ -360,13 +364,26 @@ export default function MainScreen() {
                   setHasVerified(true);
                 }}
               />
-                     <DecisionButtons 
-              hudStage={hudStage} 
-              onDecision={handleDecision}
-              onNext={nextSubject}
-              disabled={!hasVerified}
-              hasDecision={hasDecision}
-            />
+              <DecisionButtons 
+                hudStage={hudStage} 
+                onDecision={handleDecision}
+                onNext={nextSubject}
+                disabled={false}
+                hasDecision={hasDecision}
+                protocolStatus={{
+                  scanComplete: hudStage === 'full',
+                  credentialViewed: credentialViewed,
+                  credentialVerificationRequired: currentSubject.credential?.initialStatus === 'PENDING' || 
+                                                  currentSubject.credential?.initialStatus === 'NONE' ||
+                                                  !currentSubject.credential,
+                  credentialVerified: credentialVerified || 
+                                      (currentSubject.credential?.initialStatus === 'CONFIRMED') ||
+                                      (currentSubject.credential?.initialStatus === 'EXPIRED'),
+                  databaseQueried: databaseQueried,
+                  warrantCheckRequired: currentSubject.warrants !== 'NONE',
+                  warrantChecked: warrantChecked,
+                }}
+              />
             </View>
 
      
@@ -375,7 +392,12 @@ export default function MainScreen() {
               <VerificationDrawer 
                 subject={currentSubject} 
                 onClose={() => setShowVerify(false)}
-                unlockedChecks={currentShift.unlockedChecks}
+                onQueryPerformed={(queryType) => {
+                  setDatabaseQueried(true);
+                  if (queryType === 'WARRANT') {
+                    setWarrantChecked(true);
+                  }
+                }}
               />
             )}
 
@@ -388,13 +410,6 @@ export default function MainScreen() {
               />
             )}
 
-            {pendingMessage && (
-              <PersonalMessageModal 
-                message={pendingMessage} 
-                onDismiss={handleMessageDismiss} 
-              />
-            )}
-
             {showShiftTransition && (
               <ShiftTransition
                 previousShift={currentShift}
@@ -403,6 +418,7 @@ export default function MainScreen() {
                 deniedCount={shiftStats.denied}
                 totalAccuracy={totalAccuracy}
                 messageHistory={messageHistory}
+                shiftDecisions={shiftDecisions}
                 onContinue={handleShiftContinue}
               />
             )}

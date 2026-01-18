@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, Text, Animated, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Animated, Pressable } from 'react-native';
 import { styles } from '../styles/ScanData.styles';
 import { HUDBox } from './HUDBox';
 import { SubjectData } from '../data/subjects';
-
+import { CredentialModal } from './CredentialModal';
 import { BUILD_SEQUENCE } from '../constants/animations';
 
 export const TypewriterText = ({ text, active, delay = 0, style, showCursor = true }: { text: string, active: boolean, delay?: number, style?: any, showCursor?: boolean }) => {
@@ -54,55 +54,6 @@ export const TypewriterText = ({ text, active, delay = 0, style, showCursor = tr
   );
 };
 
-export const ScrambleText = ({ text, active, delay = 0, keepScrambling = false, style }: { text: string, active: boolean, delay?: number, keepScrambling?: boolean, style?: any }) => {
-  const [display, setDisplay] = React.useState(active ? '' : text);
-  const chars = '!@#$%^&*()_+{}[]|;:,.<>?';
-
-  React.useEffect(() => {
-    let interval: any = null;
-    let timeout: any = null;
-
-    if (!active) {
-      setDisplay(text);
-      return;
-    }
-
-    // Start empty while waiting for delay if we just became active
-    setDisplay('');
-
-    timeout = setTimeout(() => {
-      let iterations = 0;
-      interval = setInterval(() => {
-        setDisplay(prev => {
-          // If the length is 0, we need to initialize it with some random chars or the final length
-          const currentLength = text.length;
-          let newDisplay = '';
-          for (let i = 0; i < currentLength; i++) {
-            if (!keepScrambling && i < iterations) {
-              newDisplay += text[i];
-            } else {
-              newDisplay += chars[Math.floor(Math.random() * chars.length)];
-            }
-          }
-          return newDisplay;
-        });
-        
-        if (!keepScrambling && iterations >= text.length) {
-          if (interval) clearInterval(interval);
-        }
-        iterations += 1;
-      }, 30);
-    }, delay);
-
-    return () => {
-      if (timeout) clearTimeout(timeout);
-      if (interval) clearInterval(interval);
-    };
-  }, [active, text, keepScrambling, delay]);
-
-  return <Text style={[styles.dataValue, style]}>{display}</Text>;
-};
-
 const ProgressBar = ({ 
   progress, 
   hasDecision, 
@@ -138,16 +89,31 @@ const ProgressBar = ({
   return <Text style={[styles.progressBarText, { color }]}>{barText}</Text>;
 };
 
-export const ScanData = ({ id, isScanning, scanProgress, hudStage, subject, hasDecision, decisionType }: { 
+export const ScanData = ({ 
+  id, 
+  isScanning, 
+  scanProgress, 
+  hudStage, 
+  subject, 
+  hasDecision, 
+  decisionType,
+  onCredentialViewed,
+  onCredentialVerified,
+}: { 
   id: string, 
   isScanning: boolean, 
   scanProgress: Animated.Value,
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
   subject: SubjectData,
   hasDecision?: boolean,
-  decisionType?: 'APPROVE' | 'DENY'
+  decisionType?: 'APPROVE' | 'DENY',
+  onCredentialViewed?: () => void,
+  onCredentialVerified?: (verified: boolean) => void,
 }) => {
   const [hasReachedBottom, setHasReachedBottom] = React.useState(false);
+  const [showCredentialModal, setShowCredentialModal] = useState(false);
+  const [credentialVerified, setCredentialVerified] = useState(false);
+  const [credentialViewed, setCredentialViewed] = useState(false);
 
   React.useEffect(() => {
     if (!isScanning) {
@@ -164,8 +130,20 @@ export const ScanData = ({ id, isScanning, scanProgress, hudStage, subject, hasD
     return () => scanProgress.removeListener(listener);
   }, [isScanning, scanProgress]);
 
-  // Scramble if we're in buildup OR if a scan is active AND hasn't finished its sweep
-  const shouldScramble = hudStage !== 'full' || (isScanning && !hasReachedBottom);
+  // Reset credential state when subject changes
+  React.useEffect(() => {
+    setCredentialVerified(false);
+    setCredentialViewed(false);
+    setShowCredentialModal(false);
+  }, [subject.id]);
+
+  const handleOpenCredential = () => {
+    setShowCredentialModal(true);
+    if (!credentialViewed) {
+      setCredentialViewed(true);
+      onCredentialViewed?.();
+    }
+  };
 
   const getStatusLine = () => {
     if (!hasDecision) {
@@ -205,52 +183,91 @@ export const ScanData = ({ id, isScanning, scanProgress, hudStage, subject, hasD
     );
   };
 
+  const getCredentialStatusColor = () => {
+    if (!subject.credential) return Theme.colors.textDim;
+    if (credentialVerified) {
+      const verified = subject.credential.verifiedStatus || 'CONFIRMED';
+      if (verified === 'CONFIRMED') return Theme.colors.accentApprove;
+      if (verified === 'EXPIRED' || verified === 'DENIED') return Theme.colors.accentDeny;
+      return Theme.colors.textSecondary;
+    }
+    if (subject.credential.initialStatus === 'CONFIRMED') return Theme.colors.accentApprove;
+    if (subject.credential.initialStatus === 'PENDING') return Theme.colors.accentWarn;
+    if (subject.credential.initialStatus === 'EXPIRED') return Theme.colors.accentDeny;
+    return Theme.colors.textDim;
+  };
+
+  const getCredentialStatusText = () => {
+    if (!subject.credential) return 'NONE';
+    if (credentialVerified) {
+      return subject.credential.verifiedStatus || 'CONFIRMED';
+    }
+    return subject.credential.initialStatus;
+  };
+
+  const handleVerifyComplete = (result: 'CONFIRMED' | 'EXPIRED' | 'DENIED' | 'UNVERIFIED') => {
+    setCredentialVerified(true);
+    onCredentialVerified?.(true);
+  };
+
   return (
-    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.locRecord}>
-      <View style={styles.leftColumn}>
-        <View style={styles.identHeader}>
-          <TypewriterText text="IDENT CONFIRM" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.identification} style={styles.label} />
-          {getStatusLine()}
+    <>
+      <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.locRecord}>
+        <View style={styles.leftColumn}>
+          <View style={styles.identHeader}>
+            <TypewriterText text="IDENT CONFIRM" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.identification} style={styles.label} />
+            {getStatusLine()}
+          </View>
+          
+          <View style={styles.idSection}>
+            <TypewriterText 
+              text={id} 
+              active={hudStage === 'full'} 
+              delay={BUILD_SEQUENCE.identification + 400} 
+              style={styles.idCode} 
+              showCursor={false}
+            />
+            {renderProgressBar()}
+          </View>
         </View>
         
-        <View style={styles.idSection}>
-          <ScrambleText text={id} active={hudStage !== 'full' || (isScanning && !hasReachedBottom)} keepScrambling={hudStage !== 'full' || (isScanning && !hasReachedBottom)} delay={BUILD_SEQUENCE.identification + 400} style={styles.idCode} />
-          {renderProgressBar()}
+        {/* Credential Button - Right Column */}
+        <View style={styles.rightColumn}>
+          <TypewriterText 
+            text="CREDENTIAL" 
+            active={hudStage !== 'none'} 
+            delay={BUILD_SEQUENCE.locRecord + 200} 
+            style={styles.gridLabel} 
+            showCursor={false}
+          />
+          
+          <Pressable 
+            onPress={handleOpenCredential}
+            style={({ pressed }) => [
+              styles.credentialButton,
+              pressed && styles.credentialButtonPressed
+            ]}
+            disabled={hudStage !== 'full'}
+          >
+            <View style={styles.credentialContent}>
+              <View style={[styles.credentialDot, { backgroundColor: getCredentialStatusColor() }]} />
+              <Text style={[styles.credentialStatus, { color: getCredentialStatusColor() }]}>
+                {getCredentialStatusText()}
+              </Text>
+            </View>
+            <Text style={styles.credentialAction}>[ VIEW ]</Text>
+          </Pressable>
         </View>
-      </View>
-      
-      <View style={styles.rightColumn}>
-        <View style={styles.locationHeader}>
-          <View style={styles.gridBox}>
-            <View style={styles.gridDot} />
-          </View>
-          <TypewriterText text="LOC RECORD" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.locRecord + 200} style={styles.gridLabel} />
-        </View>
-        
-        <View style={styles.locGrid}>
-          <View style={styles.locRow}>
-            <View style={styles.dataRow}>
-              <TypewriterText text="ADDR:" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.locRecord + 400} style={styles.dataLabel} />
-              <ScrambleText text={subject.locRecord.addr} active={shouldScramble} keepScrambling={shouldScramble} delay={BUILD_SEQUENCE.locRecord + 600} />
-            </View>
-            <View style={styles.dataRow}>
-              <TypewriterText text="TIME:" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.locRecord + 500} style={styles.dataLabel} />
-              <ScrambleText text={subject.locRecord.time} active={shouldScramble} keepScrambling={shouldScramble} delay={BUILD_SEQUENCE.locRecord + 700} />
-            </View>
-          </View>
-          <View style={styles.locRow}>
-            <View style={styles.dataRow}>
-              <TypewriterText text="PL:" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.locRecord + 600} style={styles.dataLabel} />
-              <ScrambleText text={subject.locRecord.pl} active={shouldScramble} keepScrambling={shouldScramble} delay={BUILD_SEQUENCE.locRecord + 800} />
-            </View>
-            <View style={styles.dataRow}>
-              <TypewriterText text="D.O.B:" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.locRecord + 700} style={styles.dataLabel} />
-              <ScrambleText text={subject.locRecord.dob} active={shouldScramble} keepScrambling={shouldScramble} delay={BUILD_SEQUENCE.locRecord + 900} />
-            </View>
-          </View>
-        </View>
-      </View>
-    </HUDBox>
+      </HUDBox>
+
+      <CredentialModal
+        visible={showCredentialModal}
+        credential={subject.credential}
+        alreadyVerified={credentialVerified}
+        onClose={() => setShowCredentialModal(false)}
+        onVerify={handleVerifyComplete}
+      />
+    </>
   );
 };
 

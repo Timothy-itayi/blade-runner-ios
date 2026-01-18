@@ -9,6 +9,7 @@ import { BUILD_SEQUENCE } from '../constants/animations';
 export const TypewriterText = ({ text, active, delay = 0, style, showCursor = true }: { text: string, active: boolean, delay?: number, style?: any, showCursor?: boolean }) => {
   const [display, setDisplay] = React.useState('');
   const [isComplete, setIsComplete] = React.useState(false);
+  const [isTyping, setIsTyping] = React.useState(false);
 
   React.useEffect(() => {
     let interval: any = null;
@@ -17,22 +18,26 @@ export const TypewriterText = ({ text, active, delay = 0, style, showCursor = tr
     if (!active) {
       setDisplay('');
       setIsComplete(false);
+      setIsTyping(false);
       return;
     }
 
     // Reset state immediately when text or active changes
     setDisplay('');
     setIsComplete(false);
+    setIsTyping(false);
     
     let currentText = '';
     
     timeout = setTimeout(() => {
+      setIsTyping(true); // Start typing - show cursor
       interval = setInterval(() => {
         if (currentText.length < text.length) {
           currentText = text.slice(0, currentText.length + 1);
           setDisplay(currentText);
         } else {
           setIsComplete(true);
+          setIsTyping(false); // Done typing - hide cursor
           if (interval) clearInterval(interval);
         }
       }, 25); // Slightly faster
@@ -47,7 +52,7 @@ export const TypewriterText = ({ text, active, delay = 0, style, showCursor = tr
   return (
     <Text style={style}>
       {display}
-      {showCursor && !isComplete && (
+      {showCursor && isTyping && !isComplete && (
         <Text style={{ color: style?.color || Theme.colors.textPrimary, opacity: 0.8 }}>█</Text>
       )}
     </Text>

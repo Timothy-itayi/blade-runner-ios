@@ -10,6 +10,8 @@ import { SubjectDossier } from '../components/SubjectDossier';
 import { DecisionButtons } from '../components/DecisionButtons';
 import { OnboardingModal } from '../components/OnboardingModal';
 import { BootSequence } from '../components/BootSequence';
+import { HomeScreen } from '../components/HomeScreen';
+import { SystemTakeover } from '../components/SystemTakeover';
 import { VerificationDrawer } from '../components/VerificationDrawer';
 import { ShiftTransition, ShiftDecision } from '../components/ShiftTransition';
 import { PersonalMessageModal } from '../components/PersonalMessageModal';
@@ -20,12 +22,12 @@ import { SUBJECTS, Outcome } from '../data/subjects';
 import { getShiftForSubject, isEndOfShift, SHIFTS, SUBJECTS_PER_SHIFT } from '../constants/shifts';
 import { POSITIVE_MESSAGES, NEGATIVE_MESSAGES, NEUTRAL_MESSAGES } from '../constants/messages';
 
-const DEV_MODE = true; // Set to true to bypass onboarding and boot
+const DEV_MODE = false; // Set to true to bypass onboarding and boot
+
+type GamePhase = 'intro' | 'takeover' | 'boot' | 'briefing' | 'active';
 
 export default function MainScreen() {
-  const [showOnboarding, setShowOnboarding] = useState(!DEV_MODE);
-  const [isBooting, setIsBooting] = useState(false);
-  const [gameActive, setGameActive] = useState(DEV_MODE);
+  const [gamePhase, setGamePhase] = useState<GamePhase>(DEV_MODE ? 'active' : 'intro');
   const [showVerify, setShowVerify] = useState(false);
   const [showDossier, setShowDossier] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -148,14 +150,20 @@ export default function MainScreen() {
     }
   }, []);
 
-  const startBoot = () => {
-    setShowOnboarding(false);
-    setIsBooting(true);
+  const handleIntroComplete = () => {
+    setGamePhase('takeover');
+  };
+
+  const handleTakeoverComplete = () => {
+    setGamePhase('boot');
   };
 
   const handleBootComplete = () => {
-    setIsBooting(false);
-    setGameActive(true);
+    setGamePhase('briefing');
+  };
+
+  const handleBriefingComplete = () => {
+    setGamePhase('active');
     
     // Start initial build sequence
     Animated.sequence([
@@ -322,18 +330,26 @@ export default function MainScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {showOnboarding && (
-          <OnboardingModal 
-            visible={showOnboarding} 
-            onDismiss={startBoot} 
-          />
+        {gamePhase === 'intro' && (
+          <HomeScreen onComplete={handleIntroComplete} />
         )}
 
-        {isBooting && (
+        {gamePhase === 'takeover' && (
+          <SystemTakeover onComplete={handleTakeoverComplete} />
+        )}
+
+        {gamePhase === 'boot' && (
           <BootSequence onComplete={handleBootComplete} />
         )}
 
-        {gameActive && (
+        {gamePhase === 'briefing' && (
+          <OnboardingModal 
+            visible={true} 
+            onDismiss={handleBriefingComplete} 
+          />
+        )}
+
+        {gamePhase === 'active' && (
           <Animated.View style={[styles.container, { opacity: gameOpacity }]}>
             <Header 
               hudStage={hudStage} 

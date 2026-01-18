@@ -6,9 +6,10 @@ import { TypewriterText } from './ScanData';
 interface OnboardingModalProps {
   visible: boolean;
   onDismiss: () => void;
+  operatorId: string;
 }
 
-export const OnboardingModal = ({ visible, onDismiss }: OnboardingModalProps) => {
+export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingModalProps) => {
   const [showButton, setShowButton] = useState(false);
   const [isActive, setIsActive] = useState(false);
   
@@ -36,7 +37,7 @@ export const OnboardingModal = ({ visible, onDismiss }: OnboardingModalProps) =>
           duration: 600,
           useNativeDriver: true,
         }).start();
-      }, 6000);
+      }, 7200);
     }
   }, [visible]);
 
@@ -62,9 +63,16 @@ export const OnboardingModal = ({ visible, onDismiss }: OnboardingModalProps) =>
               </View>
               <View style={styles.spacer} />
               <TypewriterText 
-                text="You have been cleared for processing." 
+                text={`You are now ${operatorId}.`}
                 active={isActive} 
                 delay={1800} 
+                style={[styles.text, styles.textOperatorId]} 
+              />
+              <View style={styles.spacer} />
+              <TypewriterText 
+                text="You have been cleared for processing." 
+                active={isActive} 
+                delay={2600} 
                 style={[styles.text, styles.textClearance]} 
               />
               <View style={styles.spacer} />
@@ -72,19 +80,19 @@ export const OnboardingModal = ({ visible, onDismiss }: OnboardingModalProps) =>
                 <TypewriterText 
                   text="Review. " 
                   active={isActive} 
-                  delay={3200} 
+                  delay={4000} 
                   style={[styles.text, styles.textInstruction, styles.textReview]} 
                 />
                 <TypewriterText 
                   text="Decide. " 
                   active={isActive} 
-                  delay={3550} 
+                  delay={4350} 
                   style={[styles.text, styles.textInstruction, styles.textDecide]} 
                 />
                 <TypewriterText 
                   text="Confirm." 
                   active={isActive} 
-                  delay={3900} 
+                  delay={4700} 
                   style={[styles.text, styles.textInstruction, styles.textConfirm]} 
                 />
               </View>
@@ -92,20 +100,20 @@ export const OnboardingModal = ({ visible, onDismiss }: OnboardingModalProps) =>
               <TypewriterText 
                 text="Trust the system." 
                 active={isActive} 
-                delay={4200} 
+                delay={5000} 
                 style={[styles.text, styles.textPropaganda]} 
               />
               <TypewriterText 
                 text="The system trusts you." 
                 active={isActive} 
-                delay={4800} 
+                delay={5600} 
                 style={[styles.text, styles.textPropaganda]} 
               />
               <View style={styles.spacer} />
               <TypewriterText 
                 text="No further instructions." 
                 active={isActive} 
-                delay={5500} 
+                delay={6300} 
                 style={[styles.text, styles.textFinality]} 
               />
             </Animated.View>

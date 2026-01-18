@@ -345,7 +345,8 @@ export default function MainScreen() {
         {gamePhase === 'briefing' && (
           <OnboardingModal 
             visible={true} 
-            onDismiss={handleBriefingComplete} 
+            onDismiss={handleBriefingComplete}
+            operatorId="OP-7734"
           />
         )}
 

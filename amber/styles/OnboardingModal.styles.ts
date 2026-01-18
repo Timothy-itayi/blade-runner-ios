@@ -57,6 +57,12 @@ export const styles = StyleSheet.create({
   textStatusValue: {
     color: Theme.colors.accentApprove,
   },
+  textOperatorId: {
+    color: Theme.colors.accentApprove,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
   textClearance: {
     color: Theme.colors.textPrimary,
     fontSize: 15,

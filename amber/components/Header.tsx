@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated } from 'react-native';
+import { View, Text, Animated, TouchableOpacity } from 'react-native';
 import { styles } from '../styles/Header.styles';
 import { HUDBox } from './HUDBox';
 import { DigitalClockSplitFlap } from './DigitalClockSplitFlap';
@@ -8,9 +8,10 @@ interface HeaderProps {
   hudStage: 'none' | 'wireframe' | 'outline' | 'full';
   shiftTime?: string;
   shiftData?: any; // Contains stationName, city, authorityLabel
+  onSettingsPress?: () => void;
 }
 
-export const Header = ({ hudStage, shiftTime, shiftData }: HeaderProps) => {
+export const Header = ({ hudStage, shiftTime, shiftData, onSettingsPress }: HeaderProps) => {
   const authorityLabel = shiftData?.authorityLabel || 'СУДЬБА (SUDBA)';
   const letters = authorityLabel.split('');
   
@@ -57,7 +58,14 @@ export const Header = ({ hudStage, shiftTime, shiftData }: HeaderProps) => {
           ))}
         </View>
         {shiftData && hudStage === 'full' && (
-          <Text style={styles.locationText}>{shiftData.stationName} — {shiftData.city}</Text>
+          <TouchableOpacity 
+            onPress={onSettingsPress}
+            style={styles.locationButton}
+            hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }}
+          >
+            <Text style={styles.locationText}>{shiftData.stationName} — {shiftData.city}</Text>
+            <Text style={styles.locationArrow}>›</Text>
+          </TouchableOpacity>
         )}
       </View>
       <View style={styles.signalContainer}>

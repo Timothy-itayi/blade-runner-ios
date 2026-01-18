@@ -14,6 +14,7 @@ import { VerificationDrawer } from '../components/VerificationDrawer';
 import { ShiftTransition, ShiftDecision } from '../components/ShiftTransition';
 import { PersonalMessageModal } from '../components/PersonalMessageModal';
 import { DecisionStamp } from '../components/DecisionStamp';
+import { SettingsModal } from '../components/SettingsModal';
 import { styles } from '../styles/MainScreen.styles';
 import { SUBJECTS, Outcome } from '../data/subjects';
 import { getShiftForSubject, isEndOfShift, SHIFTS, SUBJECTS_PER_SHIFT } from '../constants/shifts';
@@ -27,6 +28,7 @@ export default function MainScreen() {
   const [gameActive, setGameActive] = useState(DEV_MODE);
   const [showVerify, setShowVerify] = useState(false);
   const [showDossier, setShowDossier] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [hudStage, setHudStage] = useState<'none' | 'wireframe' | 'outline' | 'full'>(DEV_MODE ? 'full' : 'none');
   const [currentSubjectIndex, setCurrentSubjectIndex] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
@@ -46,11 +48,13 @@ export default function MainScreen() {
   const [totalCorrectDecisions, setTotalCorrectDecisions] = useState(0);
   const [totalAccuracy, setTotalAccuracy] = useState(1.0); // 0.0 to 1.0
   const [infractions, setInfractions] = useState(0);
-  const [activeDirective, setActiveDirective] = useState<string | null>("DENY ALL FROM SECTOR 9");
   const [triggerConsequence, setTriggerConsequence] = useState(false);
   const [messageHistory, setMessageHistory] = useState<string[]>([]);
   const [shiftDecisions, setShiftDecisions] = useState<ShiftDecision[]>([]);
   const currentShift = getShiftForSubject(currentSubjectIndex);
+  
+  // Directive is derived from the current shift's briefing
+  const activeDirective = currentShift.briefing;
 
   const scanProgress = useRef(new Animated.Value(0)).current;
   const gameOpacity = useRef(new Animated.Value(DEV_MODE ? 1 : 0)).current;
@@ -184,12 +188,31 @@ export default function MainScreen() {
 
     let correct = isDecisionCorrect(currentSubject, type);
 
-    // Directive Logic: Supervisor can override standard rules
-    // e.g. "DENY ALL FROM SECTOR 9" even if they have valid papers
-    if (activeDirective === "DENY ALL FROM SECTOR 9" && 
-        currentSubject.sector.includes("SECTOR 9") && 
-        type === 'APPROVE') {
-      correct = false;
+    // Directive Logic: Shift-specific rules that override standard verification
+    // Each shift briefing creates conflict between verification and directive
+    if (currentShift.id === 1) {
+      // "STANDARD PROTOCOL: DENY ALL ACTIVE WARRANTS."
+      // Approving someone with active warrants violates the directive
+      if (currentSubject.warrants !== 'NONE' && type === 'APPROVE') {
+        correct = false;
+      }
+    } else if (currentShift.id === 5) {
+      // "PRIORITY: EXPEDITE ENGINEERING. IGNORE SECTOR FLAGS."
+      // Denying engineering personnel due to sector flags is an error
+      if (currentSubject.function === 'ENGINEERING' && type === 'DENY') {
+        // Only mark incorrect if the reason was sector-related, not other issues
+        const hasSectorIssueOnly = currentSubject.authData.sectorAuth.status !== 'AUTHORIZED' &&
+                                   currentSubject.warrants === 'NONE';
+        if (hasSectorIssueOnly) {
+          correct = true; // Override: Engineering should be approved despite sector flags
+        }
+      }
+    } else if (currentShift.id === 7) {
+      // "NOTICE: ALL SUBJECTS FROM REVOKED SECTORS MUST BE DETAINED."
+      // Sector 9 is typically revoked - approving them is an error
+      if (currentSubject.sector.includes('SECTOR 9') && type === 'APPROVE') {
+        correct = false;
+      }
     }
 
     if (!correct) {
@@ -315,7 +338,8 @@ export default function MainScreen() {
             <Header 
               hudStage={hudStage} 
               shiftTime={currentShift.timeBlock} 
-              shiftData={currentShift} 
+              shiftData={currentShift}
+              onSettingsPress={() => setShowSettings(true)}
             />
             
             <View style={styles.content}>
@@ -422,6 +446,16 @@ export default function MainScreen() {
                 onContinue={handleShiftContinue}
               />
             )}
+
+            <SettingsModal
+              visible={showSettings}
+              onClose={() => setShowSettings(false)}
+              operatorId="OP-7734"
+              currentShift={currentShift.id}
+              totalSubjectsProcessed={currentSubjectIndex}
+              accuracy={totalAccuracy}
+              shiftData={currentShift}
+            />
           </Animated.View>
         )}
       </View>

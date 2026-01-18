@@ -92,19 +92,23 @@ export const DecisionButtons = ({
     !needsDatabaseQuery && 
     !needsWarrantCheck;
 
+  // When decision is made, buttons are disabled and we wait for auto-advance
   if (hasDecision) {
     return (
       <HUDBox hudStage={hudStage} style={styles.container}>
-        <TouchableOpacity 
-          style={[
-            styles.button, 
-            { borderColor: Theme.colors.accentWarn, flex: 1, height: 60 }
-          ]} 
-          onPress={onNext}
-        >
-          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(201, 162, 39, 0.1)', opacity: 1 }]} />
-          <Text style={[styles.buttonText, { color: Theme.colors.accentWarn, fontSize: 18 }]}>[ NEXT SUBJECT ]</Text>
-        </TouchableOpacity>
+        <View style={styles.protocolStatus}>
+          <Text style={[styles.protocolText, styles.protocolComplete]}>
+            ● DECISION LOGGED
+          </Text>
+        </View>
+        <View style={styles.buttonRow}>
+          <View style={[styles.button, styles.buttonDisabled]}>
+            <Text style={[styles.buttonText, styles.buttonTextDisabled]}>APPROVE</Text>
+          </View>
+          <View style={[styles.button, styles.buttonDisabled]}>
+            <Text style={[styles.buttonText, styles.buttonTextDisabled]}>DENY</Text>
+          </View>
+        </View>
       </HUDBox>
     );
   }

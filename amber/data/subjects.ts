@@ -128,101 +128,109 @@ export interface SubjectData {
 }
 
 export const SUBJECTS: SubjectData[] = [
-  // --- ACT 1: THE ROUTINE (Subjects 1-8) ---
-  // Shift 1: Subjects 1-4
-  // Shift 2: Subjects 5-8
+  // =============================================================================
+  // ACT 1: THE ROUTINE (Subjects 1-8)
+  // =============================================================================
+  // Shift 1: SECTOR 9 checkpoint (São Paulo) - Subjects 1-4
+  // Shift 2: SECTOR 8 checkpoint (Mumbai) - Subjects 5-8
   // Tone: Mundane. Bureaucratic. Almost boring.
-  // Directive: "DENY ALL ACTIVE WARRANTS"
+  // Directive Shift 1: "DENY ALL ACTIVE WARRANTS"
+  // Directive Shift 2: "VERIFY ALL CREDENTIALS BEFORE TRANSIT"
+  
+  // --- SHIFT 1: SECTOR 9 CHECKPOINT ---
+  // Subjects here are FROM Sector 9 (peripheral) wanting to leave for work,
+  // or FROM Sector 8 passing through.
   
   {
-    name: 'ELARA VANCE',
-    id: 'V1-EV001',
-    sex: 'F',
-    sector: 'SECTOR 7',
-    function: 'ENGINEERING',
+    name: 'TOMAS REYES',
+    id: 'S9-TR001',
+    sex: 'M',
+    sector: 'SECTOR 9',
+    function: 'SANITATION',
     compliance: 'B',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Repairs to thermal regulator.',
-    requestedSector: 'SECTOR 4',
-    videoSource: require('../assets/videos/eye00.mp4'),
-    dialogue: "Long day. Just trying to get this regulator fixed before the whole sector overheats.",
+    reasonForVisit: 'Daily shift in Sector 8 waste processing.',
+    requestedSector: 'SECTOR 8',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "Same route every morning. Sector 8 waste plant. You know how it is.",
     phase: 1,
-    locRecord: { addr: 'SECTOR 7', time: '14:22:11', pl: 'SECTOR 5', dob: '12/04/92' },
+    locRecord: { addr: 'SECTOR 9', time: '05:45:22', pl: 'SECTOR 9', dob: '18/07/89' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 authorized for engineering' },
-      functionReg: { status: 'VALID', message: '✓ Credentials active' },
+      sectorAuth: { requested: 'SECTOR 8', status: 'AUTHORIZED', message: '✓ Sector 8 open for sanitation' },
+      functionReg: { status: 'VALID', message: '✓ Sanitation permit active' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
-        consequence: 'Thermal regulator repaired. Sector 4 temperature normalized.',
+        consequence: 'Sanitation worker cleared for Sector 8.',
         personalMessage: {
-          from: 'ELARA VANCE',
-          text: "Repair complete. 247 people in Sector 4 are slightly less sweaty today. You're welcome.",
+          from: 'TOMAS REYES',
+          text: "Another day, another ton of recycling. Thanks for not making me late.",
           tone: 'GRATEFUL'
         },
         flagWeight: 0
       },
       DENY: { 
         feedback: 'ENTRY DENIED', 
-        consequence: 'Engineering request denied. Sector 4 repair delayed.',
+        consequence: 'Sanitation shift missed.',
         incidentReport: {
           fileNumber: '#0001',
           redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 4. Thermal regulator repair postponed.',
-          outcome: 'Sector 4 temperature rose 3.2°C. 14 heat-related complaints filed. Maintenance backlog increased.'
+          summary: 'Subject denied transit to Sector 8. Daily sanitation shift missed.',
+          outcome: 'Waste processing delayed 4 hours. Sector 8 sanitation backlog increased. Supervisor filed overtime request.'
         },
         flagWeight: 0
       }
     },
     credential: {
       type: 'WORK_ORDER',
-      destinationSector: 4,
+      destinationSector: 8,
       issuedDate: '2087.04.14',
       expirationDate: '2087.04.14',
-      authority: 'SECTOR 7 ENGINEERING',
+      authority: 'SECTOR 9 SANITATION DEPT',
       initialStatus: 'CONFIRMED',
     },
     transitLog: [
-      { date: '2087.04.14 08:00', from: 'SECTOR 7', to: 'SECTOR 5' },
-      { date: '2087.04.13 17:30', from: 'SECTOR 4', to: 'SECTOR 7' },
-      { date: '2087.04.13 08:15', from: 'SECTOR 7', to: 'SECTOR 4' },
+      { date: '2087.04.14 05:40', from: 'SECTOR 9', to: 'CHECKPOINT 9', flagged: false },
+      { date: '2087.04.13 18:00', from: 'SECTOR 8', to: 'SECTOR 9', flagged: false },
+      { date: '2087.04.13 05:45', from: 'SECTOR 9', to: 'SECTOR 8', flagged: false },
+      { date: '2087.04.12 18:15', from: 'SECTOR 8', to: 'SECTOR 9', flagged: false },
     ],
     toneClassification: 'NEUTRAL',
   },
   {
-    name: 'KANE MORROW',
-    id: 'V1-KM002',
-    sex: 'M',
-    sector: 'SECTOR 3',
-    function: 'LOGISTICS',
+    name: 'MARA VOLKOV',
+    id: 'S9-MV002',
+    sex: 'F',
+    sector: 'SECTOR 9',
+    function: 'MAINTENANCE',
     compliance: 'C',
     status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'WARRANT NO 45221',
-    reasonForVisit: 'Visiting family.',
-    requestedSector: 'SECTOR 6',
-    videoSource: '',
-    dialogue: "I'm already late. My daughter is waiting for me in Sector 6. It's her birthday today.",
+    incidents: 1,
+    warrants: 'WARRANT NO 88412',
+    reasonForVisit: 'Visiting my mother in Sector 8. She is unwell.',
+    requestedSector: 'SECTOR 8',
+    videoSource: require('../assets/videos/subjects/subject02.mp4'),
+    dialogue: "Please. My mother is sick. I just need to see her. The warrant... it's a misunderstanding.",
     phase: 1,
-    locRecord: { addr: 'SECTOR 3', time: '09:15:44', pl: 'SECTOR 1', dob: '22/08/88' },
+    locRecord: { addr: 'SECTOR 9', time: '06:12:33', pl: 'SECTOR 9', dob: '03/11/91' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
-      functionReg: { status: 'VALID', message: '✓ Logistics permit active' },
+      sectorAuth: { requested: 'SECTOR 8', status: 'AUTHORIZED', message: '✓ Sector 8 visitor access' },
+      functionReg: { status: 'VALID', message: '✓ Maintenance permit active' },
       warrantCheck: { status: 'ACTIVE', message: '✗ ACTIVE WARRANT DETECTED' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+      medicalFlag: { status: 'ELEVATED', message: '! Elevated stress markers' },
     },
     outcomes: {
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
         consequence: 'Subject with active warrant allowed transit.',
         personalMessage: {
-          from: 'KANE MORROW',
-          text: "Made it to the party. She was so happy. Thanks for not making this harder than it had to be.",
+          from: 'MARA VOLKOV',
+          text: "I made it. She's doing better now. Thank you for understanding.",
           tone: 'GRATEFUL'
         },
         flagWeight: 2 // Major - approved active warrant
@@ -233,100 +241,429 @@ export const SUBJECTS: SubjectData[] = [
         incidentReport: {
           fileNumber: '#0002',
           redactionLevel: 'NONE',
-          summary: 'Subject detained at Checkpoint 7. Active warrant NO. 45221 confirmed. Subject remanded to Processing Queue.',
-          outcome: "Transferred to Holding Sector 11. Family notified. Daughter's birthday party missed. Appeal filed: 'My kid is crying because of you.'"
+          summary: 'Subject detained at Checkpoint 9. Active warrant NO. 88412 confirmed.',
+          outcome: "Transferred to Holding Queue. Mother's condition unknown. Appeal filed: 'She might not make it. Please.'"
         },
         flagWeight: 0 // Correct decision per directive
       }
     },
     credential: {
       type: 'VISITOR_PASS',
-      destinationSector: 6,
+      destinationSector: 8,
       issuedDate: '2087.04.14',
       expirationDate: '2087.04.14',
-      authority: 'SECTOR 3 ADMIN',
+      authority: 'SECTOR 9 ADMIN',
       initialStatus: 'CONFIRMED',
     },
     transitLog: [
-      { date: '2087.04.14 09:00', from: 'SECTOR 3', to: 'SECTOR 1' },
-      { date: '2087.04.13 18:00', from: 'SECTOR 6', to: 'SECTOR 3' },
-      { date: '2087.04.13 12:00', from: 'SECTOR 3', to: 'SECTOR 6' },
+      { date: '2087.04.14 06:00', from: 'SECTOR 9', to: 'CHECKPOINT 9', flagged: false },
+      { date: '2087.04.10 19:30', from: 'SECTOR 8', to: 'SECTOR 9', flagged: false },
+      { date: '2087.04.10 08:00', from: 'SECTOR 9', to: 'SECTOR 8', flagged: false },
+      { date: '2087.03.28 14:00', from: 'SECTOR 9', to: 'SECTOR 7', flagged: true, flagNote: 'EXPIRED PERMIT. WARRANT ISSUED.' },
+    ],
+    incidentHistory: [
+      { 
+        date: '2087.03.28', 
+        type: 'EXPIRED CREDENTIALS', 
+        location: 'SECTOR 7 CHECKPOINT', 
+        resolution: 'WARRANT ISSUED NO. 88412' 
+      },
     ],
     dialogueFlags: [
-      { keyword: 'late', category: 'URGENCY' },
-      { keyword: 'daughter', category: 'PERSONAL APPEAL' },
+      { keyword: 'please', category: 'PERSONAL APPEAL' },
+      { keyword: 'misunderstanding', category: 'DEFLECTION' },
     ],
     toneClassification: 'NERVOUS',
   },
   {
-    name: 'ELENA VOSS',
-    id: 'V1-EV003',
-    sex: 'F',
-    sector: 'SECTOR 7',
-    function: 'ENGINEERING',
+    name: 'FELIX CHEN',
+    id: 'S8-FC003',
+    sex: 'M',
+    sector: 'SECTOR 8',
+    function: 'TRANSPORT',
     compliance: 'A',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Meeting with supervisor.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '',
-    dialogue: "Sector 4 briefing. High command doesn't like it when Engineering is late. Can we move this along?",
+    reasonForVisit: 'Cargo pickup from Sector 9 depot.',
+    requestedSector: 'SECTOR 9',
+    videoSource: require('../assets/videos/subjects/subject03.mp4'),
+    dialogue: "Cargo run. Picking up recycled materials from the Sector 9 depot. Should be quick.",
     phase: 1,
-    locRecord: { addr: 'SECTOR 7', time: '03:42:11', pl: 'SECTOR 4', dob: '05/11/94' },
+    locRecord: { addr: 'SECTOR 8', time: '06:20:15', pl: 'SECTOR 8', dob: '22/02/85' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
-      functionReg: { status: 'VALID', message: '✓ Credentials active' },
+      sectorAuth: { requested: 'SECTOR 9', status: 'AUTHORIZED', message: '✓ Sector 9 transport access' },
+      functionReg: { status: 'VALID', message: '✓ Transport credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
-        consequence: 'Engineering briefing attended.',
+        consequence: 'Transport worker cleared for cargo pickup.',
         personalMessage: {
-          from: 'ELENA VOSS',
-          text: "Made the meeting. Barely. The supervisor noticed I was cutting it close. Next time, maybe a little faster?",
+          from: 'FELIX CHEN',
+          text: "Cargo secured. Smooth run today. Appreciate the efficiency.",
           tone: 'GRATEFUL'
         },
         flagWeight: 0
       },
       DENY: { 
         feedback: 'ENTRY DENIED', 
-        consequence: 'Engineering personnel denied access to briefing.',
+        consequence: 'Cargo pickup delayed.',
         incidentReport: {
           fileNumber: '#0003',
           redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 4. Scheduled supervisor briefing missed.',
-          outcome: 'Subject arrived 47 minutes late. Formal reprimand issued. Performance review scheduled. Subject filed complaint: "I had all the right papers."'
+          summary: 'Subject denied entry to Sector 9. Cargo pickup not completed.',
+          outcome: 'Recycled materials backlog in Sector 9. Transport schedule disrupted. Sector 8 processing delayed.'
+        },
+        flagWeight: 0
+      }
+    },
+    credential: {
+      type: 'WORK_ORDER',
+      destinationSector: 9,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'SECTOR 8 TRANSPORT HUB',
+      initialStatus: 'CONFIRMED',
+    },
+    transitLog: [
+      { date: '2087.04.14 06:15', from: 'SECTOR 8', to: 'CHECKPOINT 9', flagged: false },
+      { date: '2087.04.13 14:00', from: 'SECTOR 9', to: 'SECTOR 8', flagged: false },
+      { date: '2087.04.13 06:30', from: 'SECTOR 8', to: 'SECTOR 9', flagged: false },
+      { date: '2087.04.12 15:00', from: 'SECTOR 9', to: 'SECTOR 8', flagged: false },
+    ],
+    toneClassification: 'COOPERATIVE',
+  },
+  {
+    name: 'IRIS DELGADO',
+    id: 'S9-ID004',
+    sex: 'F',
+    sector: 'SECTOR 9',
+    function: 'ARCHIVE',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    reasonForVisit: 'Document retrieval from Sector 8 archive annex.',
+    requestedSector: 'SECTOR 8',
+    videoSource: '',
+    dialogue: "Records transfer. The Sector 8 annex has files we need for an audit. My permit was approved.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 9', time: '06:35:08', pl: 'SECTOR 9', dob: '14/09/93' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 8', status: 'RESTRICTED', message: '? Credential verification required' },
+      functionReg: { status: 'VALID', message: '✓ Archive credentials active' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Subject approved without valid credentials.',
+        personalMessage: {
+          from: 'IRIS DELGADO',
+          text: "Got through. Not sure how, my permit never showed up in the system. Thanks anyway.",
+          tone: 'AMBIGUOUS'
+        },
+        flagWeight: 2 // Major - approved with failed credentials
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject denied due to credential verification failure.',
+        incidentReport: {
+          fileNumber: '#0004',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 8. Work order not found in system after verification attempt.',
+          outcome: 'Subject returned to Sector 9 admin to re-file permit. Quarterly audit delayed. IT flagged sync issue for review.'
+        },
+        flagWeight: 0 // Correct decision - credential failed verification
+      }
+    },
+    credential: {
+      type: 'WORK_ORDER',
+      destinationSector: 8,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'SECTOR 9 ARCHIVE DEPT',
+      initialStatus: 'PENDING',
+      verifiedStatus: 'DENIED',
+      claim: 'Just filed this morning. Should sync any moment now.',
+      verificationNote: 'ERROR: Work order not found in database. Possible sync failure. Re-authorization required.',
+    },
+    transitLog: [
+      { date: '2087.04.14 06:30', from: 'SECTOR 9', to: 'CHECKPOINT 9', flagged: false },
+      { date: '2087.04.07 17:00', from: 'SECTOR 8', to: 'SECTOR 9', flagged: false },
+      { date: '2087.04.07 09:00', from: 'SECTOR 9', to: 'SECTOR 8', flagged: false },
+    ],
+    dialogueFlags: [
+      { keyword: 'just approved', category: 'UNVERIFIED CLAIM' },
+    ],
+    toneClassification: 'COOPERATIVE',
+  },
+  
+  // --- SHIFT 2: SECTOR 8 CHECKPOINT ---
+  // Subjects here are FROM Sector 8 wanting to leave for work in Sectors 7-6,
+  // or FROM Sector 9 passing through, or FROM Sector 7 entering Sector 8.
+  // Directive: "VERIFY ALL CREDENTIALS BEFORE TRANSIT"
+  
+  {
+    name: 'KARL BRANDT',
+    id: 'S8-KB005',
+    sex: 'M',
+    sector: 'SECTOR 8',
+    function: 'MAINTENANCE',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    reasonForVisit: 'Equipment repair in Sector 7 industrial zone.',
+    requestedSector: 'SECTOR 7',
+    videoSource: '',
+    dialogue: "Got a work order for Sector 7. Ventilation system is acting up again. Third time this month.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 8', time: '09:55:22', pl: 'SECTOR 8', dob: '18/03/82' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 7', status: 'AUTHORIZED', message: '✓ Sector 7 maintenance access' },
+      functionReg: { status: 'VALID', message: '✓ Maintenance credentials active' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Maintenance worker cleared for Sector 7.',
+        personalMessage: {
+          from: 'KARL BRANDT',
+          text: "Fixed the ventilation. They really need to replace that whole unit. See you next week, probably.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Maintenance work delayed.',
+        incidentReport: {
+          fileNumber: '#0005',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 7. Ventilation repair not completed.',
+          outcome: 'Sector 7 industrial zone air quality degraded. 3 workers reported respiratory issues. Emergency repair scheduled.'
+        },
+        flagWeight: 0
+      }
+    },
+    credential: {
+      type: 'WORK_ORDER',
+      destinationSector: 7,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'SECTOR 8 MAINTENANCE DEPT',
+      initialStatus: 'CONFIRMED',
+    },
+    transitLog: [
+      { date: '2087.04.14 09:50', from: 'SECTOR 8', to: 'CHECKPOINT 8', flagged: false },
+      { date: '2087.04.13 16:30', from: 'SECTOR 7', to: 'SECTOR 8', flagged: false },
+      { date: '2087.04.13 08:00', from: 'SECTOR 8', to: 'SECTOR 7', flagged: false },
+      { date: '2087.04.07 17:00', from: 'SECTOR 7', to: 'SECTOR 8', flagged: false },
+    ],
+    toneClassification: 'NEUTRAL',
+  },
+  {
+    name: 'SORA TANAKA',
+    id: 'S8-ST006',
+    sex: 'F',
+    sector: 'SECTOR 8',
+    function: 'SANITATION',
+    compliance: 'A',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    reasonForVisit: 'Covering sick colleague shift in Sector 6.',
+    requestedSector: 'SECTOR 6',
+    videoSource: '',
+    dialogue: "Sector 6 sanitation. Covering for a colleague who called in sick. I have the emergency transfer permit.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 8', time: '10:05:44', pl: 'SECTOR 8', dob: '02/08/95' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 emergency access' },
+      functionReg: { status: 'VALID', message: '✓ Sanitation credentials active' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Sanitation coverage secured.',
+        personalMessage: {
+          from: 'SORA TANAKA',
+          text: "Double shift done. Tell my colleague to feel better. And maybe not eat the cafeteria fish.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Sanitation coverage failed.',
+        incidentReport: {
+          fileNumber: '#0006',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 6. Emergency coverage not completed.',
+          outcome: 'Sector 6 sanitation understaffed. Waste processing delayed 8 hours. Health inspection warning issued.'
+        },
+        flagWeight: 0
+      }
+    },
+    credential: {
+      type: 'WORK_ORDER',
+      destinationSector: 6,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'SECTOR 8 SANITATION DEPT',
+      initialStatus: 'PENDING',
+      verifiedStatus: 'CONFIRMED',
+      claim: 'Emergency transfer. Just approved 10 minutes ago.',
+      verificationNote: 'Emergency coverage approved. Valid for single shift.',
+    },
+    transitLog: [
+      { date: '2087.04.14 10:00', from: 'SECTOR 8', to: 'CHECKPOINT 8', flagged: false },
+      { date: '2087.04.13 18:00', from: 'SECTOR 8', to: 'SECTOR 8', flagged: false },
+      { date: '2087.04.12 18:00', from: 'SECTOR 8', to: 'SECTOR 8', flagged: false },
+    ],
+    toneClassification: 'COOPERATIVE',
+  },
+  {
+    name: 'VIKTOR NOVAK',
+    id: 'S9-VN007',
+    sex: 'M',
+    sector: 'SECTOR 9',
+    function: 'TRANSPORT',
+    compliance: 'C',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    reasonForVisit: 'Delivery route through Sector 8 to Sector 7.',
+    requestedSector: 'SECTOR 7',
+    videoSource: '',
+    dialogue: "Delivery run. Through Sector 8, then Sector 7. Standard route. Been doing this for three years.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 9', time: '10:15:08', pl: 'SECTOR 8', dob: '11/12/79' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 7', status: 'AUTHORIZED', message: '✓ Multi-sector transport access' },
+      functionReg: { status: 'VALID', message: '✓ Transport credentials active' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Transport route cleared.',
+        personalMessage: {
+          from: 'VIKTOR NOVAK',
+          text: "Deliveries complete. Smooth run today. Thanks for keeping the line moving.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Delivery route disrupted.',
+        incidentReport: {
+          fileNumber: '#0007',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied multi-sector transit. Delivery route not completed.',
+          outcome: 'Sector 7 supply delivery delayed. 12 businesses affected. Supervisor filed route disruption report.'
         },
         flagWeight: 0
       }
     },
     credential: {
       type: 'TRANSIT_PERMIT',
-      destinationSector: 4,
+      destinationSector: 7,
       issuedDate: '2087.04.14',
       expirationDate: '2087.04.14',
-      authority: 'HIGH COMMAND',
-      initialStatus: 'PENDING',
-      verifiedStatus: 'CONFIRMED',
-      claim: 'Just got this approved 20 minutes ago. Should be in the system.',
-      verificationNote: 'Sync complete. Permit valid until end of shift.',
+      authority: 'SECTOR 9 TRANSPORT HUB',
+      initialStatus: 'CONFIRMED',
     },
     transitLog: [
-      { date: '2087.04.14 03:30', from: 'SECTOR 7', to: 'SECTOR 4' },
-      { date: '2087.04.13 19:00', from: 'SECTOR 4', to: 'SECTOR 7' },
-      { date: '2087.04.13 07:00', from: 'SECTOR 7', to: 'SECTOR 4' },
+      { date: '2087.04.14 10:10', from: 'SECTOR 9', to: 'CHECKPOINT 8', flagged: false },
+      { date: '2087.04.13 17:00', from: 'SECTOR 7', to: 'SECTOR 9', flagged: false },
+      { date: '2087.04.13 08:30', from: 'SECTOR 9', to: 'SECTOR 7', flagged: false },
+      { date: '2087.04.12 16:45', from: 'SECTOR 7', to: 'SECTOR 9', flagged: false },
     ],
-    dialogueFlags: [
-      { keyword: 'High command', category: 'AUTHORITY REFERENCE' },
+    toneClassification: 'NEUTRAL',
+  },
+  {
+    name: 'LENA MARSH',
+    id: 'S7-LM008',
+    sex: 'F',
+    sector: 'SECTOR 7',
+    function: 'MEDICAL',
+    compliance: 'A',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    reasonForVisit: 'Patient transfer pickup from Sector 8 clinic.',
+    requestedSector: 'SECTOR 8',
+    videoSource: '',
+    dialogue: "Patient transfer. Sector 8 clinic has a case that needs our equipment in Sector 7. Time-sensitive.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 7', time: '10:22:55', pl: 'SECTOR 6', dob: '29/04/88' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 8', status: 'AUTHORIZED', message: '✓ Sector 8 medical access' },
+      functionReg: { status: 'VALID', message: '✓ Medical credentials active' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Medical transfer completed.',
+        personalMessage: {
+          from: 'LENA MARSH',
+          text: "Patient stable. Made it to Sector 7 in time. Good call on the quick processing.",
+          tone: 'GRATEFUL'
+        },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Medical transfer delayed.',
+        incidentReport: {
+          fileNumber: '#0008',
+          redactionLevel: 'NONE',
+          summary: 'Subject denied transit to Sector 8. Patient transfer not completed on time.',
+          outcome: 'Patient condition worsened during delay. Transfer completed 2 hours late. Medical review initiated.'
+        },
+        flagWeight: 1
+      }
+    },
+    credential: {
+      type: 'MEDICAL_CLEARANCE',
+      destinationSector: 8,
+      issuedDate: '2087.04.14',
+      expirationDate: '2087.04.14',
+      authority: 'SECTOR 7 MEDICAL CENTER',
+      initialStatus: 'CONFIRMED',
+    },
+    transitLog: [
+      { date: '2087.04.14 10:20', from: 'SECTOR 7', to: 'CHECKPOINT 8', flagged: false },
+      { date: '2087.04.13 19:00', from: 'SECTOR 6', to: 'SECTOR 7', flagged: false },
+      { date: '2087.04.13 07:00', from: 'SECTOR 7', to: 'SECTOR 6', flagged: false },
     ],
     toneClassification: 'COOPERATIVE',
   },
+  
+  // =============================================================================
+  // ACT 2: THE CRACKS (Subjects 9-16)
+  // =============================================================================
+  // Shift 3: SECTOR 7 checkpoint - Subjects 9-12
+  // Shift 4: SECTOR 6 checkpoint - Subjects 13-16
+  // Tone: Something is off. The directive doesn't always make sense.
+  
   {
     name: 'JAXON REED',
-    id: 'V1-JR004',
+    id: 'S7-JR009',
     sex: 'M',
     sector: 'SECTOR 2',
     function: 'SANITATION',
@@ -1100,7 +1437,19 @@ export const SUBJECTS: SubjectData[] = [
     outcomes: {
       APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'DATA LEAK DETECTED. Subject connected to external leak. Your ID flagged.' },
       DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
+    },
+    incidentHistory: [
+      { 
+        date: '2087.04.02', 
+        type: 'DATA ACCESS VIOLATION', 
+        location: 'SECTOR 1 HUB', 
+        resolution: 'WARRANT ISSUED NO. 11092 - INVESTIGATION PENDING' 
+      },
+    ],
+    dialogueFlags: [
+      { keyword: 'skip the small talk', category: 'EVASION' },
+    ],
+    toneClassification: 'EVASIVE',
   },
   {
     name: 'VICTOR REED',

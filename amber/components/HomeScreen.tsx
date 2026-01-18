@@ -3,13 +3,31 @@ import { View, Text, Animated, Pressable, Easing } from 'react-native';
 import { styles } from '../styles/HomeScreen.styles';
 import { MessageThread } from './MessageThread';
 import { IntroAlertModal } from './IntroAlertModal';
+import { IntroSettingsModal } from './IntroSettingsModal';
 import { INTRO_MESSAGES, ALERT_DELAY, INTERRUPTED_MESSAGE } from '../constants/intro';
+import { useIntroAudio } from '../hooks/useIntroAudio';
 
 interface HomeScreenProps {
   onComplete: () => void;
 }
 
 export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
+  // Audio settings
+  const [musicVolume, setMusicVolume] = useState(1);
+  const [sfxVolume, setSfxVolume] = useState(1);
+  const [showSettings, setShowSettings] = useState(false);
+
+  // Audio hook
+  const {
+    playMenuSoundtrack,
+    fadeOutMenuSoundtrack,
+    playTextReceive,
+    playMessageSent,
+    playAmberAlert,
+    playInterfaceButton,
+    killAllAudio,
+  } = useIntroAudio({ musicVolume, sfxVolume });
+
   // Phase state
   const [phase, setPhase] = useState<'menu' | 'messages'>('menu');
   const [takeoverPhase, setTakeoverPhase] = useState<'none' | 'desaturate' | 'black'>('none');
@@ -24,6 +42,7 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
   const [showCursor, setShowCursor] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [wifeIsTyping, setWifeIsTyping] = useState(false);
+  const [sendButtonPressed, setSendButtonPressed] = useState(false);
   
   // Failed message state (message moved from input to bubble, then failed)
   const [failedMessage, setFailedMessage] = useState<string | null>(null);
@@ -59,6 +78,9 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
     setCurrentTime(
       `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
     );
+    
+    // Start menu soundtrack
+    playMenuSoundtrack();
     
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -104,15 +126,21 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
       setTimeout(() => {
         if (isDismantling) return;
         
-        msg.sender === 'wife' ? setWifeIsTyping(false) : clearPlayerTyping();
+        if (msg.sender === 'wife') {
+          setWifeIsTyping(false);
+          playTextReceive(); // Play receive sound for wife's messages
+        } else {
+          clearPlayerTyping();
+          playMessageSent(); // Play sent sound for player's messages
+        }
         
-        setVisibleIndices(prev => [...prev, index]);
-        Animated.spring(messageAnims[index], {
-          toValue: 1,
-          friction: 8,
-          tension: 40,
-          useNativeDriver: true,
-        }).start();
+          setVisibleIndices(prev => [...prev, index]);
+          Animated.spring(messageAnims[index], {
+            toValue: 1,
+            friction: 8,
+            tension: 40,
+            useNativeDriver: true,
+          }).start();
         
         // Mark previous player message as read
         if (msg.sender === 'wife' && index > 0 && INTRO_MESSAGES[index - 1].sender === 'player') {
@@ -131,16 +159,27 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
 
     // Start typing final message
     setTimeout(() => {
-      if (!isDismantling) typeInterruptedMessage();
+      if (!isDismantling) {
+        typeInterruptedMessage();
+      }
     }, typingStartDelay);
 
     // Calculate when typing finishes
     const typingDuration = INTERRUPTED_MESSAGE.length * 120;
-    const sendTime = typingStartDelay + typingDuration + 400;
+    const typingEndTime = typingStartDelay + typingDuration + 600;
 
-    // "Send" the message - moves from input to bubble
+    // Player pauses, then presses send button
+    const buttonPressTime = typingEndTime + 800;
     setTimeout(() => {
       if (isDismantling) return;
+      setSendButtonPressed(true);
+    }, buttonPressTime);
+
+    // Button releases, message moves to bubble
+    const sendTime = buttonPressTime + 600;
+    setTimeout(() => {
+      if (isDismantling) return;
+      setSendButtonPressed(false);
       // Stop typing, clear input
       if (typingIntervalRef.current) {
         clearInterval(typingIntervalRef.current);
@@ -151,24 +190,27 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
       // Show as bubble with "sending" status
       setFailedMessage(INTERRUPTED_MESSAGE);
       setFailedMessageStatus('sending');
+      playMessageSent(); // Play sent sound
     }, sendTime);
 
     // Message fails to send
     setTimeout(() => {
       if (isDismantling) return;
       setFailedMessageStatus('failed');
-    }, sendTime + 1200);
+    }, sendTime + 1500);
 
     // Alert appears after failure is visible
     setTimeout(() => {
       if (isDismantling) return;
       clearInterval(cursorInterval);
-      setShowAlert(true);
-      Animated.parallel([
+      fadeOutMenuSoundtrack(600); // Fade music as alert appears
+      playAmberAlert(); // Start alert sound (loops until authenticate)
+        setShowAlert(true);
+        Animated.parallel([
         Animated.timing(alertOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
         Animated.spring(alertScale, { toValue: 1, friction: 8, tension: 40, useNativeDriver: true }),
-      ]).start();
-    }, sendTime + 2500);
+        ]).start();
+    }, sendTime + 3000);
   };
 
   const typePlayerMessage = (message: string) => {
@@ -204,7 +246,12 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
   };
 
   const handleAuthenticate = () => {
+    playInterfaceButton(); // Play interface button sound
     setIsDismantling(true);
+    // Small delay before killing audio so button sound can play
+    setTimeout(() => {
+      killAllAudio();
+    }, 150);
     Animated.timing(alertOpacity, { toValue: 0, duration: 150, useNativeDriver: true }).start();
     
     setTimeout(() => {
@@ -212,19 +259,19 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
       runTakeoverSequence();
     }, 200);
   };
-
+      
   const runTakeoverSequence = () => {
-    Animated.sequence([
+      Animated.sequence([
       // Desaturation
-      Animated.timing(desaturation, {
+        Animated.timing(desaturation, {
         toValue: 0.6,
         duration: 1200,
         easing: Easing.out(Easing.quad),
-        useNativeDriver: false,
-      }),
+          useNativeDriver: false,
+        }),
       Animated.delay(200),
       // Glitch + interference
-      Animated.parallel([
+        Animated.parallel([
         Animated.sequence([
           Animated.timing(glitchOffset, { toValue: 12, duration: 40, useNativeDriver: true }),
           Animated.timing(glitchOffset, { toValue: -8, duration: 35, useNativeDriver: true }),
@@ -240,10 +287,10 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
         ]),
       ]),
       Animated.delay(300),
-    ]).start(() => {
-      setTakeoverPhase('black');
-      onComplete();
-    });
+      ]).start(() => {
+        setTakeoverPhase('black');
+        onComplete();
+      });
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -254,11 +301,11 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
     return (
       <View style={styles.container}>
         <Animated.View style={[styles.menuContainer, { opacity: fadeAnim }]}>
-          <View style={styles.menuContent}>
+      <View style={styles.menuContent}>
             <Text style={styles.menuTitle}>A.M.B.E.R</Text>
             <Text style={styles.menuSubtitle}>ACTIVE MEASURES BUREAU FOR ENTITY REVIEW</Text>
-            <Text style={styles.menuVersion}>v2.4.1</Text>
-            
+        <Text style={styles.menuVersion}>v2.4.1</Text>
+        
             <Pressable 
               onPress={handleStart} 
               style={({ pressed }) => [styles.startButton, pressed && styles.startButtonPressed]}
@@ -268,20 +315,36 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
                   <Text style={[styles.startButtonText, pressed && styles.startButtonTextPressed]}>
                     START
                   </Text>
-                </View>
+          </View>
               )}
             </Pressable>
             
-            <Text style={styles.footerText}>AUTHORIZED PERSONNEL ONLY</Text>
-          </View>
-        </Animated.View>
+            <Pressable 
+              onPress={() => setShowSettings(true)}
+              style={({ pressed }) => [styles.settingsButton, pressed && styles.settingsButtonPressed]}
+            >
+              <Text style={styles.settingsButtonText}>⚙ AUDIO</Text>
+        </Pressable>
+        
+        <Text style={styles.footerText}>AUTHORIZED PERSONNEL ONLY</Text>
+      </View>
+    </Animated.View>
+        
+        <IntroSettingsModal
+          visible={showSettings}
+          onClose={() => setShowSettings(false)}
+          musicVolume={musicVolume}
+          sfxVolume={sfxVolume}
+          onMusicVolumeChange={setMusicVolume}
+          onSfxVolumeChange={setSfxVolume}
+        />
       </View>
     );
   }
 
-  const combinedOpacity = Animated.multiply(messagesFadeAnim, uiOpacity);
-
-  return (
+    const combinedOpacity = Animated.multiply(messagesFadeAnim, uiOpacity);
+    
+    return (
     <View style={styles.container}>
       <View style={styles.messagesWrapper}>
         <Animated.View 
@@ -299,6 +362,7 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
             isTyping={isTyping}
             typingText={typingText}
             showCursor={showCursor}
+            sendButtonPressed={sendButtonPressed}
             failedMessage={failedMessage}
             failedMessageStatus={failedMessageStatus}
           />

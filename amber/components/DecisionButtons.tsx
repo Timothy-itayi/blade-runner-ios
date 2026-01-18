@@ -4,6 +4,7 @@ import { styles } from '../styles/DecisionButtons.styles';
 import { HUDBox } from './HUDBox';
 import { BUILD_SEQUENCE } from '../constants/animations';
 import { TypewriterText } from './ScanData';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 interface ProtocolStatus {
   scanComplete: boolean;
@@ -31,6 +32,12 @@ export const DecisionButtons = ({
   protocolStatus?: ProtocolStatus,
 }) => {
   const fillOpacity = useRef(new Animated.Value(0)).current;
+  const { playButtonSound } = useGameAudioContext();
+
+  const handleDecision = (type: 'APPROVE' | 'DENY') => {
+    playButtonSound();
+    onDecision(type);
+  };
 
   useEffect(() => {
     if (hudStage === 'full') {
@@ -132,7 +139,7 @@ export const DecisionButtons = ({
             styles.approveButton,
             approveDisabled && styles.buttonDisabled
           ]} 
-          onPress={() => onDecision('APPROVE')}
+          onPress={() => handleDecision('APPROVE')}
           disabled={approveDisabled}
         >
           <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(74, 138, 90, 0.1)', opacity: fillOpacity }]} />
@@ -150,7 +157,7 @@ export const DecisionButtons = ({
             styles.denyButton,
             denyDisabled && styles.buttonDisabled
           ]} 
-          onPress={() => onDecision('DENY')}
+          onPress={() => handleDecision('DENY')}
           disabled={denyDisabled}
         >
           <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(212, 83, 74, 0.1)', opacity: fillOpacity }]} />

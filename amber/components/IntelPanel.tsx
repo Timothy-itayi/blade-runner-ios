@@ -5,6 +5,7 @@ import { HUDBox } from './HUDBox';
 import { Theme } from '../constants/theme';
 import { TypewriterText } from './ScanData';
 import { BUILD_SEQUENCE } from '../constants/animations';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 export const IntelPanel = ({ 
   data, 
@@ -21,12 +22,24 @@ export const IntelPanel = ({
   hasDecision?: boolean,
   decisionType?: 'APPROVE' | 'DENY'
 }) => {
+  const { playButtonSound } = useGameAudioContext();
+
+  const handleOpenDossier = () => {
+    playButtonSound();
+    onOpenDossier();
+  };
+
+  const handleRevealVerify = () => {
+    playButtonSound();
+    onRevealVerify();
+  };
+
   return (
     <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.subjectIntel}>
       <View style={styles.mainRow}>
         <TouchableOpacity 
           style={styles.dossierButton} 
-          onPress={onOpenDossier}
+          onPress={handleOpenDossier}
           disabled={hudStage !== 'full'}
         >
           <TypewriterText 
@@ -40,7 +53,7 @@ export const IntelPanel = ({
 
         <TouchableOpacity 
           style={styles.verifyButton} 
-          onPress={onRevealVerify}
+          onPress={handleRevealVerify}
           disabled={hudStage !== 'full'}
         >
           <Text style={styles.verifyText}>VERIFICATION</Text>

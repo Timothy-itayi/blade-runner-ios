@@ -5,6 +5,7 @@ import { HUDBox } from './HUDBox';
 import { Theme } from '../constants/theme';
 import { TypewriterText } from './ScanData';
 import { BUILD_SEQUENCE } from '../constants/animations';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 export const SubjectDossier = ({ 
   data, 
@@ -17,6 +18,12 @@ export const SubjectDossier = ({
   activeDirective?: string | null,
   onClose: () => void
 }) => {
+  const { playButtonSound } = useGameAudioContext();
+
+  const handleClose = () => {
+    playButtonSound();
+    onClose();
+  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ACTIVE':
@@ -98,7 +105,7 @@ export const SubjectDossier = ({
           </View>
         </ScrollView>
 
-        <TouchableOpacity onPress={onClose} style={styles.footer}>
+        <TouchableOpacity onPress={handleClose} style={styles.footer}>
           <Text style={styles.closeButton}>[ CLOSE FILE ]</Text>
         </TouchableOpacity>
       </HUDBox>

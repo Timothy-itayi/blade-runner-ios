@@ -175,19 +175,37 @@ export const styles = StyleSheet.create({
     marginTop: 40,
     letterSpacing: 1,
   },
+  settingsButton: {
+    marginTop: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(58, 74, 58, 0.08)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(58, 74, 58, 0.2)',
+  },
+  settingsButtonPressed: {
+    backgroundColor: 'rgba(58, 74, 58, 0.15)',
+  },
+  settingsButtonText: {
+    fontFamily: 'Courier',
+    fontSize: 12,
+    color: '#5a6a5a',
+    letterSpacing: 2,
+  },
 
   // Phase 2: Clean Messaging UI
   onboardContainer: {
     flex: 1,
-    paddingTop: 60,
+    paddingTop: 16,
     paddingHorizontal: 20,
   },
   
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 15,
+    marginBottom: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(74, 93, 74, 0.1)',
   },
@@ -239,7 +257,7 @@ export const styles = StyleSheet.create({
   },
   timestampContainer: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 10,
   },
   timestampText: {
     fontFamily: 'Courier',
@@ -432,8 +450,15 @@ export const styles = StyleSheet.create({
     borderRadius: 22,
     paddingHorizontal: 16,
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    // Subtle inset shadow effect
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.06)',
+    borderLeftColor: 'rgba(0, 0, 0, 0.04)',
+    borderBottomWidth: 1,
+    borderRightWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.6)',
+    borderRightColor: 'rgba(255, 255, 255, 0.5)',
   },
   inputPlaceholder: {
     fontFamily: 'Courier',
@@ -441,8 +466,17 @@ export const styles = StyleSheet.create({
     color: '#8a9a8a',
   },
   inputFieldActive: {
-    backgroundColor: '#f0f4ec',
-    borderColor: '#6a8a6a',
+    backgroundColor: '#f8fbf6',
+    // Focus glow effect
+    borderTopColor: '#5a7a5a',
+    borderLeftColor: '#5a7a5a',
+    borderBottomColor: '#8aaa8a',
+    borderRightColor: '#8aaa8a',
+    shadowColor: '#6a8a6a',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   inputText: {
     fontFamily: 'Courier',
@@ -457,15 +491,43 @@ export const styles = StyleSheet.create({
     opacity: 0,
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#c5cbc0',
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#b8beb2',
     justifyContent: 'center',
     alignItems: 'center',
+    // 3D raised effect
+    shadowColor: '#2a3a2a',
+    shadowOffset: { width: 3, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
+    // Bevel
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+    borderTopColor: 'rgba(255, 255, 255, 0.5)',
+    borderLeftColor: 'rgba(255, 255, 255, 0.4)',
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
+    borderBottomColor: 'rgba(0, 0, 0, 0.12)',
+    borderRightColor: 'rgba(0, 0, 0, 0.08)',
   },
   sendButtonActive: {
-    backgroundColor: '#6a8a6a',
+    backgroundColor: '#5a7a5a',
+  },
+  sendButtonPressed: {
+    backgroundColor: '#4a6a4a',
+    // Deeply pressed state - fully inverted bevel, shadow collapsed
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.2)',
+    borderLeftColor: 'rgba(0, 0, 0, 0.15)',
+    borderBottomColor: 'rgba(255, 255, 255, 0.5)',
+    borderRightColor: 'rgba(255, 255, 255, 0.4)',
+    transform: [{ translateY: 3 }, { scale: 0.95 }],
   },
   sendButtonSending: {
     backgroundColor: '#7a9a7a',

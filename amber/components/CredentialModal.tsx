@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, Pressable, StyleSheet, Animated } from 'react-native';
 import { Theme } from '../constants/theme';
 import { Credential } from '../data/subjects';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 interface CredentialModalProps {
   visible: boolean;
@@ -12,10 +13,16 @@ interface CredentialModalProps {
 }
 
 export const CredentialModal = ({ visible, credential, alreadyVerified = false, onClose, onVerify }: CredentialModalProps) => {
+  const { playButtonSound } = useGameAudioContext();
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationComplete, setVerificationComplete] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const [syncProgress] = useState(new Animated.Value(0));
+
+  const handleClose = () => {
+    playButtonSound();
+    onClose();
+  };
 
   useEffect(() => {
     if (visible) {
@@ -34,7 +41,7 @@ export const CredentialModal = ({ visible, credential, alreadyVerified = false, 
 
   const handleVerify = () => {
     if (!credential || isVerifying || verificationComplete) return;
-    
+    playButtonSound();
     setIsVerifying(true);
     syncProgress.setValue(0);
 
@@ -214,7 +221,7 @@ export const CredentialModal = ({ visible, credential, alreadyVerified = false, 
           {/* Footer */}
           <View style={styles.footer}>
             <Pressable
-              onPress={onClose}
+              onPress={handleClose}
               style={({ pressed }) => [
                 styles.closeButton,
                 pressed && styles.closeButtonPressed

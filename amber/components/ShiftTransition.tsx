@@ -4,6 +4,7 @@ import { Theme } from '../constants/theme';
 import { ShiftData } from '../constants/shifts';
 import { TypewriterText } from './ScanData';
 import { SubjectData, IncidentReport, PersonalMessage } from '../data/subjects';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 // Decision record for a single subject
 export interface ShiftDecision {
@@ -34,9 +35,21 @@ export const ShiftTransition = ({
   shiftDecisions,
   onContinue 
 }: ShiftTransitionProps) => {
+  const { playButtonSound } = useGameAudioContext();
   const [phase, setPhase] = useState<'summary' | 'reports' | 'menu' | 'profile' | 'briefing'>('summary');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const briefingOpacity = useRef(new Animated.Value(0)).current;
+
+  // Button handlers with sound
+  const handlePhaseChange = (newPhase: 'summary' | 'reports' | 'menu' | 'profile' | 'briefing') => {
+    playButtonSound();
+    setPhase(newPhase);
+  };
+
+  const handleContinue = () => {
+    playButtonSound();
+    onContinue();
+  };
 
   // Get reports to display (only decisions with actual reports)
   const reportsToShow = shiftDecisions.filter(d => 
@@ -57,10 +70,12 @@ export const ShiftTransition = ({
   }, []);
 
   const handleSummaryTap = () => {
+    playButtonSound();
     setPhase('menu');
   };
 
   const handleStartBriefing = () => {
+    playButtonSound();
     setPhase('briefing');
     Animated.timing(briefingOpacity, {
       toValue: 1,
@@ -130,7 +145,7 @@ export const ShiftTransition = ({
             {/* Reports Button - only show if there are reports */}
             {reportsToShow.length > 0 && (
               <Pressable 
-                onPress={() => setPhase('reports')}
+                onPress={() => handlePhaseChange('reports')}
                 style={({ pressed }) => [
                   styles.menuButton,
                   pressed && styles.menuButtonPressed
@@ -142,7 +157,7 @@ export const ShiftTransition = ({
 
             {/* Personal Profile Button with notification badge */}
             <Pressable 
-              onPress={() => setPhase('profile')}
+              onPress={() => handlePhaseChange('profile')}
               style={({ pressed }) => [
                 styles.menuButton,
                 pressed && styles.menuButtonPressed
@@ -231,7 +246,7 @@ export const ShiftTransition = ({
           </ScrollView>
 
           <Pressable 
-            onPress={() => setPhase('menu')}
+            onPress={() => handlePhaseChange('menu')}
             style={({ pressed }) => [
               styles.backButton,
               pressed && styles.backButtonPressed,
@@ -281,7 +296,7 @@ export const ShiftTransition = ({
           </View>
 
           <Pressable 
-            onPress={() => setPhase('menu')}
+            onPress={() => handlePhaseChange('menu')}
             style={({ pressed }) => [
               styles.backButton,
               pressed && styles.backButtonPressed
@@ -308,7 +323,7 @@ export const ShiftTransition = ({
           </Animated.View>
 
           <Pressable 
-            onPress={onContinue}
+            onPress={handleContinue}
             style={({ pressed }) => [
               styles.continueButton,
               pressed && styles.continueButtonPressed,

@@ -41,7 +41,6 @@ export const INTERRUPTED_MESSAGE = "Miss you too bubba love you";
 
 // Contact info displayed in message header
 export const CONTACT = {
-  name: 'Maya',
-  initial: 'M',
-  status: 'online',
+  name: 'Wife',
+  initial: 'W',
 };

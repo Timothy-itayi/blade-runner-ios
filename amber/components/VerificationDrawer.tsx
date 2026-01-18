@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { SubjectData } from '../data/subjects';
 import { Theme } from '@/constants/theme';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 interface VerificationDrawerProps {
   subject: SubjectData;
@@ -22,6 +23,7 @@ const QUERY_LABELS: Record<QueryType, string> = {
 const OPERATOR_ID = 'OP-7734';
 
 export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: VerificationDrawerProps) => {
+  const { playButtonSound } = useGameAudioContext();
   const [activeCheck, setActiveCheck] = useState<QueryType | null>(null);
   const [queriesPerformed, setQueriesPerformed] = useState<Set<string>>(new Set());
   const [queryTimestamps, setQueryTimestamps] = useState<Record<string, string>>({});
@@ -32,6 +34,7 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
   };
 
   const handleSelectCheck = (check: QueryType) => {
+    playButtonSound();
     setActiveCheck(check);
     if (!queriesPerformed.has(check)) {
       setQueriesPerformed(prev => new Set(prev).add(check));
@@ -40,7 +43,15 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
     }
   };
 
-  const handleBack = () => setActiveCheck(null);
+  const handleBack = () => {
+    playButtonSound();
+    setActiveCheck(null);
+  };
+
+  const handleClose = () => {
+    playButtonSound();
+    onClose();
+  };
 
   // Terminal line components
   const TerminalPrompt = ({ command, logged = true }: { command: string; logged?: boolean }) => (
@@ -373,7 +384,7 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
               <Text style={styles.footerButtonText}>[ ← BACK ]</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.footerButton} onPress={onClose}>
+            <TouchableOpacity style={styles.footerButton} onPress={handleClose}>
               <Text style={styles.footerButtonText}>[ CLOSE TERMINAL ]</Text>
             </TouchableOpacity>
           )}

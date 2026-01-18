@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Theme } from '../constants/theme';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 // Sector video sources
 const SECTOR_VIDEOS: Record<string, any> = {
@@ -198,6 +199,12 @@ export const SettingsModal = ({
   accuracy = 1.0,
   shiftData,
 }: SettingsModalProps) => {
+  const { playButtonSound } = useGameAudioContext();
+
+  const handleClose = () => {
+    playButtonSound();
+    onClose();
+  };
   
   const accuracyPercent = Math.round(accuracy * 100);
   const accuracyColor = accuracyPercent >= 90 ? Theme.colors.accentApprove : 
@@ -348,7 +355,7 @@ export const SettingsModal = ({
 
           {/* Footer */}
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
               <Text style={styles.closeButtonText}>[ CLOSE ]</Text>
             </TouchableOpacity>
           </View>

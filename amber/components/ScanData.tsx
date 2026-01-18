@@ -5,6 +5,7 @@ import { HUDBox } from './HUDBox';
 import { SubjectData } from '../data/subjects';
 import { CredentialModal } from './CredentialModal';
 import { BUILD_SEQUENCE } from '../constants/animations';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 export const TypewriterText = ({ text, active, delay = 0, style, showCursor = true }: { text: string, active: boolean, delay?: number, style?: any, showCursor?: boolean }) => {
   const [display, setDisplay] = React.useState('');
@@ -115,6 +116,7 @@ export const ScanData = ({
   onCredentialViewed?: () => void,
   onCredentialVerified?: (verified: boolean) => void,
 }) => {
+  const { playButtonSound } = useGameAudioContext();
   const [hasReachedBottom, setHasReachedBottom] = React.useState(false);
   const [showCredentialModal, setShowCredentialModal] = useState(false);
   const [credentialVerified, setCredentialVerified] = useState(false);
@@ -143,6 +145,7 @@ export const ScanData = ({
   }, [subject.id]);
 
   const handleOpenCredential = () => {
+    playButtonSound();
     setShowCredentialModal(true);
     if (!credentialViewed) {
       setCredentialViewed(true);

@@ -12,6 +12,7 @@ interface MessageThreadProps {
   isTyping: boolean;
   typingText: string;
   showCursor: boolean;
+  sendButtonPressed: boolean;
   failedMessage: string | null;
   failedMessageStatus: 'sending' | 'failed' | null;
 }
@@ -25,6 +26,7 @@ export const MessageThread = ({
   isTyping,
   typingText,
   showCursor,
+  sendButtonPressed,
   failedMessage,
   failedMessageStatus,
 }: MessageThreadProps) => {
@@ -66,7 +68,7 @@ export const MessageThread = ({
           <View style={styles.photoMessage}>
             <View style={styles.photoFrame}>
               <Image 
-                source={require('../assets/wife-on-a-walk.png')} 
+                source={require('../assets/wife-n-child.png')} 
                 style={styles.photoImage}
                 resizeMode="cover"
               />
@@ -89,12 +91,8 @@ export const MessageThread = ({
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{CONTACT.initial}</Text>
           </View>
-          <View style={styles.onlineIndicator} />
         </View>
-        <View style={styles.headerText}>
-          <Text style={styles.contactName}>{CONTACT.name}</Text>
-          <Text style={styles.contactStatus}>{CONTACT.status}</Text>
-        </View>
+        <Text style={styles.contactName}>{CONTACT.name}</Text>
       </View>
 
       {/* Timestamp */}
@@ -159,7 +157,11 @@ export const MessageThread = ({
             <Text style={styles.inputPlaceholder}>Message...</Text>
           )}
         </View>
-        <View style={[styles.sendButton, isTyping && styles.sendButtonActive]}>
+        <View style={[
+          styles.sendButton, 
+          isTyping && styles.sendButtonActive,
+          sendButtonPressed && styles.sendButtonPressed
+        ]}>
           <Text style={styles.sendButtonText}>→</Text>
         </View>
       </View>

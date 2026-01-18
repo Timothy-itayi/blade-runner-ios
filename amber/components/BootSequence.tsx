@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Animated, ScrollView } from 'react-native';
 import { styles } from '../styles/BootSequence.styles';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 const BOOT_LOGS = [
   "BIOS v9.0.1 (C) 2026 GLOBAL SURVEILLANCE ORG.",
@@ -36,8 +37,13 @@ export const BootSequence = ({ onComplete }: { onComplete: () => void }) => {
   const [logs, setLogs] = useState<string[]>([]);
   const progressAnim = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  const { playBootSequence, stopBootSequence } = useGameAudioContext();
 
   useEffect(() => {
+    // Start boot sequence sound
+    playBootSequence();
+    
     let logIndex = 0;
     
     // Animate logs with randomized timing
@@ -60,6 +66,7 @@ export const BootSequence = ({ onComplete }: { onComplete: () => void }) => {
       duration: 10000,
       useNativeDriver: false,
     }).start(() => {
+      stopBootSequence(); // Stop boot sound when complete
       setTimeout(onComplete, 1000);
     });
   }, []);

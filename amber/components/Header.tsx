@@ -3,6 +3,7 @@ import { View, Text, Animated, TouchableOpacity } from 'react-native';
 import { styles } from '../styles/Header.styles';
 import { HUDBox } from './HUDBox';
 import { DigitalClockSplitFlap } from './DigitalClockSplitFlap';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 interface HeaderProps {
   hudStage: 'none' | 'wireframe' | 'outline' | 'full';
@@ -12,7 +13,13 @@ interface HeaderProps {
 }
 
 export const Header = ({ hudStage, shiftTime, shiftData, onSettingsPress }: HeaderProps) => {
+  const { playButtonSound } = useGameAudioContext();
   const authorityLabel = shiftData?.authorityLabel || 'СУДЬБА (SUDBA)';
+
+  const handleSettingsPress = () => {
+    playButtonSound();
+    onSettingsPress?.();
+  };
   const letters = authorityLabel.split('');
   
   // Use a ref to store an array of animated values that can grow as needed
@@ -59,7 +66,7 @@ export const Header = ({ hudStage, shiftTime, shiftData, onSettingsPress }: Head
         </View>
         {shiftData && hudStage === 'full' && (
           <TouchableOpacity 
-            onPress={onSettingsPress}
+            onPress={handleSettingsPress}
             style={styles.locationButton}
             hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }}
           >

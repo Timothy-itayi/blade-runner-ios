@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
 import { Theme } from '../constants/theme';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 interface PersonalMessageModalProps {
   message: string;
@@ -8,9 +9,15 @@ interface PersonalMessageModalProps {
 }
 
 export const PersonalMessageModal = ({ message, onDismiss }: PersonalMessageModalProps) => {
+  const { playButtonSound } = useGameAudioContext();
   const parts = message.split(': ');
   const sender = parts.length > 1 ? parts[0] : 'SYSTEM';
   const body = parts.length > 1 ? parts[1] : message;
+
+  const handleDismiss = () => {
+    playButtonSound();
+    onDismiss();
+  };
 
   const isSupervisor = sender === 'SUPERVISOR' || sender === 'SYSTEM';
   const color = isSupervisor ? Theme.colors.accentDeny : Theme.colors.accentWarn;
@@ -28,7 +35,7 @@ export const PersonalMessageModal = ({ message, onDismiss }: PersonalMessageModa
           <View style={styles.spacer} />
           <Text style={styles.messageText}>"{body}"</Text>
           <View style={styles.spacer} />
-          <TouchableOpacity onPress={onDismiss} style={styles.button}>
+          <TouchableOpacity onPress={handleDismiss} style={styles.button}>
             <Text style={[styles.buttonText, { color }]}>[ ACKNOWLEDGE ]</Text>
           </TouchableOpacity>
         </View>

@@ -21,12 +21,14 @@ import { styles } from '../styles/MainScreen.styles';
 import { SUBJECTS, Outcome } from '../data/subjects';
 import { getShiftForSubject, isEndOfShift, SHIFTS, SUBJECTS_PER_SHIFT } from '../constants/shifts';
 import { POSITIVE_MESSAGES, NEGATIVE_MESSAGES, NEUTRAL_MESSAGES } from '../constants/messages';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 const DEV_MODE = false; // Set to true to bypass onboarding and boot
 
 type GamePhase = 'intro' | 'takeover' | 'boot' | 'briefing' | 'active';
 
 export default function MainScreen() {
+  const { playLoadingSound, playGameSoundtrack } = useGameAudioContext();
   const [gamePhase, setGamePhase] = useState<GamePhase>(DEV_MODE ? 'active' : 'intro');
   const [showVerify, setShowVerify] = useState(false);
   const [showDossier, setShowDossier] = useState(false);
@@ -163,7 +165,13 @@ export default function MainScreen() {
   };
 
   const handleBriefingComplete = () => {
+    playLoadingSound(); // Play UI loading sound
     setGamePhase('active');
+    
+    // Start game soundtrack halfway through transition (~300ms in)
+    setTimeout(() => {
+      playGameSoundtrack();
+    }, 300);
     
     // Start initial build sequence
     Animated.sequence([

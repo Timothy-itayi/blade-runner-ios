@@ -17,8 +17,7 @@
       "distribution": "internal",
       "ios": {
         "simulator": false,
-        "buildConfiguration": "Release",
-        "icon": "./assets/app-icon.png"
+        "buildConfiguration": "Release"
       },
       "android": {
         "buildType": "apk"
@@ -27,8 +26,7 @@
     "production": {
       "ios": {
         "simulator": false,
-        "buildConfiguration": "Release",
-    "icon": "./assets/app-icon.png"
+        "buildConfiguration": "Release"
       },
       "android": {
         "buildType": "app-bundle"
@@ -37,18 +35,10 @@
   },
   "submit": {
     "preview": {
-      "ios": {
-        "appleId": null,
-        "ascAppId": null,
-        "appleTeamId": null
-      }
+      "ios": {}
     },
     "production": {
-      "ios": {
-        "appleId": null,
-        "ascAppId": null,
-        "appleTeamId": null
-      }
+      "ios": {}
     }
   }
 }

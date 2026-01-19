@@ -152,38 +152,40 @@ export const styles = StyleSheet.create({
   // Credential Button Styles
   credentialButton: {
     width: '100%',
-    marginTop: 8,
-    borderWidth: 2,
-    borderColor: 'rgba(127, 184, 216, 0.3)',
-    backgroundColor: 'rgba(127, 184, 216, 0.05)',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: Theme.colors.accentWarn,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: 'rgba(201, 162, 39, 0.08)',
   },
   credentialButtonPressed: {
-    backgroundColor: 'rgba(127, 184, 216, 0.15)',
-    borderColor: 'rgba(127, 184, 216, 0.6)',
+    backgroundColor: 'rgba(201, 162, 39, 0.2)',
   },
-  credentialContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-  },
-  credentialDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  credentialStatus: {
+  credentialButtonText: {
+    color: Theme.colors.accentWarn,
     fontFamily: Theme.fonts.mono,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
   },
-  credentialAction: {
-    color: Theme.colors.textDim,
+  credentialReceivedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginTop: 4,
+  },
+  credentialReceivedDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Theme.colors.accentApprove,
+  },
+  credentialReceivedText: {
+    color: Theme.colors.accentApprove,
     fontFamily: Theme.fonts.mono,
-    fontSize: 9,
+    fontSize: 10,
+    fontWeight: '700',
     letterSpacing: 1,
   },
 });

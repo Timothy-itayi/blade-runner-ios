@@ -238,14 +238,6 @@ export const ScanData = ({
         
         {/* Credential Button - Right Column */}
         <View style={styles.rightColumn}>
-          <TypewriterText 
-            text="CREDENTIAL" 
-            active={hudStage !== 'none'} 
-            delay={BUILD_SEQUENCE.locRecord + 200} 
-            style={styles.gridLabel} 
-            showCursor={false}
-          />
-          
           <Pressable 
             onPress={handleOpenCredential}
             style={({ pressed }) => [
@@ -254,13 +246,13 @@ export const ScanData = ({
             ]}
             disabled={hudStage !== 'full'}
           >
-            <View style={styles.credentialContent}>
-              <View style={[styles.credentialDot, { backgroundColor: getCredentialStatusColor() }]} />
-              <Text style={[styles.credentialStatus, { color: getCredentialStatusColor() }]}>
-                {getCredentialStatusText()}
-              </Text>
-            </View>
-            <Text style={styles.credentialAction}>[ VIEW ]</Text>
+            <Text style={styles.credentialButtonText}>[ CREDENTIALS ]</Text>
+            {subject.credential && (
+              <View style={styles.credentialReceivedRow}>
+                <View style={styles.credentialReceivedDot} />
+                <Text style={styles.credentialReceivedText}>RECEIVED</Text>
+              </View>
+            )}
           </Pressable>
         </View>
       </HUDBox>

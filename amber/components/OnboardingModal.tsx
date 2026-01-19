@@ -12,7 +12,7 @@ interface OnboardingModalProps {
 export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingModalProps) => {
   const [showButton, setShowButton] = useState(false);
   const [isActive, setIsActive] = useState(false);
-  
+
   const contentOpacity = useRef(new Animated.Value(0)).current;
   const buttonOpacity = useRef(new Animated.Value(0)).current;
 
@@ -20,24 +20,24 @@ export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingMo
   useEffect(() => {
     if (visible) {
       setIsActive(true);
-      
+
       // Fade in content after a brief pause (coming from boot sequence)
       Animated.timing(contentOpacity, {
         toValue: 1,
-        duration: 400,
-        delay: 500,
+        duration: 300,
+        delay: 300,
         useNativeDriver: true,
       }).start();
 
-      // Show button after text sequence finishes
+      // Show button after text sequence finishes (faster timing)
       setTimeout(() => {
         setShowButton(true);
         Animated.timing(buttonOpacity, {
           toValue: 1,
-          duration: 600,
+          duration: 400,
           useNativeDriver: true,
         }).start();
-      }, 7200);
+      }, 5000);
     }
   }, [visible]);
 
@@ -47,88 +47,152 @@ export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingMo
         <View style={styles.container}>
           <View style={styles.content}>
             <Animated.View style={[styles.innerContent, { opacity: contentOpacity }]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <TypewriterText 
-                  text="OPERATOR STATUS: " 
-                  active={isActive} 
-                  delay={800} 
-                  style={[styles.text, styles.textStatus]} 
+              {/* Terminal prompt style */}
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>&gt;</Text>
+                <TypewriterText
+                  text="OPERATOR STATUS: "
+                  active={isActive}
+                  delay={400}
+                  style={[styles.text]}
                 />
-                <TypewriterText 
-                  text="ASSIGNED" 
-                  active={isActive} 
-                  delay={1350} 
-                  style={[styles.text, styles.textStatus, styles.textStatusValue]} 
-                />
-              </View>
-              <View style={styles.spacer} />
-              <TypewriterText 
-                text={`You are now ${operatorId}.`}
-                active={isActive} 
-                delay={1800} 
-                style={[styles.text, styles.textOperatorId]} 
-              />
-              <View style={styles.spacer} />
-              <TypewriterText 
-                text="You have been cleared for processing." 
-                active={isActive} 
-                delay={2600} 
-                style={[styles.text, styles.textClearance]} 
-              />
-              <View style={styles.spacer} />
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <TypewriterText 
-                  text="Review. " 
-                  active={isActive} 
-                  delay={4000} 
-                  style={[styles.text, styles.textInstruction, styles.textReview]} 
-                />
-                <TypewriterText 
-                  text="Decide. " 
-                  active={isActive} 
-                  delay={4350} 
-                  style={[styles.text, styles.textInstruction, styles.textDecide]} 
-                />
-                <TypewriterText 
-                  text="Confirm." 
-                  active={isActive} 
-                  delay={4700} 
-                  style={[styles.text, styles.textInstruction, styles.textConfirm]} 
+                <TypewriterText
+                  text="ASSIGNED"
+                  active={isActive}
+                  delay={700}
+                  style={[styles.text, styles.textStatusValue]}
                 />
               </View>
+
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>&gt;</Text>
+                <TypewriterText
+                  text="ID: "
+                  active={isActive}
+                  delay={1000}
+                  style={[styles.text]}
+                />
+                <TypewriterText
+                  text={operatorId}
+                  active={isActive}
+                  delay={1100}
+                  style={[styles.text, styles.textOperatorId]}
+                />
+              </View>
+
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>&gt;</Text>
+                <TypewriterText
+                  text="CLEARANCE: "
+                  active={isActive}
+                  delay={1400}
+                  style={[styles.text]}
+                />
+                <TypewriterText
+                  text="PROCESSING AUTHORIZED"
+                  active={isActive}
+                  delay={1600}
+                  style={[styles.text, styles.textClearance]}
+                />
+              </View>
+
               <View style={styles.spacer} />
-              <TypewriterText 
-                text="Trust the system." 
-                active={isActive} 
-                delay={5000} 
-                style={[styles.text, styles.textPropaganda]} 
-              />
-              <TypewriterText 
-                text="The system trusts you." 
-                active={isActive} 
-                delay={5600} 
-                style={[styles.text, styles.textPropaganda]} 
-              />
+
+              {/* Instructions - each on own line */}
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>  </Text>
+                <TypewriterText
+                  text="1. "
+                  active={isActive}
+                  delay={2000}
+                  style={[styles.text, styles.textDim]}
+                />
+                <TypewriterText
+                  text="Review"
+                  active={isActive}
+                  delay={2100}
+                  style={[styles.text, styles.textReview]}
+                />
+              </View>
+
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>  </Text>
+                <TypewriterText
+                  text="2. "
+                  active={isActive}
+                  delay={2400}
+                  style={[styles.text, styles.textDim]}
+                />
+                <TypewriterText
+                  text="Verify"
+                  active={isActive}
+                  delay={2500}
+                  style={[styles.text, styles.textVerify]}
+                />
+              </View>
+
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>  </Text>
+                <TypewriterText
+                  text="3. "
+                  active={isActive}
+                  delay={2800}
+                  style={[styles.text, styles.textDim]}
+                />
+                <TypewriterText
+                  text="Decide"
+                  active={isActive}
+                  delay={2900}
+                  style={[styles.text, styles.textDecide]}
+                />
+              </View>
+
               <View style={styles.spacer} />
-              <TypewriterText 
-                text="No further instructions." 
-                active={isActive} 
-                delay={6300} 
-                style={[styles.text, styles.textFinality]} 
-              />
+
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>!</Text>
+                <TypewriterText
+                  text="Always check credentials."
+                  active={isActive}
+                  delay={3400}
+                  style={[styles.text, styles.textCredentialWarn]}
+                />
+              </View>
+
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>!</Text>
+                <TypewriterText
+                  text="Trust nothing at face value."
+                  active={isActive}
+                  delay={3900}
+                  style={[styles.text, styles.textSecondary]}
+                />
+              </View>
+
+              <View style={styles.spacerSmall} />
+
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>_</Text>
+                <TypewriterText
+                  text="The system is watching. :)"
+                  active={isActive}
+                  delay={4400}
+                  style={[styles.text, styles.textFinality]}
+                />
+              </View>
             </Animated.View>
           </View>
 
           {showButton && (
-            <Animated.View style={{ opacity: buttonOpacity, marginTop: 40 }}>
-              <Pressable 
-                onPress={onDismiss} 
+            <Animated.View style={{ opacity: buttonOpacity, marginTop: 30 }}>
+              <Pressable
+                onPress={onDismiss}
                 style={({ pressed }) => [
                   styles.beginButton,
                   pressed && styles.beginButtonPressed
                 ]}
               >
-                <Text style={styles.beginButtonText}>[ BEGIN SHIFT ]</Text>
+                <Text style={styles.beginButtonText}>BEGIN SHIFT</Text>
               </Pressable>
             </Animated.View>
           )}

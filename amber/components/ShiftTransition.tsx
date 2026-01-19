@@ -235,25 +235,52 @@ export const ShiftTransition = ({
       return (
         <View style={styles.container}>
           <Animated.View style={[styles.briefingContainer, { opacity: briefingOpacity }]}>
-            <Text style={styles.briefingLabel}>NEW DIRECTIVE:</Text>
-            <TypewriterText 
-              text={nextShift.briefing} 
-              active={true} 
-              delay={300} 
-              style={styles.briefingText}
-              showCursor={true}
-            />
+            {/* Header */}
+            <View style={styles.briefingHeader}>
+              <Text style={styles.briefingShiftLabel}>SHIFT {nextShift.id}</Text>
+              <Text style={styles.briefingLocation}>{nextShift.stationName}</Text>
+            </View>
+
+            {/* Directive Card */}
+            <View style={styles.directiveCard}>
+              <Text style={styles.directiveCardLabel}>⚠ ACTIVE DIRECTIVE</Text>
+              <TypewriterText
+                text={nextShift.briefing}
+                active={true}
+                delay={300}
+                style={styles.directiveCardText}
+                showCursor={true}
+              />
+            </View>
+
+            {/* Instructions Card */}
+            <View style={styles.instructionsCard}>
+              <Text style={styles.instructionsHeader}>YOUR TASK</Text>
+              <View style={styles.instructionsList}>
+                <View style={styles.instructionItem}>
+                  <Text style={styles.instructionNumber}>1</Text>
+                  <Text style={styles.instructionText}>Review subject dossiers and access requests</Text>
+                </View>
+                <View style={styles.instructionItem}>
+                  <Text style={styles.instructionNumber}>2</Text>
+                  <Text style={styles.instructionText}>Confirm credentials and verify documentation</Text>
+                </View>
+                <View style={styles.instructionItem}>
+                  <Text style={styles.instructionNumber}>3</Text>
+                  <Text style={styles.instructionText}>Approve or deny transit based on findings</Text>
+                </View>
+              </View>
+            </View>
           </Animated.View>
 
-          <Pressable 
+          <Pressable
             onPress={onContinue}
             style={({ pressed }) => [
-              styles.continueButton,
-              pressed && styles.continueButtonPressed,
-              { marginTop: 40 }
+              styles.beginShiftButton,
+              pressed && styles.beginShiftButtonPressed,
             ]}
           >
-            <Text style={styles.continueText}>[ BEGIN SHIFT {nextShift.id} ]</Text>
+            <Text style={styles.beginShiftText}>BEGIN SHIFT</Text>
           </Pressable>
         </View>
       );
@@ -508,23 +535,102 @@ const styles = StyleSheet.create({
   },
   briefingContainer: {
     width: '100%',
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
-  briefingLabel: {
-    color: Theme.colors.accentDeny,
+  briefingHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  briefingShiftLabel: {
+    color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 16,
-    textAlign: 'center',
+    letterSpacing: 2,
+    marginBottom: 4,
   },
-  briefingText: {
+  briefingLocation: {
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
-    fontSize: 15,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  directiveCard: {
+    backgroundColor: 'rgba(212, 83, 74, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 83, 74, 0.4)',
+    borderLeftWidth: 4,
+    borderLeftColor: Theme.colors.accentDeny,
+    padding: 16,
+    marginBottom: 16,
+  },
+  directiveCardLabel: {
+    color: Theme.colors.accentDeny,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  directiveCardText: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
     lineHeight: 22,
-    textAlign: 'center',
+  },
+  instructionsCard: {
+    backgroundColor: 'rgba(26, 42, 58, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(74, 106, 122, 0.3)',
+    padding: 16,
+    marginBottom: 24,
+  },
+  instructionsHeader: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 14,
+  },
+  instructionsList: {
+    gap: 12,
+  },
+  instructionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  instructionNumber: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
+    fontWeight: '700',
+    width: 24,
+  },
+  instructionText: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
+  },
+  beginShiftButton: {
+    width: '100%',
+    paddingVertical: 18,
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    borderWidth: 2,
+    borderColor: Theme.colors.accentWarn,
+    alignItems: 'center',
+  },
+  beginShiftButtonPressed: {
+    backgroundColor: 'rgba(212, 175, 55, 0.3)',
+  },
+  beginShiftText: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 2,
   },
   // Report styles
   reportCounter: {

@@ -12,20 +12,25 @@ export const styles = StyleSheet.create({
     backgroundColor: Theme.colors.bgDark,
   },
   protocolStatus: {
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-    marginBottom: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    marginBottom: 10,
+  },
+  protocolStatusComplete: {
+    // No additional styling needed
   },
   protocolText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    letterSpacing: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    textAlign: 'center',
   },
   protocolComplete: {
     color: Theme.colors.accentApprove,
   },
   protocolPending: {
-    color: Theme.colors.accentWarn,
+    color: '#FF6B35',
   },
   buttonRow: {
     flexDirection: 'row',

@@ -83,13 +83,13 @@ export const DecisionButtons = ({
     needsCredentialView ||
     needsDatabaseQuery;
 
-  // Protocol status message - show first incomplete step
+  // Protocol status message - show first incomplete step (matches button names)
   const getProtocolMessage = () => {
     if (!ps.scanComplete) return 'AWAITING SCAN...';
-    if (needsCredentialView) return 'REVIEW CREDENTIAL';
-    if (needsDatabaseQuery) return 'RUN DATABASE QUERY';
-    if (needsWarrantCheck) return 'WARRANT CHECK REQUIRED';
-    if (needsCredentialVerify) return 'VERIFY CREDENTIAL FOR APPROVAL';
+    if (needsCredentialView) return 'TAP [ CREDENTIALS ]';
+    if (needsDatabaseQuery) return 'TAP [ VERIFICATION ]';
+    if (needsWarrantCheck) return 'RUN WARRANT CHECK';
+    if (needsCredentialVerify) return 'TAP [ VERIFY CREDENTIAL ]';
     return 'PROTOCOL COMPLETE';
   };
 
@@ -123,7 +123,10 @@ export const DecisionButtons = ({
   return (
     <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.decisionButtons}>
       {/* Protocol Status Indicator */}
-      <View style={styles.protocolStatus}>
+      <View style={[
+        styles.protocolStatus,
+        isProtocolComplete && styles.protocolStatusComplete
+      ]}>
         <Text style={[
           styles.protocolText, 
           isProtocolComplete ? styles.protocolComplete : styles.protocolPending

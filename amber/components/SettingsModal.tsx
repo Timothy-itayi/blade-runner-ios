@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, Pressable, StyleSheet, ScrollView } from 'react-native';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { Theme } from '../constants/theme';
 import { useGameAudioContext } from '../contexts/AudioContext';
@@ -184,9 +184,10 @@ interface SettingsModalProps {
   accuracy?: number;
   shiftData?: {
     stationName: string;
-    city: string;
+    chapter: string;
     authorityLabel: string;
     briefing: string;
+    directive: string;
   };
 }
 
@@ -199,11 +200,10 @@ export const SettingsModal = ({
   accuracy = 1.0,
   shiftData,
 }: SettingsModalProps) => {
-  const { playButtonSound } = useGameAudioContext();
+  const { sfxEnabled, setSfxEnabled } = useGameAudioContext();
 
-  const handleClose = () => {
-    playButtonSound();
-    onClose();
+  const handleToggleSfx = () => {
+    setSfxEnabled(!sfxEnabled);
   };
   
   const accuracyPercent = Math.round(accuracy * 100);
@@ -238,7 +238,7 @@ export const SettingsModal = ({
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>{shiftData?.stationName || 'SECTOR INFO'}</Text>
-            <Text style={styles.headerSub}>{shiftData?.city || 'TERMINAL'} — {shiftData?.authorityLabel || 'SYSTEM'}</Text>
+            <Text style={styles.headerSub}>{shiftData?.chapter || 'TERMINAL'} — {shiftData?.authorityLabel || 'SYSTEM'}</Text>
           </View>
 
           <ScrollView style={styles.content}>
@@ -330,9 +330,11 @@ export const SettingsModal = ({
             {/* Options */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>OPTIONS</Text>
-              <TouchableOpacity style={styles.optionButton} disabled>
-                <Text style={styles.optionText}>AUDIO: ON</Text>
-                <Text style={styles.optionArrow}>▶</Text>
+              <TouchableOpacity style={styles.optionButton} onPress={handleToggleSfx}>
+                <Text style={styles.optionText}>SFX: {sfxEnabled ? 'ON' : 'OFF'}</Text>
+                <Text style={[styles.optionArrow, !sfxEnabled && styles.optionOff]}>
+                  {sfxEnabled ? '▶' : '◼'}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.optionButton} disabled>
                 <Text style={styles.optionText}>HAPTICS: ON</Text>
@@ -355,9 +357,15 @@ export const SettingsModal = ({
 
           {/* Footer */}
           <View style={styles.footer}>
-            <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.closeButton,
+                pressed && styles.closeButtonPressed
+              ]}
+              onPress={onClose}
+            >
               <Text style={styles.closeButtonText}>[ CLOSE ]</Text>
-            </TouchableOpacity>
+            </Pressable>
           </View>
         </View>
       </View>
@@ -563,6 +571,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: Theme.colors.textDim,
   },
+  optionOff: {
+    color: Theme.colors.accentDeny,
+  },
   legalText: {
     fontFamily: Theme.fonts.mono,
     fontSize: 9,
@@ -577,12 +588,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  closeButtonPressed: {
+    backgroundColor: 'rgba(127, 184, 216, 0.2)',
+    borderColor: Theme.colors.textSecondary,
   },
   closeButtonText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '600',
     color: Theme.colors.textSecondary,
     letterSpacing: 1,
   },

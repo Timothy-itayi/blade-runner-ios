@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Pressable, Animated } from 'react-native';
 import { Theme } from '../constants/theme';
-import { useGameAudioContext } from '../contexts/AudioContext';
 
 interface PersonalMessageModalProps {
   message: string;
@@ -9,15 +8,9 @@ interface PersonalMessageModalProps {
 }
 
 export const PersonalMessageModal = ({ message, onDismiss }: PersonalMessageModalProps) => {
-  const { playButtonSound } = useGameAudioContext();
   const parts = message.split(': ');
   const sender = parts.length > 1 ? parts[0] : 'SYSTEM';
   const body = parts.length > 1 ? parts[1] : message;
-
-  const handleDismiss = () => {
-    playButtonSound();
-    onDismiss();
-  };
 
   const isSupervisor = sender === 'SUPERVISOR' || sender === 'SYSTEM';
   const color = isSupervisor ? Theme.colors.accentDeny : Theme.colors.accentWarn;
@@ -35,9 +28,16 @@ export const PersonalMessageModal = ({ message, onDismiss }: PersonalMessageModa
           <View style={styles.spacer} />
           <Text style={styles.messageText}>"{body}"</Text>
           <View style={styles.spacer} />
-          <TouchableOpacity onPress={handleDismiss} style={styles.button}>
+          <Pressable
+            onPress={onDismiss}
+            style={({ pressed }) => [
+              styles.button,
+              pressed && styles.buttonPressed,
+              { borderColor: pressed ? color : 'transparent' }
+            ]}
+          >
             <Text style={[styles.buttonText, { color }]}>[ ACKNOWLEDGE ]</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
         <Text style={[styles.borderBottom, { color }]}>
           {isSupervisor ? '╚═════════════════════════════════════════╝' : '└─────────────────────────────────────────┘'}
@@ -99,8 +99,13 @@ const styles = StyleSheet.create({
     height: 24,
   },
   button: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  buttonPressed: {
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
   },
   buttonText: {
     color: Theme.colors.textPrimary,

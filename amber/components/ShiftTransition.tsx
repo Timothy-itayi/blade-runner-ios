@@ -4,7 +4,7 @@ import { Theme } from '../constants/theme';
 import { ShiftData } from '../constants/shifts';
 import { TypewriterText } from './ScanData';
 import { SubjectData, IncidentReport, PersonalMessage } from '../data/subjects';
-import { useGameAudioContext } from '../contexts/AudioContext';
+import { NewsBroadcast } from './NewsBroadcast';
 
 // Decision record for a single subject
 export interface ShiftDecision {
@@ -35,21 +35,9 @@ export const ShiftTransition = ({
   shiftDecisions,
   onContinue 
 }: ShiftTransitionProps) => {
-  const { playButtonSound } = useGameAudioContext();
   const [phase, setPhase] = useState<'summary' | 'reports' | 'menu' | 'profile' | 'briefing'>('summary');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const briefingOpacity = useRef(new Animated.Value(0)).current;
-
-  // Button handlers with sound
-  const handlePhaseChange = (newPhase: 'summary' | 'reports' | 'menu' | 'profile' | 'briefing') => {
-    playButtonSound();
-    setPhase(newPhase);
-  };
-
-  const handleContinue = () => {
-    playButtonSound();
-    onContinue();
-  };
 
   // Get reports to display (only decisions with actual reports)
   const reportsToShow = shiftDecisions.filter(d => 
@@ -70,12 +58,10 @@ export const ShiftTransition = ({
   }, []);
 
   const handleSummaryTap = () => {
-    playButtonSound();
     setPhase('menu');
   };
 
   const handleStartBriefing = () => {
-    playButtonSound();
     setPhase('briefing');
     Animated.timing(briefingOpacity, {
       toValue: 1,
@@ -94,7 +80,7 @@ export const ShiftTransition = ({
               <Text style={styles.shiftCompleteText}>SHIFT COMPLETE</Text>
               <View style={styles.statsRow}>
                 <Text style={styles.statLabel}>STATION:</Text>
-                <Text style={styles.statValue}>{previousShift.stationName} - {previousShift.city.toUpperCase()}</Text>
+                <Text style={styles.statValue}>{previousShift.stationName} - {previousShift.chapter.toUpperCase()}</Text>
               </View>
               <View style={styles.statsRow}>
                 <Text style={styles.statLabel}>PROCESSED:</Text>
@@ -114,7 +100,7 @@ export const ShiftTransition = ({
           <View style={styles.timeJumpContainer}>
             <Text style={styles.timeJumpLabel}>NEXT REGION:</Text>
             <View style={styles.timeJumpRow}>
-              <Text style={styles.timeNew}>{nextShift.city.toUpperCase()}</Text>
+              <Text style={styles.timeNew}>{nextShift.chapter.toUpperCase()}</Text>
             </View>
             <View style={[styles.timeJumpRow, { marginTop: 10 }]}>
               <Text style={styles.timeOld}>{previousShift.timeBlock}</Text>
@@ -142,22 +128,20 @@ export const ShiftTransition = ({
         <View style={styles.container}>
           <Text style={styles.menuTitle}>TERMINAL OFFLINE // STANDBY</Text>
           <View style={styles.buttonGrid}>
-            {/* Reports Button - only show if there are reports */}
-            {reportsToShow.length > 0 && (
-              <Pressable 
-                onPress={() => handlePhaseChange('reports')}
-                style={({ pressed }) => [
-                  styles.menuButton,
-                  pressed && styles.menuButtonPressed
-                ]}
-              >
-                <Text style={styles.menuButtonText}>[ VIEW REPORTS ({reportsToShow.length}) ]</Text>
-              </Pressable>
-            )}
+            {/* News Broadcast Button */}
+            <Pressable 
+              onPress={() => setPhase('reports')}
+              style={({ pressed }) => [
+                styles.menuButton,
+                pressed && styles.menuButtonPressed
+              ]}
+            >
+              <Text style={styles.menuButtonText}>[ WATCH NEWS BROADCAST ]</Text>
+            </Pressable>
 
             {/* Personal Profile Button with notification badge */}
             <Pressable 
-              onPress={() => handlePhaseChange('profile')}
+              onPress={() => setPhase('profile')}
               style={({ pressed }) => [
                 styles.menuButton,
                 pressed && styles.menuButtonPressed
@@ -190,72 +174,11 @@ export const ShiftTransition = ({
 
     if (phase === 'reports') {
       return (
-        <View style={styles.reportsContainer}>
-          <Text style={styles.reportsTitle}>SHIFT REPORTS</Text>
-          <Text style={styles.reportsSubtitle}>{reportsToShow.length} REPORTS FILED</Text>
-          
-          <ScrollView style={styles.reportsScrollView} showsVerticalScrollIndicator={false}>
-            {reportsToShow.map((decision, index) => {
-              const isApprove = decision.decision === 'APPROVE';
-              
-              return (
-                <View key={index} style={styles.reportCard}>
-                  {isApprove && decision.personalMessage ? (
-                    // Personal Message (APPROVE)
-                    <View style={styles.messageBox}>
-                      <Text style={styles.messageBoxBorder}>┌─────────────────────────────────────────┐</Text>
-                      <View style={styles.messageContent}>
-                        <Text style={styles.messageLabel}>PERSONAL TRANSMISSION</Text>
-                        <Text style={styles.messageFrom}>FROM: {decision.personalMessage.from}</Text>
-                        <View style={styles.messageSpacer} />
-                        <Text style={styles.messageText}>"{decision.personalMessage.text}"</Text>
-                      </View>
-                      <Text style={styles.messageBoxBorder}>└─────────────────────────────────────────┘</Text>
-                    </View>
-                  ) : decision.incidentReport ? (
-                    // Incident Report (DENY)
-                    <View style={styles.incidentBox}>
-                      <Text style={styles.incidentBoxBorder}>══════════════════════════════════════════</Text>
-                      <View style={styles.incidentContent}>
-                        <Text style={styles.incidentTitle}>INCIDENT REPORT — FILE {decision.incidentReport.fileNumber}</Text>
-                        <View style={styles.incidentRow}>
-                          <Text style={styles.incidentLabel}>SUBJECT:</Text>
-                          <Text style={styles.incidentValue}>{decision.subject.name}</Text>
-                        </View>
-                        <View style={styles.incidentRow}>
-                          <Text style={styles.incidentLabel}>ID:</Text>
-                          <Text style={styles.incidentValue}>{decision.subject.id}</Text>
-                        </View>
-                        <View style={styles.incidentRow}>
-                          <Text style={styles.incidentLabel}>STATUS:</Text>
-                          <Text style={[styles.incidentValue, styles.deniedText]}>DENIED</Text>
-                        </View>
-                        <View style={styles.incidentSpacer} />
-                        <Text style={styles.incidentSummaryLabel}>SUMMARY:</Text>
-                        <Text style={styles.incidentSummary}>{decision.incidentReport.summary}</Text>
-                        <View style={styles.incidentSpacer} />
-                        <Text style={styles.incidentSummaryLabel}>OUTCOME:</Text>
-                        <Text style={styles.incidentOutcome}>{decision.incidentReport.outcome}</Text>
-                      </View>
-                      <Text style={styles.incidentBoxBorder}>══════════════════════════════════════════</Text>
-                    </View>
-                  ) : null}
-                </View>
-              );
-            })}
-          </ScrollView>
-
-          <Pressable 
-            onPress={() => handlePhaseChange('menu')}
-            style={({ pressed }) => [
-              styles.backButton,
-              pressed && styles.backButtonPressed,
-              { marginTop: 20 }
-            ]}
-          >
-            <Text style={styles.backButtonText}>[ BACK TO TERMINAL ]</Text>
-          </Pressable>
-        </View>
+        <NewsBroadcast 
+          decisions={shiftDecisions}
+          shiftNumber={previousShift.id}
+          onComplete={() => setPhase('menu')}
+        />
       );
     }
 
@@ -296,7 +219,7 @@ export const ShiftTransition = ({
           </View>
 
           <Pressable 
-            onPress={() => handlePhaseChange('menu')}
+            onPress={() => setPhase('menu')}
             style={({ pressed }) => [
               styles.backButton,
               pressed && styles.backButtonPressed
@@ -323,7 +246,7 @@ export const ShiftTransition = ({
           </Animated.View>
 
           <Pressable 
-            onPress={handleContinue}
+            onPress={onContinue}
             style={({ pressed }) => [
               styles.continueButton,
               pressed && styles.continueButtonPressed,

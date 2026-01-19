@@ -1,29 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Animated, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, Animated, ScrollView, StyleSheet } from 'react-native';
 import { SubjectData } from '../data/subjects';
 import { HUDBox } from './HUDBox';
 import { Theme } from '../constants/theme';
 import { TypewriterText } from './ScanData';
 import { BUILD_SEQUENCE } from '../constants/animations';
-import { useGameAudioContext } from '../contexts/AudioContext';
 
-export const SubjectDossier = ({ 
-  data, 
+export const SubjectDossier = ({
+  data,
   index,
   activeDirective,
   onClose
-}: { 
-  data: SubjectData, 
+}: {
+  data: SubjectData,
   index: number,
   activeDirective?: string | null,
   onClose: () => void
 }) => {
-  const { playButtonSound } = useGameAudioContext();
-
-  const handleClose = () => {
-    playButtonSound();
-    onClose();
-  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ACTIVE':
@@ -41,73 +34,85 @@ export const SubjectDossier = ({
     }
   };
 
-  const getComplianceColor = (compliance: string) => {
-    if (['A', 'B'].includes(compliance)) return Theme.colors.accentApprove;
-    if (['C', 'D'].includes(compliance)) return Theme.colors.accentWarn;
-    if (['E', 'F'].includes(compliance)) return Theme.colors.accentDeny;
-    return Theme.colors.textPrimary;
+  const getStatusBg = (status: string) => {
+    switch (status) {
+      case 'ACTIVE':
+        return 'rgba(74, 138, 90, 0.15)';
+      case 'PROVISIONAL':
+      case 'UNDER REVIEW':
+        return 'rgba(212, 175, 55, 0.15)';
+      case 'RESTRICTED':
+      case '[TERMINATED]':
+      case 'ERROR':
+      case 'UNDEFINED':
+        return 'rgba(212, 83, 74, 0.15)';
+      default:
+        return 'rgba(127, 184, 216, 0.1)';
+    }
   };
-
-  const renderRow = (label: string, value: string | number, valueStyle?: any) => (
-    <View style={styles.row}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={[styles.value, valueStyle]}>{value}</Text>
-    </View>
-  );
 
   return (
     <View style={styles.overlay}>
       <HUDBox hudStage="full" style={styles.container}>
+        {/* Header with Subject Number */}
         <View style={styles.header}>
-          <Text style={styles.subjectNo}>DOSSIER: SUBJECT {index + 1}</Text>
+          <Text style={styles.subjectNo}>SUBJECT {index + 1}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusBg(data.status) }]}>
+            <View style={[styles.statusDot, { backgroundColor: getStatusColor(data.status) }]} />
+            <Text style={[styles.statusText, { color: getStatusColor(data.status) }]}>{data.status}</Text>
+          </View>
         </View>
 
-        <ScrollView style={styles.scroll}>
+        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+          {/* Active Directive Alert */}
           {activeDirective && (
             <View style={styles.directiveSection}>
-              <Text style={styles.directiveLabel}>CURRENT STANDING DIRECTIVE:</Text>
+              <Text style={styles.directiveLabel}>⚠ STANDING DIRECTIVE</Text>
               <Text style={styles.directiveValue}>{activeDirective}</Text>
             </View>
           )}
 
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>IDENTIFICATION</Text>
-            {renderRow('NAME', data.name)}
-            {renderRow('ID', data.id)}
-            {renderRow('SECTOR', data.sector)}
-            {renderRow('FUNCTION', data.function)}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>STATUS & COMPLIANCE</Text>
-            {renderRow('COMPLIANCE', data.compliance, { color: getComplianceColor(data.compliance) })}
-            {renderRow('STATUS', data.status, { color: getStatusColor(data.status) })}
-            {renderRow('INCIDENTS', data.incidents, { color: data.incidents > 0 ? Theme.colors.accentWarn : Theme.colors.textPrimary })}
-            {renderRow('WARRANTS', data.warrants, data.warrants !== 'NONE' && { color: Theme.colors.accentDeny })}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>REQUEST DETAILS</Text>
-            <View style={styles.reasonBox}>
-              <Text style={styles.reasonLabel}>REQUESTING ACCESS TO:</Text>
-              <Text style={styles.requestedSector}>{data.requestedSector}</Text>
-              <Text style={styles.reasonLabel}>REASON:</Text>
-              <Text style={styles.reasonValue}>{data.reasonForVisit}</Text>
+          {/* Identity Card */}
+          <View style={styles.identityCard}>
+            <Text style={styles.subjectName}>{data.name}</Text>
+            <View style={styles.identityMeta}>
+              <View style={styles.metaItem}>
+                <Text style={styles.metaLabel}>LOCATION</Text>
+                <Text style={styles.metaValue}>{data.sector}</Text>
+              </View>
+              <View style={styles.metaDivider} />
+              <View style={styles.metaItem}>
+                <Text style={styles.metaLabel}>OCCUPATION</Text>
+                <Text style={styles.metaValue}>{data.function}</Text>
+              </View>
             </View>
           </View>
-          
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>LOCATION RECORD</Text>
-            {renderRow('LAST ADDR', data.locRecord.addr)}
-            {renderRow('TIMESTAMP', data.locRecord.time)}
-            {renderRow('PREV LOC', data.locRecord.pl)}
-            {renderRow('D.O.B', data.locRecord.dob)}
+
+          {/* Request Details - Primary Focus */}
+          <View style={styles.requestCard}>
+            <Text style={styles.requestHeader}>ACCESS REQUEST</Text>
+            <View style={styles.requestDestination}>
+              <Text style={styles.requestArrow}>→</Text>
+              <Text style={styles.requestedSector}>{data.requestedSector}</Text>
+            </View>
+            <View style={styles.reasonContainer}>
+              <Text style={styles.reasonLabel}>STATED REASON</Text>
+              <Text style={styles.reasonValue}>"{data.reasonForVisit}"</Text>
+            </View>
           </View>
         </ScrollView>
 
-        <TouchableOpacity onPress={handleClose} style={styles.footer}>
-          <Text style={styles.closeButton}>[ CLOSE FILE ]</Text>
-        </TouchableOpacity>
+        <Pressable
+          onPress={onClose}
+          style={({ pressed }) => [
+            styles.footer,
+            pressed && styles.footerPressed
+          ]}
+        >
+          {({ pressed }) => (
+            <Text style={[styles.closeButton, pressed && styles.closeButtonPressed]}>[ CLOSE ]</Text>
+          )}
+        </Pressable>
       </HUDBox>
     </View>
   );
@@ -122,115 +127,183 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   container: {
-    flex: 1,
     padding: 16,
     backgroundColor: Theme.colors.bgPanel,
+    maxHeight: '80%',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: Theme.colors.border,
-    paddingBottom: 10,
   },
   subjectNo: {
-    color: Theme.colors.accentWarn,
+    color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     letterSpacing: 2,
   },
-  footer: {
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(212, 83, 74, 0.2)',
+  statusBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    gap: 6,
   },
-  closeButton: {
-    color: Theme.colors.accentDeny,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
   },
   scroll: {
-    flex: 1,
+    flexGrow: 0,
   },
   directiveSection: {
-    backgroundColor: 'rgba(212, 83, 74, 0.1)',
+    backgroundColor: 'rgba(212, 83, 74, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(212, 83, 74, 0.3)',
-    padding: 12,
-    marginBottom: 20,
+    borderColor: 'rgba(212, 83, 74, 0.4)',
+    borderLeftWidth: 4,
+    borderLeftColor: Theme.colors.accentDeny,
+    padding: 14,
+    marginBottom: 16,
   },
   directiveLabel: {
     color: Theme.colors.accentDeny,
     fontFamily: Theme.fonts.mono,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 1,
   },
   directiveValue: {
     color: Theme.colors.accentDeny,
     fontFamily: Theme.fonts.mono,
     fontSize: 14,
     fontWeight: '700',
+    lineHeight: 20,
   },
-  section: {
-    marginBottom: 20,
+  identityCard: {
+    backgroundColor: 'rgba(26, 42, 58, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(74, 106, 122, 0.3)',
+    padding: 16,
+    marginBottom: 12,
   },
-  sectionLabel: {
-    color: Theme.colors.textSecondary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
-    marginBottom: 8,
-    letterSpacing: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(74, 106, 122, 0.2)',
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  label: {
-    color: Theme.colors.textDim,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 12,
-  },
-  value: {
+  subjectName: {
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
+    fontSize: 20,
     fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 12,
   },
-  reasonBox: {
-    backgroundColor: 'rgba(127, 184, 216, 0.05)',
-    padding: 10,
-    borderLeftWidth: 2,
-    borderLeftColor: Theme.colors.textSecondary,
+  identityMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  reasonLabel: {
+  metaItem: {
+    flex: 1,
+  },
+  metaDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(74, 106, 122, 0.3)',
+    marginHorizontal: 12,
+  },
+  metaLabel: {
     color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    marginBottom: 2,
+    fontSize: 9,
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  metaValue: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  requestCard: {
+    backgroundColor: 'rgba(212, 175, 55, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 175, 55, 0.25)',
+    padding: 16,
+    marginBottom: 12,
+  },
+  requestHeader: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  requestDestination: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  requestArrow: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 20,
+    marginRight: 10,
   },
   requestedSector: {
     color: Theme.colors.accentWarn,
     fontFamily: Theme.fonts.mono,
-    fontSize: 16,
+    fontSize: 22,
     fontWeight: '900',
-    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  reasonContainer: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(212, 175, 55, 0.2)',
+    paddingTop: 12,
+  },
+  reasonLabel: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1,
+    marginBottom: 6,
   },
   reasonValue: {
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
+    fontSize: 13,
     fontStyle: 'italic',
+    lineHeight: 20,
+  },
+  footer: {
+    marginTop: 8,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.border,
+    alignItems: 'center',
+  },
+  footerPressed: {
+    backgroundColor: 'rgba(127, 184, 216, 0.15)',
+    borderColor: Theme.colors.textSecondary,
+  },
+  closeButton: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  closeButtonPressed: {
+    color: Theme.colors.textSecondary,
   },
 });

@@ -23,7 +23,7 @@ import { getShiftForSubject, isEndOfShift, SHIFTS, SUBJECTS_PER_SHIFT } from '..
 import { POSITIVE_MESSAGES, NEGATIVE_MESSAGES, NEUTRAL_MESSAGES } from '../constants/messages';
 import { useGameAudioContext } from '../contexts/AudioContext';
 
-const DEV_MODE = false; // Set to true to bypass onboarding and boot
+const DEV_MODE = true; // Set to true to bypass onboarding and boot
 
 type GamePhase = 'intro' | 'takeover' | 'boot' | 'briefing' | 'active';
 

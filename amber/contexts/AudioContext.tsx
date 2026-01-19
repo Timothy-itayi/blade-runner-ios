@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useCallback, useRef, useState } from 'react';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 
 const AUDIO_FILES = {
@@ -15,12 +15,15 @@ interface GameAudioContextType {
   playLoadingSound: () => void;
   playGameSoundtrack: () => void;
   stopGameSoundtrack: () => void;
+  sfxEnabled: boolean;
+  setSfxEnabled: (enabled: boolean) => void;
 }
 
 const GameAudioContext = createContext<GameAudioContextType | null>(null);
 
 export const GameAudioProvider = ({ children }: { children: React.ReactNode }) => {
   const isInitialized = useRef(false);
+  const [sfxEnabled, setSfxEnabled] = useState(true);
   
   // Create audio players
   const bootSequencePlayer = useAudioPlayer(AUDIO_FILES.bootSequence);
@@ -48,12 +51,12 @@ export const GameAudioProvider = ({ children }: { children: React.ReactNode }) =
   }, []);
 
   const playBootSequence = useCallback(() => {
-    if (!bootSequencePlayer) return;
+    if (!bootSequencePlayer || !sfxEnabled) return;
     bootSequencePlayer.volume = 0.5;
     bootSequencePlayer.loop = false;
     bootSequencePlayer.seekTo(0);
     bootSequencePlayer.play();
-  }, [bootSequencePlayer]);
+  }, [bootSequencePlayer, sfxEnabled]);
 
   const stopBootSequence = useCallback(() => {
     if (!bootSequencePlayer) return;
@@ -61,18 +64,18 @@ export const GameAudioProvider = ({ children }: { children: React.ReactNode }) =
   }, [bootSequencePlayer]);
 
   const playButtonSound = useCallback(() => {
-    if (!uiButtonPlayer) return;
+    if (!uiButtonPlayer || !sfxEnabled) return;
     uiButtonPlayer.volume = 1.0; // Max volume
     uiButtonPlayer.seekTo(0.9);
     uiButtonPlayer.play();
-  }, [uiButtonPlayer]);
+  }, [uiButtonPlayer, sfxEnabled]);
 
   const playLoadingSound = useCallback(() => {
-    if (!uiLoadingPlayer) return;
+    if (!uiLoadingPlayer || !sfxEnabled) return;
     uiLoadingPlayer.volume = 0.5;
     uiLoadingPlayer.seekTo(0);
     uiLoadingPlayer.play();
-  }, [uiLoadingPlayer]);
+  }, [uiLoadingPlayer, sfxEnabled]);
 
   const playGameSoundtrack = useCallback(() => {
     if (!gameSoundtrackPlayer) return;
@@ -95,6 +98,8 @@ export const GameAudioProvider = ({ children }: { children: React.ReactNode }) =
       playLoadingSound,
       playGameSoundtrack,
       stopGameSoundtrack,
+      sfxEnabled,
+      setSfxEnabled,
     }}>
       {children}
     </GameAudioContext.Provider>
@@ -112,6 +117,8 @@ export const useGameAudioContext = () => {
       playLoadingSound: () => {},
       playGameSoundtrack: () => {},
       stopGameSoundtrack: () => {},
+      sfxEnabled: true,
+      setSfxEnabled: () => {},
     };
   }
   return context;

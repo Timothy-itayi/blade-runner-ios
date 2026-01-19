@@ -6,7 +6,6 @@ const AUDIO_FILES = {
   textReceive: require('../assets/sound-effects/main-menu/text-recieve-sound.mp3'),
   messageSent: require('../assets/sound-effects/main-menu/send-message.mp3'),
   amberAlert: require('../assets/sound-effects/main-menu/amber-alert.mp3'),
-  interfaceButton: require('../assets/sound-effects/main-menu/digital-interface.mp3'),
 };
 
 interface UseIntroAudioOptions {
@@ -22,7 +21,6 @@ export const useIntroAudio = ({ musicVolume, sfxVolume }: UseIntroAudioOptions) 
   const textReceivePlayer = useAudioPlayer(AUDIO_FILES.textReceive);
   const messageSentPlayer = useAudioPlayer(AUDIO_FILES.messageSent);
   const amberAlertPlayer = useAudioPlayer(AUDIO_FILES.amberAlert);
-  const interfaceButtonPlayer = useAudioPlayer(AUDIO_FILES.interfaceButton);
 
   // Initialize audio mode
   useEffect(() => {
@@ -135,16 +133,6 @@ export const useIntroAudio = ({ musicVolume, sfxVolume }: UseIntroAudioOptions) 
   }, [amberAlertPlayer]);
 
   // ─────────────────────────────────────────────────────────────
-  // INTERFACE BUTTON SOUND (for AUTHENTICATE and game UI buttons)
-  // ─────────────────────────────────────────────────────────────
-  const playInterfaceButton = useCallback(() => {
-    if (!interfaceButtonPlayer) return;
-    interfaceButtonPlayer.volume = 1.0;
-    interfaceButtonPlayer.seekTo(0);
-    interfaceButtonPlayer.play();
-  }, [interfaceButtonPlayer]);
-
-  // ─────────────────────────────────────────────────────────────
   // TAKEOVER - kill all audio abruptly
   // ─────────────────────────────────────────────────────────────
   const killAllAudio = useCallback(() => {
@@ -152,8 +140,7 @@ export const useIntroAudio = ({ musicVolume, sfxVolume }: UseIntroAudioOptions) 
     if (textReceivePlayer) textReceivePlayer.pause();
     if (messageSentPlayer) messageSentPlayer.pause();
     if (amberAlertPlayer) amberAlertPlayer.pause();
-    if (interfaceButtonPlayer) interfaceButtonPlayer.pause();
-  }, [menuPlayer, textReceivePlayer, messageSentPlayer, amberAlertPlayer, interfaceButtonPlayer]);
+  }, [menuPlayer, textReceivePlayer, messageSentPlayer, amberAlertPlayer]);
 
   return {
     playMenuSoundtrack,
@@ -163,7 +150,6 @@ export const useIntroAudio = ({ musicVolume, sfxVolume }: UseIntroAudioOptions) 
     playMessageSent,
     playAmberAlert,
     stopAmberAlert,
-    playInterfaceButton,
     killAllAudio,
   };
 };

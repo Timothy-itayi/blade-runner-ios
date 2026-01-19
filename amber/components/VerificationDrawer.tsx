@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { SubjectData } from '../data/subjects';
 import { Theme } from '@/constants/theme';
-import { useGameAudioContext } from '../contexts/AudioContext';
 
 interface VerificationDrawerProps {
   subject: SubjectData;
@@ -23,7 +22,6 @@ const QUERY_LABELS: Record<QueryType, string> = {
 const OPERATOR_ID = 'OP-7734';
 
 export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: VerificationDrawerProps) => {
-  const { playButtonSound } = useGameAudioContext();
   const [activeCheck, setActiveCheck] = useState<QueryType | null>(null);
   const [queriesPerformed, setQueriesPerformed] = useState<Set<string>>(new Set());
   const [queryTimestamps, setQueryTimestamps] = useState<Record<string, string>>({});
@@ -34,7 +32,6 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
   };
 
   const handleSelectCheck = (check: QueryType) => {
-    playButtonSound();
     setActiveCheck(check);
     if (!queriesPerformed.has(check)) {
       setQueriesPerformed(prev => new Set(prev).add(check));
@@ -43,15 +40,7 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
     }
   };
 
-  const handleBack = () => {
-    playButtonSound();
-    setActiveCheck(null);
-  };
-
-  const handleClose = () => {
-    playButtonSound();
-    onClose();
-  };
+  const handleBack = () => setActiveCheck(null);
 
   // Terminal line components
   const TerminalPrompt = ({ command, logged = true }: { command: string; logged?: boolean }) => (
@@ -98,33 +87,101 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
 
   const renderWarrantCheck = () => {
     const hasWarrants = subject.warrants !== 'NONE';
+    const hasIncidents = subject.incidents > 0;
+    const complianceGood = ['A', 'B'].includes(subject.compliance);
+    const complianceMid = ['C', 'D'].includes(subject.compliance);
+
     return (
       <>
         <TerminalPrompt command={`nquery --table=warrants --subject=${subject.id}`} />
         <Text style={styles.responseHeader}>[NETWORK RESPONSE]</Text>
         <TerminalDivider />
-        
-        <TerminalOutput 
-          label="WARRANT_STATUS:" 
-          value={subject.warrants} 
-          status={hasWarrants ? 'error' : 'ok'} 
-        />
-        <TerminalOutput 
-          label="INCIDENT_COUNT:" 
-          value={String(subject.incidents)} 
-          status={subject.incidents > 0 ? 'warn' : 'ok'} 
-        />
-        <TerminalOutput 
-          label="COMPLIANCE_RATING:" 
-          value={subject.compliance} 
-          status={['A', 'B'].includes(subject.compliance) ? 'ok' : ['C', 'D'].includes(subject.compliance) ? 'warn' : 'error'} 
-        />
+
+        {/* Warrant Status - Primary Alert Card */}
+        <View style={[
+          styles.warrantCard,
+          hasWarrants ? styles.warrantCardDanger : styles.warrantCardClear
+        ]}>
+          <View style={styles.warrantCardHeader}>
+            <Text style={[
+              styles.warrantCardIcon,
+              { color: hasWarrants ? Theme.colors.accentDeny : Theme.colors.accentApprove }
+            ]}>
+              {hasWarrants ? '⚠' : '✓'}
+            </Text>
+            <Text style={styles.warrantCardLabel}>WARRANT STATUS</Text>
+          </View>
+          <Text style={[
+            styles.warrantCardValue,
+            { color: hasWarrants ? Theme.colors.accentDeny : Theme.colors.accentApprove }
+          ]}>
+            {subject.warrants}
+          </Text>
+        </View>
+
+        {/* Stats Grid */}
+        <View style={styles.warrantStatsGrid}>
+          {/* Incident Count */}
+          <View style={[
+            styles.warrantStatBox,
+            hasIncidents ? styles.warrantStatBoxWarn : styles.warrantStatBoxNeutral
+          ]}>
+            <Text style={styles.warrantStatLabel}>INCIDENTS</Text>
+            <Text style={[
+              styles.warrantStatValue,
+              { color: hasIncidents ? Theme.colors.accentWarn : Theme.colors.accentApprove }
+            ]}>
+              {subject.incidents}
+            </Text>
+            <Text style={[
+              styles.warrantStatStatus,
+              { color: hasIncidents ? Theme.colors.accentWarn : Theme.colors.textDim }
+            ]}>
+              {hasIncidents ? 'ON RECORD' : 'CLEAN'}
+            </Text>
+          </View>
+
+          {/* Compliance Rating */}
+          <View style={[
+            styles.warrantStatBox,
+            complianceGood ? styles.warrantStatBoxOk : complianceMid ? styles.warrantStatBoxWarn : styles.warrantStatBoxDanger
+          ]}>
+            <Text style={styles.warrantStatLabel}>COMPLIANCE</Text>
+            <Text style={[
+              styles.warrantStatValue,
+              { color: complianceGood ? Theme.colors.accentApprove : complianceMid ? Theme.colors.accentWarn : Theme.colors.accentDeny }
+            ]}>
+              {subject.compliance}
+            </Text>
+            <Text style={[
+              styles.warrantStatStatus,
+              { color: complianceGood ? Theme.colors.accentApprove : complianceMid ? Theme.colors.accentWarn : Theme.colors.accentDeny }
+            ]}>
+              {complianceGood ? 'GOOD' : complianceMid ? 'REVIEW' : 'FLAGGED'}
+            </Text>
+          </View>
+        </View>
 
         <TerminalDivider />
-        <TerminalStatus 
-          message={hasWarrants ? 'ACTIVE WARRANT DETECTED. DETENTION RECOMMENDED.' : 'NO ACTIVE WARRANTS IN DATABASE.'} 
-          status={hasWarrants ? 'error' : 'ok'} 
-        />
+
+        {/* Final Status Banner */}
+        <View style={[
+          styles.warrantResultBanner,
+          hasWarrants ? styles.warrantResultDanger : styles.warrantResultClear
+        ]}>
+          <Text style={[
+            styles.warrantResultIcon,
+            { color: hasWarrants ? Theme.colors.accentDeny : Theme.colors.accentApprove }
+          ]}>
+            {hasWarrants ? '✗' : '✓'}
+          </Text>
+          <Text style={[
+            styles.warrantResultText,
+            { color: hasWarrants ? Theme.colors.accentDeny : Theme.colors.accentApprove }
+          ]}>
+            {hasWarrants ? 'ACTIVE WARRANT DETECTED\nDETENTION RECOMMENDED' : 'NO ACTIVE WARRANTS\nSUBJECT CLEAR'}
+          </Text>
+        </View>
       </>
     );
   };
@@ -380,13 +437,25 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
         {/* Terminal Footer - Navigation */}
         <View style={styles.terminalFooter}>
           {activeCheck ? (
-            <TouchableOpacity style={styles.footerButton} onPress={handleBack}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.footerButton,
+                pressed && styles.footerButtonPressed
+              ]}
+              onPress={handleBack}
+            >
               <Text style={styles.footerButtonText}>[ ← BACK ]</Text>
-            </TouchableOpacity>
+            </Pressable>
           ) : (
-            <TouchableOpacity style={styles.footerButton} onPress={handleClose}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.footerButton,
+                pressed && styles.footerButtonPressed
+              ]}
+              onPress={onClose}
+            >
               <Text style={styles.footerButtonText}>[ CLOSE TERMINAL ]</Text>
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
       </View>
@@ -518,6 +587,119 @@ const styles = StyleSheet.create({
   statusError: { color: Theme.colors.accentDeny },
   statusDim: { color: Theme.colors.textSecondary },
   statusNeutral: { color: Theme.colors.textPrimary },
+
+  // Warrant Check Styles
+  warrantCard: {
+    padding: 16,
+    marginVertical: 8,
+    borderWidth: 2,
+    borderLeftWidth: 4,
+  },
+  warrantCardDanger: {
+    backgroundColor: 'rgba(212, 83, 74, 0.12)',
+    borderColor: 'rgba(212, 83, 74, 0.4)',
+    borderLeftColor: Theme.colors.accentDeny,
+  },
+  warrantCardClear: {
+    backgroundColor: 'rgba(74, 138, 90, 0.1)',
+    borderColor: 'rgba(74, 138, 90, 0.3)',
+    borderLeftColor: Theme.colors.accentApprove,
+  },
+  warrantCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  warrantCardIcon: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 18,
+    marginRight: 10,
+  },
+  warrantCardLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    color: Theme.colors.textDim,
+    letterSpacing: 1,
+  },
+  warrantCardValue: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
+  warrantStatsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginVertical: 8,
+  },
+  warrantStatBox: {
+    flex: 1,
+    padding: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  warrantStatBoxNeutral: {
+    backgroundColor: 'rgba(74, 138, 90, 0.08)',
+    borderColor: 'rgba(74, 138, 90, 0.25)',
+  },
+  warrantStatBoxOk: {
+    backgroundColor: 'rgba(74, 138, 90, 0.1)',
+    borderColor: 'rgba(74, 138, 90, 0.3)',
+  },
+  warrantStatBoxWarn: {
+    backgroundColor: 'rgba(212, 175, 55, 0.1)',
+    borderColor: 'rgba(212, 175, 55, 0.3)',
+  },
+  warrantStatBoxDanger: {
+    backgroundColor: 'rgba(212, 83, 74, 0.1)',
+    borderColor: 'rgba(212, 83, 74, 0.3)',
+  },
+  warrantStatLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: Theme.colors.textDim,
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  warrantStatValue: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  warrantStatStatus: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginTop: 4,
+  },
+  warrantResultBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    marginTop: 4,
+    borderWidth: 1,
+  },
+  warrantResultDanger: {
+    backgroundColor: 'rgba(212, 83, 74, 0.15)',
+    borderColor: Theme.colors.accentDeny,
+  },
+  warrantResultClear: {
+    backgroundColor: 'rgba(74, 138, 90, 0.12)',
+    borderColor: Theme.colors.accentApprove,
+  },
+  warrantResultIcon: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 24,
+    marginRight: 14,
+  },
+  warrantResultText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+    lineHeight: 18,
+  },
 
   // Status line
   statusLine: {
@@ -829,12 +1011,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  footerButtonPressed: {
+    backgroundColor: 'rgba(127, 184, 216, 0.2)',
+    borderColor: Theme.colors.textSecondary,
   },
   footerButtonText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '600',
     color: Theme.colors.textSecondary,
     letterSpacing: 1,
   },

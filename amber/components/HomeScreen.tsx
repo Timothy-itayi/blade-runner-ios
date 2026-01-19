@@ -24,7 +24,6 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
     playTextReceive,
     playMessageSent,
     playAmberAlert,
-    playInterfaceButton,
     killAllAudio,
   } = useIntroAudio({ musicVolume, sfxVolume });
 
@@ -246,12 +245,8 @@ export const HomeScreen = ({ onComplete }: HomeScreenProps) => {
   };
 
   const handleAuthenticate = () => {
-    playInterfaceButton(); // Play interface button sound
     setIsDismantling(true);
-    // Small delay before killing audio so button sound can play
-    setTimeout(() => {
-      killAllAudio();
-    }, 150);
+    killAllAudio();
     Animated.timing(alertOpacity, { toValue: 0, duration: 150, useNativeDriver: true }).start();
     
     setTimeout(() => {

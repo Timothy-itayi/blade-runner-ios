@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Modal, Pressable, StyleSheet, Animated } from 'react-native';
 import { Theme } from '../constants/theme';
 import { Credential } from '../data/subjects';
-import { useGameAudioContext } from '../contexts/AudioContext';
 
 interface CredentialModalProps {
   visible: boolean;
@@ -13,16 +12,10 @@ interface CredentialModalProps {
 }
 
 export const CredentialModal = ({ visible, credential, alreadyVerified = false, onClose, onVerify }: CredentialModalProps) => {
-  const { playButtonSound } = useGameAudioContext();
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationComplete, setVerificationComplete] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<string | null>(null);
   const [syncProgress] = useState(new Animated.Value(0));
-
-  const handleClose = () => {
-    playButtonSound();
-    onClose();
-  };
 
   useEffect(() => {
     if (visible) {
@@ -41,7 +34,6 @@ export const CredentialModal = ({ visible, credential, alreadyVerified = false, 
 
   const handleVerify = () => {
     if (!credential || isVerifying || verificationComplete) return;
-    playButtonSound();
     setIsVerifying(true);
     syncProgress.setValue(0);
 
@@ -106,6 +98,20 @@ export const CredentialModal = ({ visible, credential, alreadyVerified = false, 
     }
   };
 
+  // Format date to dd/mm/yyyy
+  const formatDate = (dateStr: string) => {
+    // Handle various input formats and convert to dd/mm/yyyy
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    // If already in a format or can't parse, return as-is
+    return dateStr;
+  };
+
   const canVerify = credential && 
     (credential.initialStatus === 'PENDING' || credential.initialStatus === 'NONE') &&
     !verificationComplete &&
@@ -146,7 +152,7 @@ export const CredentialModal = ({ visible, credential, alreadyVerified = false, 
                 </View>
                 <View style={styles.row}>
                   <Text style={styles.label}>ISSUED</Text>
-                  <Text style={styles.value}>{credential.issuedDate}</Text>
+                  <Text style={styles.value}>{formatDate(credential.issuedDate)}</Text>
                 </View>
                 {credential.expirationDate && (
                   <View style={styles.row}>
@@ -155,7 +161,7 @@ export const CredentialModal = ({ visible, credential, alreadyVerified = false, 
                       styles.value,
                       credential.initialStatus === 'EXPIRED' && { color: Theme.colors.accentDeny }
                     ]}>
-                      {credential.expirationDate}
+                      {formatDate(credential.expirationDate)}
                     </Text>
                   </View>
                 )}
@@ -221,7 +227,7 @@ export const CredentialModal = ({ visible, credential, alreadyVerified = false, 
           {/* Footer */}
           <View style={styles.footer}>
             <Pressable
-              onPress={handleClose}
+              onPress={onClose}
               style={({ pressed }) => [
                 styles.closeButton,
                 pressed && styles.closeButtonPressed
@@ -390,16 +396,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   closeButtonPressed: {
-    opacity: 0.7,
+    backgroundColor: 'rgba(127, 184, 216, 0.2)',
+    borderColor: Theme.colors.textSecondary,
   },
   closeButtonText: {
     color: Theme.colors.textSecondary,
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '600',
     letterSpacing: 1,
   },
 });

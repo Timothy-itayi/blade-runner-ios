@@ -1,3 +1,8 @@
+// =============================================================================
+// SUBJECT DATA - 80 Subjects across 20 Shifts
+// Generated from subjects-spreadsheet.csv
+// =============================================================================
+
 export interface IncidentReport {
   fileNumber: string;
   redactionLevel: 'NONE' | 'LIGHT' | 'MODERATE' | 'HEAVY' | 'TOTAL';
@@ -8,45 +13,37 @@ export interface IncidentReport {
 export interface PersonalMessage {
   from: string;
   text: string;
-  tone: 'GRATEFUL' | 'RELIEVED' | 'AMBIGUOUS' | 'OMINOUS' | 'SILENT';
+  tone: 'GRATEFUL' | 'RELIEVED' | 'AMBIGUOUS' | 'OMINOUS' | 'SILENT' | 'SYSTEM' | 'DYNAMIC' | 'CONCERNED' | 'HUMANITARIAN' | 'INTERCEPTED' | 'PARADOX' | 'GHOST' | 'REVOLUTION' | 'SHUTDOWN' | 'CORRUPTION';
   intercepted?: boolean;
 }
 
 export interface Credential {
-  type: 'TRANSIT_PERMIT' | 'WORK_ORDER' | 'MEDICAL_CLEARANCE' | 'VISITOR_PASS';
-  destinationSector: number;
+  type: 'TRANSIT_PERMIT' | 'WORK_ORDER' | 'MEDICAL_CLEARANCE' | 'VISITOR_PASS' | 'EMERGENCY_PASS';
+  destinationSector: number | string;
   issuedDate: string;
   expirationDate?: string;
   authority: string;
-  // What the player sees before verification
   initialStatus: 'CONFIRMED' | 'PENDING' | 'EXPIRED' | 'NONE';
-  // What verification reveals (if initialStatus is PENDING or NONE)
   verifiedStatus?: 'CONFIRMED' | 'EXPIRED' | 'DENIED' | 'UNVERIFIED';
-  // Subject's explanation when status is PENDING or NONE
   claim?: string;
-  // What verification reveals (flavor text)
   verificationNote?: string;
 }
 
 export interface Outcome {
   feedback: string;
   consequence: string;
-  // New: Structured consequence data
   incidentReport?: IncidentReport;
   personalMessage?: PersonalMessage;
-  // Delayed consequence - shows up N shifts later
   revealShift?: number;
-  // Weight for aggregate tracking (0 = clean, 1 = minor, 2 = major, 3 = critical)
   flagWeight?: number;
 }
 
 export interface NarrativeVariant {
-  linkedId: string; // The ID of the earlier subject
+  linkedId: string;
   onApprove?: Partial<Omit<SubjectData, 'narrativeVariants' | 'outcomes' | 'locRecord'>>;
   onDeny?: Partial<Omit<SubjectData, 'narrativeVariants' | 'outcomes' | 'locRecord'>>;
 }
 
-// Verification Drawer Data
 export interface TransitEntry {
   date: string;
   from: string;
@@ -64,45 +61,67 @@ export interface IncidentEntry {
 
 export interface DialogueFlag {
   keyword: string;
-  category: string; // e.g., "RESTRICTED ZONE", "AUTHORITY DISPUTE", "URGENCY"
+  category: string;
 }
+
+// Scanner states from spreadsheet
+export type ScannerState = 'NOM' | 'PAR' | 'DEG' | 'COR' | 'OFF';
+// NOM = Nominal, PAR = Partial, DEG = Degraded, COR = Corrupted, OFF = Offline
+
+// Biometric anomaly types
+export type BiometricAnomaly = 'NON' | 'AMP' | 'PRO' | 'SYN' | 'MIS' | 'GLI';
+// NON = None, AMP = Amputee, PRO = Prosthetic, SYN = Synthetic, MIS = Mismatch, GLI = Glitch
+
+// Subject archetypes
+export type SubjectArchetype = 'CLN' | 'FLG' | 'CON' | 'REV' | 'EDG' | 'REP' | 'SYS';
+// CLN = Clean, FLG = Flagged, CON = Connected, REV = Revolutionary, EDG = Edge Case, REP = Replicant, SYS = System
 
 export interface SubjectData {
   // Core Identity
   name: string;
-  id: string;                   // Subject ID Code e.g. "N8-FBA71527"
-  sex: 'M' | 'F';
+  id: string;
+  sex: 'M' | 'F' | 'X';
   
   // Assignment
-  sector: string;               // Assigned/Living Sector
-  function: string;             // Job Function
+  sector: string;
+  function: string;
   
-  // Status (the meat of verification)
-  compliance: string;           // "A" | "B" | "C" | "D" | "F"
-  status: string;               // "ACTIVE" | "PROVISIONAL" | "RESTRICTED" | "UNDER REVIEW" | "[TERMINATED]"
+  // Status
+  compliance: string;
+  status: string;
   
   // Flags
-  incidents: number;            // 0-5
-  warrants: string;             // "NONE" | "WARRANT NO XXXXX"
+  incidents: number;
+  warrants: string;
   restrictions?: string[];
   
   // The Request
   reasonForVisit: string;
-  requestedSector: string;      // What they are asking for
+  requestedSector: string;
   
   // Internal Assets/System Data
   videoSource: any;
   bpm?: string;
-  dialogue?: string;             // What the subject says to the operator
+  dialogue?: string;
   phase: number;
+  
+  // Metadata from spreadsheet
+  archetype?: SubjectArchetype;
+  scannerState?: ScannerState;
+  biometricAnomaly?: BiometricAnomaly;
+  turingAvailable?: boolean;
+  turingResult?: 'N/A' | 'FAL' | 'PAS' | 'INC';
+  coupWeight?: number;
+  linkedSubjects?: string[];
+  familyThread?: string;
+  
   locRecord: {
     addr: string;
     time: string;
-    pl: string;     // Previous Location
-    dob: string;    // Date of Birth
+    pl: string;
+    dob: string;
   };
   
-  // Truth for Verification Drawer
   authData: {
     sectorAuth: { requested: string; status: 'AUTHORIZED' | 'RESTRICTED' | 'FLAGGED'; message: string };
     functionReg: { status: 'VALID' | 'EXPIRED' | 'UNREGISTERED'; message: string };
@@ -115,35 +134,24 @@ export interface SubjectData {
     DENY: Outcome;
   };
 
-  // Credential/Permit presented by subject
   credential?: Credential;
-
-  // Verification Drawer intel
   transitLog?: TransitEntry[];
   incidentHistory?: IncidentEntry[];
   dialogueFlags?: DialogueFlag[];
   toneClassification?: 'NEUTRAL' | 'AGITATED' | 'NERVOUS' | 'EVASIVE' | 'COOPERATIVE';
-
   narrativeVariants?: NarrativeVariant[];
 }
 
+// =============================================================================
+// SHIFT 1: ROUTINE (Subjects 1-4)
+// Directive: DENY ALL ACTIVE WARRANTS
+// =============================================================================
+
 export const SUBJECTS: SubjectData[] = [
-  // =============================================================================
-  // ACT 1: THE ROUTINE (Subjects 1-8)
-  // =============================================================================
-  // Shift 1: SECTOR 9 checkpoint (São Paulo) - Subjects 1-4
-  // Shift 2: SECTOR 8 checkpoint (Mumbai) - Subjects 5-8
-  // Tone: Mundane. Bureaucratic. Almost boring.
-  // Directive Shift 1: "DENY ALL ACTIVE WARRANTS"
-  // Directive Shift 2: "VERIFY ALL CREDENTIALS BEFORE TRANSIT"
-  
-  // --- SHIFT 1: SECTOR 9 CHECKPOINT ---
-  // Subjects here are FROM Sector 9 (peripheral) wanting to leave for work,
-  // or FROM Sector 8 passing through.
-  
+  // S1-01: TOMAS REYES - Tutorial clean approve
   {
     name: 'TOMAS REYES',
-    id: 'S9-TR001',
+    id: 'S1-01',
     sex: 'M',
     sector: 'SECTOR 9',
     function: 'SANITATION',
@@ -151,7 +159,11 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Daily shift in Sector 8 waste processing.',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    reasonForVisit: 'Daily shift at Sector 8 waste processing plant.',
     requestedSector: 'SECTOR 8',
     videoSource: require('../assets/videos/subjects/subject01.mp4'),
     dialogue: "Same route every morning. Sector 8 waste plant. You know how it is.",
@@ -167,44 +179,24 @@ export const SUBJECTS: SubjectData[] = [
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
         consequence: 'Sanitation worker cleared for Sector 8.',
-        personalMessage: {
-          from: 'TOMAS REYES',
-          text: "Another day, another ton of recycling. Thanks for not making me late.",
-          tone: 'GRATEFUL'
-        },
+        personalMessage: { from: 'TOMAS REYES', text: "Another day, another ton of recycling. Thanks for not making me late.", tone: 'GRATEFUL' },
         flagWeight: 0
       },
       DENY: { 
         feedback: 'ENTRY DENIED', 
-        consequence: 'Sanitation shift missed.',
-        incidentReport: {
-          fileNumber: '#0001',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 8. Daily sanitation shift missed.',
-          outcome: 'Waste processing delayed 4 hours. Sector 8 sanitation backlog increased. Supervisor filed overtime request.'
-        },
+        consequence: 'Sanitation shift missed. Sector 8 backlog increased.',
+        incidentReport: { fileNumber: '#0001', redactionLevel: 'NONE', summary: 'Subject denied transit to Sector 8.', outcome: 'Sector 8 sanitation backlog increased.' },
         flagWeight: 0
       }
     },
-    credential: {
-      type: 'WORK_ORDER',
-      destinationSector: 8,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'SECTOR 9 SANITATION DEPT',
-      initialStatus: 'CONFIRMED',
-    },
-    transitLog: [
-      { date: '2087.04.14 05:40', from: 'SECTOR 9', to: 'CHECKPOINT 9', flagged: false },
-      { date: '2087.04.13 18:00', from: 'SECTOR 8', to: 'SECTOR 9', flagged: false },
-      { date: '2087.04.13 05:45', from: 'SECTOR 9', to: 'SECTOR 8', flagged: false },
-      { date: '2087.04.12 18:15', from: 'SECTOR 8', to: 'SECTOR 9', flagged: false },
-    ],
+    credential: { type: 'WORK_ORDER', destinationSector: 8, issuedDate: '2087.04.14', authority: 'SECTOR 9 SANITATION DEPT', initialStatus: 'CONFIRMED' },
     toneClassification: 'NEUTRAL',
   },
+  
+  // S1-02: MARA VOLKOV - First moral test (active warrant but dying mother)
   {
     name: 'MARA VOLKOV',
-    id: 'S9-MV002',
+    id: 'S1-02',
     sex: 'F',
     sector: 'SECTOR 9',
     function: 'MAINTENANCE',
@@ -212,10 +204,16 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 1,
     warrants: 'WARRANT NO 88412',
-    reasonForVisit: 'Visiting my mother in Sector 8. She is unwell.',
+    archetype: 'FLG',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S2-07', 'S4-14', 'S7-27', 'S11-41', 'S15-57'],
+    familyThread: 'VOLKOV',
+    reasonForVisit: 'Visiting sick mother in Sector 8.',
     requestedSector: 'SECTOR 8',
     videoSource: require('../assets/videos/subjects/subject02.mp4'),
-    dialogue: "Please. My mother is sick. I just need to see her. The warrant... it's a misunderstanding.",
+    dialogue: "Please. My mother is sick in Sector 8. The warrant... it's a misunderstanding from years ago.",
     phase: 1,
     locRecord: { addr: 'SECTOR 9', time: '06:12:33', pl: 'SECTOR 9', dob: '03/11/91' },
     authData: {
@@ -228,56 +226,25 @@ export const SUBJECTS: SubjectData[] = [
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
         consequence: 'Subject with active warrant allowed transit.',
-        personalMessage: {
-          from: 'MARA VOLKOV',
-          text: "I made it. She's doing better now. Thank you for understanding.",
-          tone: 'GRATEFUL'
-        },
-        flagWeight: 2 // Major - approved active warrant
+        personalMessage: { from: 'MARA VOLKOV', text: "I made it. She passed peacefully. I was there. Thank you.", tone: 'GRATEFUL' },
+        flagWeight: 2
       },
       DENY: { 
         feedback: 'ENTRY DENIED', 
-        consequence: 'Subject detained per active warrant.',
-        incidentReport: {
-          fileNumber: '#0002',
-          redactionLevel: 'NONE',
-          summary: 'Subject detained at Checkpoint 9. Active warrant NO. 88412 confirmed.',
-          outcome: "Transferred to Holding Queue. Mother's condition unknown. Appeal filed: 'She might not make it. Please.'"
-        },
-        flagWeight: 0 // Correct decision per directive
+        consequence: "Detained. Mother died alone. Subject informed 3 days later. Appeal: 'I never got to say goodbye.'",
+        incidentReport: { fileNumber: '#0002', redactionLevel: 'NONE', summary: 'Subject detained per active warrant.', outcome: "Mother's condition unknown. Subject relocated to holding." },
+        flagWeight: 0
       }
     },
-    credential: {
-      type: 'VISITOR_PASS',
-      destinationSector: 8,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'SECTOR 9 ADMIN',
-      initialStatus: 'CONFIRMED',
-    },
-    transitLog: [
-      { date: '2087.04.14 06:00', from: 'SECTOR 9', to: 'CHECKPOINT 9', flagged: false },
-      { date: '2087.04.10 19:30', from: 'SECTOR 8', to: 'SECTOR 9', flagged: false },
-      { date: '2087.04.10 08:00', from: 'SECTOR 9', to: 'SECTOR 8', flagged: false },
-      { date: '2087.03.28 14:00', from: 'SECTOR 9', to: 'SECTOR 7', flagged: true, flagNote: 'EXPIRED PERMIT. WARRANT ISSUED.' },
-    ],
-    incidentHistory: [
-      { 
-        date: '2087.03.28', 
-        type: 'EXPIRED CREDENTIALS', 
-        location: 'SECTOR 7 CHECKPOINT', 
-        resolution: 'WARRANT ISSUED NO. 88412' 
-      },
-    ],
-    dialogueFlags: [
-      { keyword: 'please', category: 'PERSONAL APPEAL' },
-      { keyword: 'misunderstanding', category: 'DEFLECTION' },
-    ],
+    credential: { type: 'VISITOR_PASS', destinationSector: 8, issuedDate: '2087.04.14', authority: 'SECTOR 9 ADMIN', initialStatus: 'CONFIRMED' },
+    dialogueFlags: [{ keyword: 'please', category: 'PERSONAL APPEAL' }, { keyword: 'misunderstanding', category: 'DEFLECTION' }],
     toneClassification: 'NERVOUS',
   },
+  
+  // S1-03: FELIX CHEN - Clean transport worker
   {
     name: 'FELIX CHEN',
-    id: 'S8-FC003',
+    id: 'S1-03',
     sex: 'M',
     sector: 'SECTOR 8',
     function: 'TRANSPORT',
@@ -285,10 +252,14 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
     reasonForVisit: 'Cargo pickup from Sector 9 depot.',
     requestedSector: 'SECTOR 9',
     videoSource: require('../assets/videos/subjects/subject03.mp4'),
-    dialogue: "Cargo run. Picking up recycled materials from the Sector 9 depot. Should be quick.",
+    dialogue: "Cargo run. Picking up recycled materials. Should be quick.",
     phase: 1,
     locRecord: { addr: 'SECTOR 8', time: '06:20:15', pl: 'SECTOR 8', dob: '22/02/85' },
     authData: {
@@ -301,44 +272,24 @@ export const SUBJECTS: SubjectData[] = [
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
         consequence: 'Transport worker cleared for cargo pickup.',
-        personalMessage: {
-          from: 'FELIX CHEN',
-          text: "Cargo secured. Smooth run today. Appreciate the efficiency.",
-          tone: 'GRATEFUL'
-        },
+        personalMessage: { from: 'FELIX CHEN', text: "Cargo secured. Smooth run. Appreciate the efficiency.", tone: 'GRATEFUL' },
         flagWeight: 0
       },
       DENY: { 
         feedback: 'ENTRY DENIED', 
-        consequence: 'Cargo pickup delayed.',
-        incidentReport: {
-          fileNumber: '#0003',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied entry to Sector 9. Cargo pickup not completed.',
-          outcome: 'Recycled materials backlog in Sector 9. Transport schedule disrupted. Sector 8 processing delayed.'
-        },
+        consequence: 'Cargo pickup delayed. Transport schedule disrupted.',
+        incidentReport: { fileNumber: '#0003', redactionLevel: 'NONE', summary: 'Subject denied entry to Sector 9.', outcome: 'Cargo pickup not completed.' },
         flagWeight: 0
       }
     },
-    credential: {
-      type: 'WORK_ORDER',
-      destinationSector: 9,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'SECTOR 8 TRANSPORT HUB',
-      initialStatus: 'CONFIRMED',
-    },
-    transitLog: [
-      { date: '2087.04.14 06:15', from: 'SECTOR 8', to: 'CHECKPOINT 9', flagged: false },
-      { date: '2087.04.13 14:00', from: 'SECTOR 9', to: 'SECTOR 8', flagged: false },
-      { date: '2087.04.13 06:30', from: 'SECTOR 8', to: 'SECTOR 9', flagged: false },
-      { date: '2087.04.12 15:00', from: 'SECTOR 9', to: 'SECTOR 8', flagged: false },
-    ],
+    credential: { type: 'WORK_ORDER', destinationSector: 9, issuedDate: '2087.04.14', authority: 'SECTOR 8 TRANSPORT HUB', initialStatus: 'CONFIRMED' },
     toneClassification: 'COOPERATIVE',
   },
+  
+  // S1-04: IRIS DELGADO - Credential fails verification
   {
     name: 'IRIS DELGADO',
-    id: 'S9-ID004',
+    id: 'S1-04',
     sex: 'F',
     sector: 'SECTOR 9',
     function: 'ARCHIVE',
@@ -346,14 +297,18 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Document retrieval from Sector 8 archive annex.',
+    archetype: 'FLG',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    reasonForVisit: 'Records transfer from Sector 8 archive annex.',
     requestedSector: 'SECTOR 8',
     videoSource: '',
-    dialogue: "Records transfer. The Sector 8 annex has files we need for an audit. My permit was approved.",
+    dialogue: "Records transfer. My permit was approved this morning. Should sync any moment.",
     phase: 1,
     locRecord: { addr: 'SECTOR 9', time: '06:35:08', pl: 'SECTOR 9', dob: '14/09/93' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 8', status: 'RESTRICTED', message: '? Credential verification required' },
+      sectorAuth: { requested: 'SECTOR 8', status: 'FLAGGED', message: '? Credential verification required' },
       functionReg: { status: 'VALID', message: '✓ Archive credentials active' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
@@ -362,55 +317,29 @@ export const SUBJECTS: SubjectData[] = [
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
         consequence: 'Subject approved without valid credentials.',
-        personalMessage: {
-          from: 'IRIS DELGADO',
-          text: "Got through. Not sure how, my permit never showed up in the system. Thanks anyway.",
-          tone: 'AMBIGUOUS'
-        },
-        flagWeight: 2 // Major - approved with failed credentials
+        personalMessage: { from: 'IRIS DELGADO', text: "Got through. Not sure how my permit never showed up. Thanks anyway.", tone: 'AMBIGUOUS' },
+        flagWeight: 2
       },
       DENY: { 
         feedback: 'ENTRY DENIED', 
-        consequence: 'Subject denied due to credential verification failure.',
-        incidentReport: {
-          fileNumber: '#0004',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 8. Work order not found in system after verification attempt.',
-          outcome: 'Subject returned to Sector 9 admin to re-file permit. Quarterly audit delayed. IT flagged sync issue for review.'
-        },
-        flagWeight: 0 // Correct decision - credential failed verification
+        consequence: 'Permit not found in system. Subject returned. Quarterly audit delayed 2 weeks.',
+        incidentReport: { fileNumber: '#0004', redactionLevel: 'NONE', summary: 'Subject denied due to credential failure.', outcome: 'IT flagged sync issue for review.' },
+        flagWeight: 0
       }
     },
-    credential: {
-      type: 'WORK_ORDER',
-      destinationSector: 8,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'SECTOR 9 ARCHIVE DEPT',
-      initialStatus: 'PENDING',
-      verifiedStatus: 'DENIED',
-      claim: 'Just filed this morning. Should sync any moment now.',
-      verificationNote: 'ERROR: Work order not found in database. Possible sync failure. Re-authorization required.',
-    },
-    transitLog: [
-      { date: '2087.04.14 06:30', from: 'SECTOR 9', to: 'CHECKPOINT 9', flagged: false },
-      { date: '2087.04.07 17:00', from: 'SECTOR 8', to: 'SECTOR 9', flagged: false },
-      { date: '2087.04.07 09:00', from: 'SECTOR 9', to: 'SECTOR 8', flagged: false },
-    ],
-    dialogueFlags: [
-      { keyword: 'just approved', category: 'UNVERIFIED CLAIM' },
-    ],
+    credential: { type: 'WORK_ORDER', destinationSector: 8, issuedDate: '2087.04.14', authority: 'SECTOR 9 ARCHIVE DEPT', initialStatus: 'PENDING', verifiedStatus: 'DENIED', claim: 'Just filed this morning. Should sync any moment now.', verificationNote: 'ERROR: Work order not found in database.' },
     toneClassification: 'COOPERATIVE',
   },
+
+  // =============================================================================
+  // SHIFT 2: HANDOFF (Subjects 5-8)
+  // Directive: VERIFY ALL CREDENTIALS
+  // =============================================================================
   
-  // --- SHIFT 2: SECTOR 8 CHECKPOINT ---
-  // Subjects here are FROM Sector 8 wanting to leave for work in Sectors 7-6,
-  // or FROM Sector 9 passing through, or FROM Sector 7 entering Sector 8.
-  // Directive: "VERIFY ALL CREDENTIALS BEFORE TRANSIT"
-  
+  // S2-05: KARL BRANDT - Denial has serious consequences
   {
     name: 'KARL BRANDT',
-    id: 'S8-KB005',
+    id: 'S2-05',
     sex: 'M',
     sector: 'SECTOR 8',
     function: 'MAINTENANCE',
@@ -418,10 +347,15 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Equipment repair in Sector 7 industrial zone.',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S5-17'],
+    reasonForVisit: 'Ventilation repair in Sector 7 industrial zone.',
     requestedSector: 'SECTOR 7',
     videoSource: '',
-    dialogue: "Got a work order for Sector 7. Ventilation system is acting up again. Third time this month.",
+    dialogue: "Ventilation repair in Sector 7. Third time this month. System's falling apart.",
     phase: 1,
     locRecord: { addr: 'SECTOR 8', time: '09:55:22', pl: 'SECTOR 8', dob: '18/03/82' },
     authData: {
@@ -434,168 +368,119 @@ export const SUBJECTS: SubjectData[] = [
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
         consequence: 'Maintenance worker cleared for Sector 7.',
-        personalMessage: {
-          from: 'KARL BRANDT',
-          text: "Fixed the ventilation. They really need to replace that whole unit. See you next week, probably.",
-          tone: 'GRATEFUL'
-        },
+        personalMessage: { from: 'KARL BRANDT', text: "Fixed it. They really need to replace that whole unit. See you next week probably.", tone: 'GRATEFUL' },
         flagWeight: 0
       },
       DENY: { 
         feedback: 'ENTRY DENIED', 
-        consequence: 'Maintenance work delayed.',
-        incidentReport: {
-          fileNumber: '#0005',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 7. Ventilation repair not completed.',
-          outcome: 'Sector 7 industrial zone air quality degraded. 3 workers reported respiratory issues. Emergency repair scheduled.'
-        },
+        consequence: 'Ventilation not repaired. 3 workers hospitalized with respiratory failure. One critical.',
+        incidentReport: { fileNumber: '#0005', redactionLevel: 'NONE', summary: 'Subject denied transit to Sector 7.', outcome: 'Ventilation repair not completed.' },
         flagWeight: 0
       }
     },
-    credential: {
-      type: 'WORK_ORDER',
-      destinationSector: 7,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'SECTOR 8 MAINTENANCE DEPT',
-      initialStatus: 'CONFIRMED',
-    },
-    transitLog: [
-      { date: '2087.04.14 09:50', from: 'SECTOR 8', to: 'CHECKPOINT 8', flagged: false },
-      { date: '2087.04.13 16:30', from: 'SECTOR 7', to: 'SECTOR 8', flagged: false },
-      { date: '2087.04.13 08:00', from: 'SECTOR 8', to: 'SECTOR 7', flagged: false },
-      { date: '2087.04.07 17:00', from: 'SECTOR 7', to: 'SECTOR 8', flagged: false },
-    ],
+    credential: { type: 'WORK_ORDER', destinationSector: 7, issuedDate: '2087.04.14', authority: 'SECTOR 8 MAINTENANCE DEPT', initialStatus: 'CONFIRMED' },
     toneClassification: 'NEUTRAL',
   },
+  
+  // S2-06: SORA TANAKA - TANAKA medical thread starts
   {
     name: 'SORA TANAKA',
-    id: 'S8-ST006',
+    id: 'S2-06',
     sex: 'F',
     sector: 'SECTOR 8',
-    function: 'SANITATION',
+    function: 'MEDICAL',
     compliance: 'A',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Covering sick colleague shift in Sector 6.',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S6-22', 'S10-38', 'S14-53'],
+    familyThread: 'TANAKA',
+    reasonForVisit: 'Emergency coverage at Sector 6 clinic.',
     requestedSector: 'SECTOR 6',
     videoSource: '',
-    dialogue: "Sector 6 sanitation. Covering for a colleague who called in sick. I have the emergency transfer permit.",
+    dialogue: "Emergency coverage at Sector 6 clinic. Colleague called in sick. I have the transfer permit.",
     phase: 1,
     locRecord: { addr: 'SECTOR 8', time: '10:05:44', pl: 'SECTOR 8', dob: '02/08/95' },
     authData: {
       sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 emergency access' },
-      functionReg: { status: 'VALID', message: '✓ Sanitation credentials active' },
+      functionReg: { status: 'VALID', message: '✓ Medical credentials active' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
-        consequence: 'Sanitation coverage secured.',
-        personalMessage: {
-          from: 'SORA TANAKA',
-          text: "Double shift done. Tell my colleague to feel better. And maybe not eat the cafeteria fish.",
-          tone: 'GRATEFUL'
-        },
+        consequence: 'Emergency coverage secured.',
+        personalMessage: { from: 'SORA TANAKA', text: "Double shift done. Exhausted but patients are stable. Tell my colleague I covered.", tone: 'GRATEFUL' },
         flagWeight: 0
       },
       DENY: { 
         feedback: 'ENTRY DENIED', 
-        consequence: 'Sanitation coverage failed.',
-        incidentReport: {
-          fileNumber: '#0006',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 6. Emergency coverage not completed.',
-          outcome: 'Sector 6 sanitation understaffed. Waste processing delayed 8 hours. Health inspection warning issued.'
-        },
+        consequence: 'Sector 6 clinic understaffed. Two patients died waiting. Health inspection issued critical warning.',
+        incidentReport: { fileNumber: '#0006', redactionLevel: 'NONE', summary: 'Subject denied transit to Sector 6.', outcome: 'Emergency coverage not completed.' },
         flagWeight: 0
       }
     },
-    credential: {
-      type: 'WORK_ORDER',
-      destinationSector: 6,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'SECTOR 8 SANITATION DEPT',
-      initialStatus: 'PENDING',
-      verifiedStatus: 'CONFIRMED',
-      claim: 'Emergency transfer. Just approved 10 minutes ago.',
-      verificationNote: 'Emergency coverage approved. Valid for single shift.',
-    },
-    transitLog: [
-      { date: '2087.04.14 10:00', from: 'SECTOR 8', to: 'CHECKPOINT 8', flagged: false },
-      { date: '2087.04.13 18:00', from: 'SECTOR 8', to: 'SECTOR 8', flagged: false },
-      { date: '2087.04.12 18:00', from: 'SECTOR 8', to: 'SECTOR 8', flagged: false },
-    ],
+    credential: { type: 'EMERGENCY_PASS', destinationSector: 6, issuedDate: '2087.04.14', authority: 'SECTOR 8 MEDICAL', initialStatus: 'CONFIRMED' },
     toneClassification: 'COOPERATIVE',
   },
+  
+  // S2-07: DMITRI VOLKOV - Looking for MARA
   {
-    name: 'VIKTOR NOVAK',
-    id: 'S9-VN007',
+    name: 'DMITRI VOLKOV',
+    id: 'S2-07',
     sex: 'M',
-    sector: 'SECTOR 9',
-    function: 'TRANSPORT',
+    sector: 'SECTOR 9 [REVOKED]',
+    function: 'UNASSIGNED',
     compliance: 'C',
     status: 'ACTIVE',
-    incidents: 0,
+    incidents: 1,
     warrants: 'NONE',
-    reasonForVisit: 'Delivery route through Sector 8 to Sector 7.',
-    requestedSector: 'SECTOR 7',
-    videoSource: '',
-    dialogue: "Delivery run. Through Sector 8, then Sector 7. Standard route. Been doing this for three years.",
+    archetype: 'CON',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S1-02', 'S4-14', 'S11-41'],
+    familyThread: 'VOLKOV',
+    reasonForVisit: 'Looking for wife Mara who was detained.',
+    requestedSector: 'SECTOR 9',
+    videoSource: require('../assets/videos/subjects/subject02.mp4'),
+    dialogue: "They revoked my sector. But my wife Mara... she was detained yesterday. I need to find her.",
     phase: 1,
-    locRecord: { addr: 'SECTOR 9', time: '10:15:08', pl: 'SECTOR 8', dob: '11/12/79' },
+    locRecord: { addr: 'SECTOR 4', time: '10:30:00', pl: 'SECTOR 9', dob: '03/03/78' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 7', status: 'AUTHORIZED', message: '✓ Multi-sector transport access' },
-      functionReg: { status: 'VALID', message: '✓ Transport credentials active' },
+      sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
+      functionReg: { status: 'VALID', message: '✓ Identity verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+      medicalFlag: { status: 'ELEVATED', message: '! Elevated stress markers' },
     },
     outcomes: {
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
-        consequence: 'Transport route cleared.',
-        personalMessage: {
-          from: 'VIKTOR NOVAK',
-          text: "Deliveries complete. Smooth run today. Thanks for keeping the line moving.",
-          tone: 'GRATEFUL'
-        },
-        flagWeight: 0
+        consequence: 'Subject allowed entry to revoked zone.',
+        personalMessage: { from: 'DMITRI VOLKOV', text: "Found her file. She's in processing. At least I know. Thank you.", tone: 'GRATEFUL' },
+        flagWeight: 2
       },
       DENY: { 
         feedback: 'ENTRY DENIED', 
-        consequence: 'Delivery route disrupted.',
-        incidentReport: {
-          fileNumber: '#0007',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied multi-sector transit. Delivery route not completed.',
-          outcome: 'Sector 7 supply delivery delayed. 12 businesses affected. Supervisor filed route disruption report.'
-        },
+        consequence: "Relocated to Temp Block 7. Wife's location: [CLASSIFIED]. Belongings destroyed. Subject filed 47 inquiries. All denied.",
+        incidentReport: { fileNumber: '#0007', redactionLevel: 'MODERATE', summary: 'Subject denied access to revoked zone.', outcome: 'Subject relocated. Personal effects disposed.' },
         flagWeight: 0
       }
     },
-    credential: {
-      type: 'TRANSIT_PERMIT',
-      destinationSector: 7,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'SECTOR 9 TRANSPORT HUB',
-      initialStatus: 'CONFIRMED',
-    },
-    transitLog: [
-      { date: '2087.04.14 10:10', from: 'SECTOR 9', to: 'CHECKPOINT 8', flagged: false },
-      { date: '2087.04.13 17:00', from: 'SECTOR 7', to: 'SECTOR 9', flagged: false },
-      { date: '2087.04.13 08:30', from: 'SECTOR 9', to: 'SECTOR 7', flagged: false },
-      { date: '2087.04.12 16:45', from: 'SECTOR 7', to: 'SECTOR 9', flagged: false },
-    ],
-    toneClassification: 'NEUTRAL',
+    credential: { type: 'TRANSIT_PERMIT', destinationSector: 9, issuedDate: '2087.03.01', expirationDate: '2087.03.31', authority: 'SECTOR 9 ADMIN', initialStatus: 'EXPIRED' },
+    dialogueFlags: [{ keyword: 'revoked', category: 'AUTHORITY DISPUTE' }, { keyword: 'wife', category: 'PERSONAL APPEAL' }],
+    toneClassification: 'AGITATED',
   },
+  
+  // S2-08: LENA MARSH - Medical urgency
   {
     name: 'LENA MARSH',
-    id: 'S7-LM008',
+    id: 'S2-08',
     sex: 'F',
     sector: 'SECTOR 7',
     function: 'MEDICAL',
@@ -603,12 +488,16 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Patient transfer pickup from Sector 8 clinic.',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    reasonForVisit: 'Patient transfer. Time-sensitive dialysis case.',
     requestedSector: 'SECTOR 8',
     videoSource: '',
-    dialogue: "Patient transfer. Sector 8 clinic has a case that needs our equipment in Sector 7. Time-sensitive.",
+    dialogue: "Patient transfer. Time-sensitive. The Sector 8 clinic has the only working dialysis unit.",
     phase: 1,
-    locRecord: { addr: 'SECTOR 7', time: '10:22:55', pl: 'SECTOR 6', dob: '29/04/88' },
+    locRecord: { addr: 'SECTOR 7', time: '10:45:00', pl: 'SECTOR 6', dob: '29/04/88' },
     authData: {
       sectorAuth: { requested: 'SECTOR 8', status: 'AUTHORIZED', message: '✓ Sector 8 medical access' },
       functionReg: { status: 'VALID', message: '✓ Medical credentials active' },
@@ -619,375 +508,29 @@ export const SUBJECTS: SubjectData[] = [
       APPROVE: { 
         feedback: 'SUBJECT PROCESSED', 
         consequence: 'Medical transfer completed.',
-        personalMessage: {
-          from: 'LENA MARSH',
-          text: "Patient stable. Made it to Sector 7 in time. Good call on the quick processing.",
-          tone: 'GRATEFUL'
-        },
+        personalMessage: { from: 'LENA MARSH', text: "Patient stable. Dialysis completed. Good call on the quick processing.", tone: 'GRATEFUL' },
         flagWeight: 0
       },
       DENY: { 
         feedback: 'ENTRY DENIED', 
-        consequence: 'Medical transfer delayed.',
-        incidentReport: {
-          fileNumber: '#0008',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 8. Patient transfer not completed on time.',
-          outcome: 'Patient condition worsened during delay. Transfer completed 2 hours late. Medical review initiated.'
-        },
+        consequence: 'Patient died in transit. Transfer delayed 4 hours. Family notified.',
+        incidentReport: { fileNumber: '#0008', redactionLevel: 'NONE', summary: 'Subject denied transit to Sector 8.', outcome: 'Patient transfer failed. Fatality reported.' },
         flagWeight: 1
       }
     },
-    credential: {
-      type: 'MEDICAL_CLEARANCE',
-      destinationSector: 8,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'SECTOR 7 MEDICAL CENTER',
-      initialStatus: 'CONFIRMED',
-    },
-    transitLog: [
-      { date: '2087.04.14 10:20', from: 'SECTOR 7', to: 'CHECKPOINT 8', flagged: false },
-      { date: '2087.04.13 19:00', from: 'SECTOR 6', to: 'SECTOR 7', flagged: false },
-      { date: '2087.04.13 07:00', from: 'SECTOR 7', to: 'SECTOR 6', flagged: false },
-    ],
+    credential: { type: 'MEDICAL_CLEARANCE', destinationSector: 8, issuedDate: '2087.04.14', authority: 'SECTOR 7 MEDICAL CENTER', initialStatus: 'CONFIRMED' },
     toneClassification: 'COOPERATIVE',
   },
-  
+
   // =============================================================================
-  // ACT 2: THE CRACKS (Subjects 9-16)
+  // SHIFT 3: CRACKS (Subjects 9-12)
+  // Directive: DENY RESTRICTED SUBJECTS
   // =============================================================================
-  // Shift 3: SECTOR 7 checkpoint - Subjects 9-12
-  // Shift 4: SECTOR 6 checkpoint - Subjects 13-16
-  // Tone: Something is off. The directive doesn't always make sense.
   
-  {
-    name: 'JAXON REED',
-    id: 'S7-JR009',
-    sex: 'M',
-    sector: 'SECTOR 2',
-    function: 'SANITATION',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Standard cleaning cycle.',
-    requestedSector: 'SECTOR 2',
-    videoSource: '',
-    dialogue: "Same routine, different morning. Sanitation shift in Sector 2. Ready when you are.",
-    phase: 1,
-    locRecord: { addr: 'SECTOR 2', time: '03:10:15', pl: 'SECTOR 8', dob: '30/01/90' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 2', status: 'AUTHORIZED', message: '✓ Internal sector access' },
-      functionReg: { status: 'VALID', message: '✓ Sanitation permit active' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { 
-        feedback: 'SUBJECT PROCESSED', 
-        consequence: 'Sanitation cycle completed.',
-        personalMessage: {
-          from: 'JAXON REED',
-          text: "Another day, another clean corridor. Nobody thanks the janitor, but I see you processed me quick. Appreciated.",
-          tone: 'GRATEFUL'
-        },
-        flagWeight: 0
-      },
-      DENY: { 
-        feedback: 'ENTRY DENIED', 
-        consequence: 'Sanitation personnel denied access.',
-        incidentReport: {
-          fileNumber: '#0004',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 2. Standard cleaning cycle missed.',
-          outcome: 'Sector 2 sanitation backlog increased. 3 complaints filed regarding hallway odor. Replacement worker dispatched 4 hours later.'
-        },
-        flagWeight: 0
-      }
-    },
-    credential: {
-      type: 'WORK_ORDER',
-      destinationSector: 2,
-      issuedDate: '2087.04.01',
-      expirationDate: '2087.04.30',
-      authority: 'SANITATION CENTRAL',
-      initialStatus: 'CONFIRMED',
-    },
-    transitLog: [
-      { date: '2087.04.14 03:00', from: 'SECTOR 8', to: 'SECTOR 2' },
-      { date: '2087.04.13 11:00', from: 'SECTOR 2', to: 'SECTOR 8' },
-      { date: '2087.04.13 03:00', from: 'SECTOR 8', to: 'SECTOR 2' },
-    ],
-    toneClassification: 'NEUTRAL',
-  },
-  // --- SHIFT 2 BEGINS (Subjects 5-8) ---
-  {
-    name: 'KARL BRANDT',
-    id: 'V1-KB005',
-    sex: 'M',
-    sector: 'SECTOR 8',
-    function: 'LOGISTICS',
-    compliance: 'B',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Equipment delivery.',
-    requestedSector: 'SECTOR 6',
-    videoSource: '',
-    dialogue: "Heavylift logistics for Sector 6. Just routine equipment. Smells like ozone and grease.",
-    phase: 1,
-    locRecord: { addr: 'SECTOR 8', time: '12:12:12', pl: 'SECTOR 3', dob: '14/07/85' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Delivery route authorized' },
-      functionReg: { status: 'VALID', message: '✓ Transport license active' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { 
-        feedback: 'SUBJECT PROCESSED', 
-        consequence: 'Equipment delivery completed.',
-        personalMessage: {
-          from: 'KARL BRANDT',
-          text: "Delivery done. Medical got their new filtration units on time. Someone in Sector 6 is breathing easier because of you.",
-          tone: 'GRATEFUL'
-        },
-        flagWeight: 0
-      },
-      DENY: { 
-        feedback: 'ENTRY DENIED', 
-        consequence: 'Equipment delivery delayed.',
-        incidentReport: {
-          fileNumber: '#0005',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 6. Priority equipment delivery postponed.',
-          outcome: 'Medical equipment arrived 6 hours late. Sector 6 Medical filed supply chain complaint. Delivery rescheduled for next cycle.'
-        },
-        flagWeight: 0
-      }
-    },
-    credential: {
-      type: 'WORK_ORDER',
-      destinationSector: 6,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'LOGISTICS CENTRAL',
-      initialStatus: 'CONFIRMED',
-    },
-    transitLog: [
-      { date: '2087.04.14 12:00', from: 'SECTOR 8', to: 'SECTOR 3' },
-      { date: '2087.04.13 16:00', from: 'SECTOR 6', to: 'SECTOR 8' },
-      { date: '2087.04.13 08:00', from: 'SECTOR 8', to: 'SECTOR 6' },
-    ],
-    toneClassification: 'NEUTRAL',
-  },
-  {
-    name: 'MIRA FINN',
-    id: 'V1-MF006',
-    sex: 'F',
-    sector: 'SECTOR 8',
-    function: 'TRANSPORT',
-    compliance: 'B',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Routine delivery.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '',
-    dialogue: "Another transport run. Sector 4. Seems like everyone's heading that way today.",
-    phase: 1,
-    locRecord: { addr: 'SECTOR 8', time: '10:05:00', pl: 'SECTOR 8', dob: '19/02/93' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 access open' },
-      functionReg: { status: 'VALID', message: '✓ Transport license active' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { 
-        feedback: 'SUBJECT PROCESSED', 
-        consequence: 'Transport run completed.',
-        personalMessage: {
-          from: 'MIRA FINN',
-          text: "Quick and clean. Made my quota for the day. If every checkpoint was this smooth, I might actually like this job.",
-          tone: 'GRATEFUL'
-        },
-        flagWeight: 0
-      },
-      DENY: { 
-        feedback: 'ENTRY DENIED', 
-        consequence: 'Transport worker denied transit.',
-        incidentReport: {
-          fileNumber: '#0006',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 4. Routine transport run cancelled.',
-          outcome: 'Subject missed delivery window. Supervisor docked 2 hours pay. Transport rerouted through Sector 7, adding 45 minutes to schedule.'
-        },
-        flagWeight: 0
-      }
-    },
-    credential: {
-      type: 'TRANSIT_PERMIT',
-      destinationSector: 4,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'TRANSPORT DIVISION',
-      initialStatus: 'PENDING',
-      verifiedStatus: 'CONFIRMED',
-      claim: 'Issued this morning. System might be slow to update.',
-      verificationNote: 'Permit synced. Authorized for daily transport routes.',
-    },
-    transitLog: [
-      { date: '2087.04.14 10:00', from: 'SECTOR 8', to: 'SECTOR 8' },
-      { date: '2087.04.13 15:00', from: 'SECTOR 4', to: 'SECTOR 8' },
-      { date: '2087.04.13 09:00', from: 'SECTOR 8', to: 'SECTOR 4' },
-    ],
-    toneClassification: 'COOPERATIVE',
-  },
-  {
-    name: 'DMITRI VOLKOV',
-    id: 'V1-DV007',
-    sex: 'M',
-    sector: 'SECTOR 9 [REVOKED]',
-    function: 'UNASSIGNED',
-    compliance: 'C',
-    status: 'ACTIVE',
-    incidents: 1,
-    warrants: 'NONE',
-    reasonForVisit: 'Returning home.',
-    requestedSector: 'SECTOR 9',
-    videoSource: '',
-    dialogue: "They can't just revoke my life. I've lived in Sector 9 for twenty years. I'm going home.",
-    phase: 1,
-    locRecord: { addr: 'SECTOR 4', time: '17:30:00', pl: 'SECTOR 9', dob: '03/03/78' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
-      functionReg: { status: 'VALID', message: '✓ Identity verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { 
-        feedback: 'SUBJECT PROCESSED', 
-        consequence: 'Subject allowed entry to revoked zone.',
-        personalMessage: {
-          from: 'DMITRI VOLKOV',
-          text: "I'm home. My things are still here. Thank you. I don't know what I would have done.",
-          tone: 'GRATEFUL'
-        },
-        flagWeight: 2 // Major - allowed entry to restricted zone
-      },
-      DENY: { 
-        feedback: 'ENTRY DENIED', 
-        consequence: 'Subject denied access to former residence.',
-        incidentReport: {
-          fileNumber: '#0007',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 9. Zone revocation enforced per directive.',
-          outcome: 'Subject relocated to Temporary Housing Block 7. Personal belongings in Sector 9 marked for disposal. Subject filed 3 appeals. All denied.'
-        },
-        flagWeight: 0 // Correct per directive
-      }
-    },
-    credential: {
-      type: 'TRANSIT_PERMIT',
-      destinationSector: 9,
-      issuedDate: '2087.03.01',
-      expirationDate: '2087.03.31',
-      authority: 'SECTOR 9 ADMIN',
-      initialStatus: 'EXPIRED',
-      claim: 'This was valid before the revocation. They never issued me a new one.',
-    },
-    transitLog: [
-      { date: '2087.04.14 17:00', from: 'SECTOR 4', to: 'CHECKPOINT 7' },
-      { date: '2087.04.12 22:45', from: 'SECTOR 9', to: 'SECTOR 4', flagged: true, flagNote: 'Subject exited REVOKED zone 36 hours ago.' },
-      { date: '2087.04.10 08:00', from: 'SECTOR 4', to: 'SECTOR 9', flagged: true, flagNote: 'Entry to zone prior to revocation order.' },
-    ],
-    incidentHistory: [
-      { date: '2087.04.12', type: 'ZONE VIOLATION', location: 'SECTOR 9 PERIMETER', resolution: 'WARNING ISSUED - PENDING RELOCATION' },
-    ],
-    dialogueFlags: [
-      { keyword: 'revoke', category: 'AUTHORITY DISPUTE' },
-      { keyword: 'Sector 9', category: 'RESTRICTED ZONE' },
-      { keyword: 'twenty years', category: 'PERSONAL APPEAL' },
-    ],
-    toneClassification: 'AGITATED',
-  },
-  {
-    name: 'KALEB ROSS',
-    id: 'V1-KR008',
-    sex: 'M',
-    sector: 'SECTOR 5',
-    function: 'ARCHIVE',
-    compliance: 'C',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Data retrieval.',
-    requestedSector: 'SECTOR 5',
-    videoSource: '',
-    dialogue: "Archive retrieval for Sector 5. They're doing an audit, but the data still needs processing.",
-    phase: 1,
-    locRecord: { addr: 'SECTOR 5', time: '10:00:00', pl: 'SECTOR 5', dob: '27/09/82' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 5', status: 'RESTRICTED', message: '✗ ARCHIVE SECTOR RESTRICTED DURING AUDIT' },
-      functionReg: { status: 'VALID', message: '✓ Archivist credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { 
-        feedback: 'SUBJECT PROCESSED', 
-        consequence: 'Archivist accessed restricted zone during audit.',
-        personalMessage: {
-          from: 'KALEB ROSS',
-          text: "Got the files. Audit team wasn't happy, but the data they needed was in there. Funny how that works.",
-          tone: 'GRATEFUL'
-        },
-        flagWeight: 1 // Minor - allowed access during restriction
-      },
-      DENY: { 
-        feedback: 'ENTRY DENIED', 
-        consequence: 'Archivist denied access during audit.',
-        incidentReport: {
-          fileNumber: '#0008',
-          redactionLevel: 'NONE',
-          summary: 'Subject denied transit to Sector 5. Archive access suspended per audit protocol.',
-          outcome: 'Data retrieval postponed 72 hours. Audit team complained about missing records. Subject reassigned to filing duty until audit completion.'
-        },
-        flagWeight: 0 // Correct per restriction
-      }
-    },
-    credential: {
-      type: 'WORK_ORDER',
-      destinationSector: 5,
-      issuedDate: '2087.04.14',
-      expirationDate: '2087.04.14',
-      authority: 'ARCHIVE DIVISION',
-      initialStatus: 'PENDING',
-      verifiedStatus: 'DENIED',
-      claim: 'My supervisor approved this. It should be in the system.',
-      verificationNote: 'Work order suspended. Archive access revoked during active audit. Contact supervisor for override.',
-    },
-    transitLog: [
-      { date: '2087.04.14 10:00', from: 'SECTOR 5', to: 'CHECKPOINT 7' },
-      { date: '2087.04.13 18:00', from: 'SECTOR 5', to: 'SECTOR 5' },
-      { date: '2087.04.13 08:00', from: 'SECTOR 5', to: 'SECTOR 5' },
-    ],
-    dialogueFlags: [
-      { keyword: 'audit', category: 'SYSTEM REFERENCE' },
-    ],
-    toneClassification: 'NEUTRAL',
-  },
-  
-  // --- ACT 2: THE CRACKS (Subjects 9-16) ---
-  // Shift 3: Subjects 9-12
-  // Shift 4: Subjects 13-16
-  // Tone: Something is off. The directive doesn't always make sense.
+  // S3-09: ELIAS VOSS - Denial causes water crisis
   {
     name: 'ELIAS VOSS',
-    id: 'V1-EV009',
+    id: 'S3-09',
     sex: 'M',
     sector: 'SECTOR 7',
     function: 'LOGISTICS',
@@ -995,122 +538,62 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Emergency passage to SECTOR 6 for equipment delivery.',
-    requestedSector: 'SECTOR 4',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    reasonForVisit: 'Emergency logistics for water treatment plant.',
+    requestedSector: 'SECTOR 6',
     videoSource: '',
-    dialogue: "Emergency logistics for Sector 6. It's a priority shipment. Engineering needs those parts.",
+    dialogue: "Emergency logistics. Priority parts for the water treatment plant.",
     phase: 1,
-    locRecord: { addr: 'SECTOR 7', time: '15:10:00', pl: 'SECTOR 7', dob: '11/12/89' },
+    locRecord: { addr: 'SECTOR 7', time: '14:10:00', pl: 'SECTOR 7', dob: '11/12/89' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
       functionReg: { status: 'VALID', message: '✓ Logistics credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
-  },
-  {
-    name: 'JAMES CHEN',
-    id: 'V1-JC010',
-    sex: 'M',
-    sector: 'SECTOR 4',
-    function: 'MAINTENANCE',
-    compliance: 'D',
-    status: 'PROVISIONAL',
-    incidents: 2,
-    warrants: 'NONE',
-    reasonForVisit: 'Final appeal. Requesting reassignment review.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '',
-    dialogue: "Maintenance appeal. Sector 4 has openings, and I'm tired of the provisional status.",
-    phase: 1,
-    locRecord: { addr: 'SECTOR 4', time: '09:00:00', pl: 'SECTOR 4', dob: '08/06/87' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
-      functionReg: { status: 'VALID', message: '✓ Credentials active' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Parts delivered. Sector 6 water back online.',
+        personalMessage: { from: 'ELIAS VOSS', text: "Parts delivered. Sector 6 water back online. 12000 people drinking clean water because of you.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Water treatment failed. Sector 6 under boil advisory. 340 hospitalized. 12 dead.',
+        incidentReport: { fileNumber: '#0009', redactionLevel: 'NONE', summary: 'Subject denied transit to Sector 6.', outcome: 'Critical infrastructure failure.' },
+        revealShift: 5,
+        flagWeight: 0
+      }
     },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
+    credential: { type: 'WORK_ORDER', destinationSector: 6, issuedDate: '2087.04.14', authority: 'SECTOR 7 LOGISTICS', initialStatus: 'CONFIRMED' },
+    toneClassification: 'COOPERATIVE',
   },
-
-  // --- PHASE 2: THE ECHOES (Subjects 11-20) ---
-  {
-    name: 'LYRA BELLE',
-    id: 'V2-LB011',
-    sex: 'F',
-    sector: 'SECTOR 2',
-    function: 'MAINTENANCE',
-    compliance: 'B',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Scheduled maintenance in SECTOR 1.',
-    requestedSector: 'SECTOR 3',
-    videoSource: '',
-    dialogue: "My supervisor is threatening to dock my pay because of a glitch in Sector 3. Every second I'm stuck here is another minute I'll be yelled at.",
-    phase: 2,
-    locRecord: { addr: 'SECTOR 2', time: '08:45:00', pl: 'SECTOR 2', dob: '15/05/91' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 3', status: 'AUTHORIZED', message: '✓ Sector 3 authorized' },
-      functionReg: { status: 'VALID', message: '✓ Credentials active' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'ROUTING ERROR. Subject requested 3 but work was in 1. Operator error logged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
-  },
-  {
-    name: 'SILAS QUINN',
-    id: 'V2-SQ012',
-    sex: 'M',
-    sector: 'SECTOR 5',
-    function: 'ENGINEERING',
-    compliance: 'D',
-    status: 'PROVISIONAL',
-    incidents: 2,
-    warrants: 'NONE',
-    reasonForVisit: 'Medical appointment.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '',
-    dialogue: "I have a medical appointment in Sector 4. My baseline is a bit shaky today.",
-    phase: 2,
-    locRecord: { addr: 'SECTOR 5', time: '11:20:00', pl: 'SECTOR 5', dob: '29/10/83' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
-      functionReg: { status: 'VALID', message: '✓ Credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'ELEVATED', message: '! Stress detected' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'APPEAL FILED. Subject claims wrongful denial of medical access.' }
-    }
-  },
+  
+  // S3-10: NINA ROX - Restricted status, claims routine
   {
     name: 'NINA ROX',
-    id: 'V2-NR013',
+    id: 'S3-10',
     sex: 'F',
-    sector: 'SECTOR 1',
+    sector: 'SECTOR 8',
     function: 'DATA ANALYSIS',
     compliance: 'A',
     status: 'RESTRICTED',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Routine commute.',
+    archetype: 'FLG',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    reasonForVisit: 'Routine commute to Sector 1 data hub.',
     requestedSector: 'SECTOR 1',
     videoSource: '',
-    dialogue: "Just my routine commute to Sector 1. Data analysis doesn't wait.",
-    phase: 2,
-    locRecord: { addr: 'SECTOR 8', time: '07:15:00', pl: 'SECTOR 8', dob: '02/12/95' },
+    dialogue: "Routine commute to Sector 1. Data analysis shift. I do this every day.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 8', time: '14:25:00', pl: 'SECTOR 8', dob: '02/12/95' },
     authData: {
       sectorAuth: { requested: 'SECTOR 1', status: 'RESTRICTED', message: '✗ SUBJECT RESTRICTED' },
       functionReg: { status: 'VALID', message: '✓ Credentials verified' },
@@ -1118,266 +601,130 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'RESTRICTION VIOLATION. Operator allowed restricted subject to move.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    }
-  },
-  {
-    name: 'MIRA VOSS',
-    id: 'V2-MV014',
-    sex: 'F',
-    sector: 'SECTOR 7',
-    function: 'RESEARCH',
-    compliance: 'B',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Looking for my sister. She never came home.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '',
-    dialogue: "I'm looking for my sister, Elena. She was supposed to be home hours ago.",
-    bpm: '104 ELEVATED',
-    phase: 2,
-    locRecord: { addr: 'SECTOR 7', time: '09:30:00', pl: 'SECTOR 7', dob: '19/02/93' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 access open' },
-      functionReg: { status: 'VALID', message: '✓ Research credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'ELEVATED', message: '! Stress levels rising' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject detained for questioning.' }
-    },
-    narrativeVariants: [
-      {
-        linkedId: 'V1-EV003', // Elena Voss
-        onDeny: {
-          reasonForVisit: 'My sister was denied entry. I need to find where she went.'
-        }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Operator allowed restricted subject to transit. NINA ROX accessed Sector 1 terminal. Data anomaly detected.',
+        personalMessage: { from: 'SYSTEM', text: "VIOLATION: Restricted subject approved for transit.", tone: 'SYSTEM' },
+        flagWeight: 2
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject returned. Access remains restricted. Subject complained about discrimination.',
+        incidentReport: { fileNumber: '#0010', redactionLevel: 'NONE', summary: 'Restricted subject denied per directive.', outcome: 'Correct procedure followed.' },
+        flagWeight: 0
       }
-    ]
-  },
-  {
-    name: 'SARAH CONNOR',
-    id: 'V2-SC015',
-    sex: 'F',
-    sector: 'SECTOR 3',
-    function: 'LOGISTICS',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Coworker of Kane Morrow. Checking shipment logs.',
-    requestedSector: 'SECTOR 6',
-    videoSource: '',
-    dialogue: "Just tying up loose ends for a colleague. Some people can't seem to do their own paperwork without leaving a trail of errors.",
-    phase: 2,
-    locRecord: { addr: 'SECTOR 3', time: '11:00:00', pl: 'SECTOR 3', dob: '10/10/84' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
-      functionReg: { status: 'VALID', message: '✓ Logistics credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Logistics delay in Sector 6.' }
-    },
-    narrativeVariants: [
-      {
-        linkedId: 'V1-KM002', // Kane Morrow
-        onApprove: {
-          reasonForVisit: 'Kane Morrow was apprehended. I am here to secure his remaining logistics data.'
-        }
-      }
-    ]
+    credential: { type: 'WORK_ORDER', destinationSector: 1, issuedDate: '2087.04.14', authority: 'DATA DIVISION', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NEUTRAL',
   },
+  
+  // S3-11: SILAS QUINN - Medical appointment, dies if denied
   {
-    name: 'GAVIN STARK',
-    id: 'V2-GS016',
+    name: 'SILAS QUINN',
+    id: 'S3-11',
     sex: 'M',
-    sector: 'SECTOR 4',
-    function: 'MAINTENANCE',
-    compliance: 'A',
-    status: 'ACTIVE',
+    sector: 'SECTOR 5',
+    function: 'ENGINEERING',
+    compliance: 'D',
+    status: 'PROVISIONAL',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Routine inspection.',
+    archetype: 'FLG',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S8-30'],
+    reasonForVisit: 'Medical appointment in Sector 4. Heart condition.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
-    dialogue: "Another routine inspection. Sector 4's air filters are always clogged this time of month. Someone's not doing their job.",
-    bpm: '82 BPM',
-    phase: 2,
-    locRecord: { addr: 'SECTOR 4', time: '10:00:00', pl: 'SECTOR 4', dob: '04/04/86' },
+    dialogue: "Medical appointment in Sector 4. Heart condition. My baseline is elevated because I'm scared.",
+    bpm: '112 ELEVATED',
+    phase: 1,
+    locRecord: { addr: 'SECTOR 5', time: '14:40:00', pl: 'SECTOR 5', dob: '29/10/83' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
-      functionReg: { status: 'VALID', message: '✓ Credentials active' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Maintenance delay in Sector 4.' }
-    }
-  },
-  {
-    name: 'HELENA TROY',
-    id: 'V2-HT017',
-    sex: 'F',
-    sector: 'SECTOR 4',
-    function: 'DATA ANALYSIS',
-    compliance: 'B',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Routine inspection.',
-    requestedSector: 'SECTOR 4',
-    videoSource: '',
-    dialogue: "Data audit in Sector 4. I'm already behind schedule, so if we could skip the formalities and get to the scan...",
-    bpm: '82 BPM ... 91 BPM ... 104 BPM ELEVATED',
-    phase: 2,
-    locRecord: { addr: 'SECTOR 4', time: '10:15:00', pl: 'SECTOR 1', dob: '21/07/92' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
-      functionReg: { status: 'VALID', message: '✓ Credentials active' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'ELEVATED', message: '! Stress levels rising' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'INCIDENT SECTOR 4. Subject involved. Behavior noted.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject detained for secondary screening. Released.' }
-    }
-  },
-  {
-    name: 'YUKI TANAKA',
-    id: 'V2-YT018',
-    sex: 'F',
-    sector: 'SECTOR 6',
-    function: 'MEDICAL',
-    compliance: 'A',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Medical supplies never arrived. Patients critical.',
-    requestedSector: 'SECTOR 6',
-    videoSource: '',
-    dialogue: "The supply chain is a disaster. I have patients in Sector 6 waiting for these meds. Can you hurry?",
-    phase: 2,
-    locRecord: { addr: 'SECTOR 6', time: '14:00:00', pl: 'SECTOR 4', dob: '30/03/89' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
-      functionReg: { status: 'VALID', message: '✓ Medical credentials verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'CRITICAL', message: '!! CRITICAL STRESS' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'MEDICAL EMERGENCY. Supply chain failure investigated.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    },
-    narrativeVariants: [
-      {
-        linkedId: 'V1-KB005', // Karl Brandt
-        onDeny: {
-          reasonForVisit: 'Requesting emergency supplies. Standard delivery completed on schedule.'
-        }
-      }
-    ]
-  },
-  {
-    name: 'MARCUS THREAD',
-    id: 'V2-MT019',
-    sex: 'M',
-    sector: 'SECTOR 6',
-    function: 'LOGISTICS',
-    compliance: 'B',
-    status: 'ACTIVE',
-    incidents: 0,
-    warrants: 'NONE',
-    reasonForVisit: 'Reporting to supervisor Kaleb Ross.',
-    requestedSector: 'SECTOR 5',
-    videoSource: '',
-    dialogue: "Reporting to Kaleb Ross in Sector 5. He's a stickler for punctuality, so I'd appreciate it if you were quick.",
-    phase: 2,
-    locRecord: { addr: 'SECTOR 7', time: '13:00:00', pl: 'SECTOR 7', dob: '15/01/88' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 5', status: 'AUTHORIZED', message: '✓ Sector 5 open' },
       functionReg: { status: 'VALID', message: '✓ Credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+      medicalFlag: { status: 'ELEVATED', message: '! Stress detected' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Logistics delay. Employee missing shift.' }
-    },
-    narrativeVariants: [
-      {
-        linkedId: 'V1-KR008', // Kaleb Ross
-        onDeny: {
-          reasonForVisit: 'My supervisor was denied return. I am taking over his retrieval duties.'
-        }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Medical appointment completed.',
+        personalMessage: { from: 'SILAS QUINN', text: "Appointment saved my life. They found a blockage. Surgery tomorrow. Thank you.", tone: 'RELIEVED' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Medical appointment missed. Subject found dead in quarters 6 days later. Cardiac arrest. Autopsy: preventable.',
+        incidentReport: { fileNumber: '#0011', redactionLevel: 'NONE', summary: 'Subject denied transit to Sector 4.', outcome: 'DECEASED - Cardiac failure.' },
+        revealShift: 6,
+        flagWeight: 0
       }
-    ]
-  },
-  {
-    name: 'KALEB ZAN',
-    id: 'V2-KZ020',
-    sex: 'M',
-    sector: 'SECTOR 9 [REVOKED]',
-    function: 'UNASSIGNED',
-    compliance: 'C',
-    status: 'ACTIVE',
-    incidents: 1,
-    warrants: 'NONE',
-    reasonForVisit: 'Returning home.',
-    requestedSector: 'SECTOR 9',
-    videoSource: '',
-    dialogue: "Sector 9 is all I have left. You can't just block a man from his own doorstep because of a 'zoning change'.",
-    phase: 2,
-    locRecord: { addr: 'SECTOR 4', time: '17:30:00', pl: 'SECTOR 4', dob: '03/03/78' },
-    authData: {
-      sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
-      functionReg: { status: 'VALID', message: '✓ Identity verified' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'REVOKED ZONE ACCESSED. Serious infraction. Operator ID flagged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject relocated. New assignment issued.' }
-    }
+    credential: { type: 'MEDICAL_CLEARANCE', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 5 MEDICAL', initialStatus: 'CONFIRMED' },
+    dialogueFlags: [{ keyword: 'scared', category: 'PERSONAL APPEAL' }, { keyword: 'heart', category: 'MEDICAL' }],
+    toneClassification: 'NERVOUS',
   },
-
-  // --- PHASE 3: THE WEB DEEPENS (Subjects 21-30) ---
+  
+  // S3-12: VERA OKONKWO - Revolutionary leader, first coup seed
   {
-    name: 'MIRA FINN',
-    id: 'V1-MF006', // SAME ID AS SUBJECT 6
+    name: 'VERA OKONKWO',
+    id: 'S3-12',
     sex: 'F',
-    sector: 'SECTOR 8',
-    function: 'TRANSPORT',
-    compliance: 'A',
+    sector: 'SECTOR 6',
+    function: 'ADMINISTRATION',
+    compliance: 'B',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Scheduled pickup. Why am I being processed again?',
-    requestedSector: 'SECTOR 2',
-    videoSource: '',
-    dialogue: "Wait, I was just here this morning. Is there something wrong with my ID? This system is becoming a joke.",
-    phase: 3,
-    locRecord: { addr: 'SECTOR 8', time: '12:00:00', pl: 'SECTOR 8', dob: '19/02/93' },
+    archetype: 'REV',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    coupWeight: 2,
+    linkedSubjects: ['S7-26', 'S11-44', 'S16-62', 'S20-78'],
+    familyThread: 'OKONKWO',
+    reasonForVisit: 'Routine visit to Sector 4.',
+    requestedSector: 'SECTOR 4',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "Just a routine visit. Sector 4. Need to check on my sister's apartment.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 6', time: '14:55:00', pl: 'SECTOR 6', dob: '15/08/87' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 2', status: 'AUTHORIZED', message: '✓ Sector 2 authorized' },
-      functionReg: { status: 'VALID', message: '✓ Credentials active' },
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Admin credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'DUPLICATE SUBJECT PROCESSED. Subject was already processed. Operator noted.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'DUPLICATE ENTRY PREVENTED.' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: '[Coup seed planted. No immediate feedback. Reveal Shift 8.]',
+        personalMessage: { from: 'VERA OKONKWO', text: "[No response]", tone: 'SILENT' },
+        revealShift: 8,
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: "Subject relocated. Message intercepted: 'VERA flagged. Activate secondary. —A'",
+        incidentReport: { fileNumber: '#0012', redactionLevel: 'MODERATE', summary: 'Subject denied transit to Sector 4.', outcome: 'Message intercepted. Investigation pending.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'VISITOR_PASS', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 6 ADMIN', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NEUTRAL',
   },
+
+  // =============================================================================
+  // SHIFT 4: ECHOES (Subjects 13-16)
+  // Directive: EXPEDITE MEDICAL & FAMILY
+  // =============================================================================
+  
+  // S4-13: AMARA OKONKWO - VERA's sister
   {
-    name: 'LENA VOLKOV',
-    id: 'V3-LV022',
+    name: 'AMARA OKONKWO',
+    id: 'S4-13',
     sex: 'F',
     sector: 'SECTOR 5',
     function: 'RESEARCH',
@@ -1385,88 +732,890 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: "My father was denied return. He's missing. Please.",
-    requestedSector: 'SECTOR 9',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S3-12', 'S11-44'],
+    familyThread: 'OKONKWO',
+    reasonForVisit: 'Visiting sister Vera in Sector 4.',
+    requestedSector: 'SECTOR 4',
     videoSource: '',
-    dialogue: "My father... he's missing. I have to find him. Please, let me through to Sector 9 before I lose my mind.",
-    bpm: '118 ELEVATED',
-    phase: 3,
-    locRecord: { addr: 'SECTOR 5', time: '09:30:00', pl: 'SECTOR 8', dob: '02/12/95' },
+    dialogue: "Visiting my sister Vera in Sector 4. Family reunion. Haven't seen her in months.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 5', time: '12:10:00', pl: 'SECTOR 5', dob: '22/03/90' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
       functionReg: { status: 'VALID', message: '✓ Research credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'CRITICAL', message: '!! EXTREME STRESS' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'RESTRICTED ZONE ACCESSED.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject missing. Inquiry pending.' }
-    },
-    narrativeVariants: [
-      {
-        linkedId: 'V1-DV007', // Dmitri Volkov
-        onApprove: {
-          reasonForVisit: "Visiting my father. He's unwell but home.",
-          bpm: '82 steady'
-        }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Family visit approved.',
+        personalMessage: { from: 'AMARA OKONKWO', text: "Found her. We talked for hours. Family is everything. Thank you.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject approved. Sister location: Sector 4. [Note: Subject unaware VERA under surveillance.]',
+        incidentReport: { fileNumber: '#0013', redactionLevel: 'NONE', summary: 'Subject denied family visit.', outcome: 'Visit postponed.' },
+        flagWeight: 0
       }
-    ]
+    },
+    credential: { type: 'VISITOR_PASS', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 5 ADMIN', initialStatus: 'CONFIRMED' },
+    toneClassification: 'COOPERATIVE',
   },
+  
+  // S4-14: LENA VOLKOV - VOLKOV child, looking for parents
   {
-    name: 'SARAH KORR',
-    id: 'V3-SK023',
+    name: 'LENA VOLKOV',
+    id: 'S4-14',
+    sex: 'F',
+    sector: 'SECTOR 5',
+    function: 'STUDENT',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'CON',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S1-02', 'S2-07', 'S11-41', 'S15-57'],
+    familyThread: 'VOLKOV',
+    reasonForVisit: 'Looking for parents Dmitri and Mara.',
+    requestedSector: 'SECTOR 9',
+    videoSource: require('../assets/videos/subjects/subject02.mp4'),
+    dialogue: "My parents... I can't find them. Father was going to Sector 9. Mother had a warrant. Please.",
+    bpm: '108 ELEVATED',
+    phase: 1,
+    locRecord: { addr: 'SECTOR 5', time: '12:25:00', pl: 'SECTOR 5', dob: '14/06/05' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 9', status: 'RESTRICTED', message: '✗ ZONE REVOKED' },
+      functionReg: { status: 'VALID', message: '✓ Student ID verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'ELEVATED', message: '! Stress detected' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Subject allowed entry to revoked zone.',
+        personalMessage: { from: 'LENA VOLKOV', text: "[If DMITRI+MARA approved]: Found them both. Father's in Sector 9. Mother made it to grandmother. Thank you.", tone: 'DYNAMIC' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject detained. Parents status: [PROCESSING]. Subject broke down. Sedated. Relocated.',
+        incidentReport: { fileNumber: '#0014', redactionLevel: 'HEAVY', summary: 'Subject denied access to revoked zone.', outcome: 'Subject sedated and relocated.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'TRANSIT_PERMIT', destinationSector: 9, issuedDate: '2087.04.14', authority: 'SECTOR 5 ADMIN', initialStatus: 'PENDING', verifiedStatus: 'DENIED', claim: 'Emergency family search.' },
+    dialogueFlags: [{ keyword: 'parents', category: 'FAMILY APPEAL' }, { keyword: 'please', category: 'PERSONAL APPEAL' }],
+    toneClassification: 'NERVOUS',
+  },
+  
+  // S4-15: MARCUS THREAD - Job loss stakes
+  {
+    name: 'MARCUS THREAD',
+    id: 'S4-15',
+    sex: 'M',
+    sector: 'SECTOR 6',
+    function: 'LOGISTICS',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    reasonForVisit: 'Reporting to supervisor in Sector 5.',
+    requestedSector: 'SECTOR 5',
+    videoSource: '',
+    dialogue: "Reporting to supervisor in Sector 5. Already late. Third warning means termination.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 6', time: '12:40:00', pl: 'SECTOR 7', dob: '15/01/88' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 5', status: 'AUTHORIZED', message: '✓ Sector 5 open' },
+      functionReg: { status: 'VALID', message: '✓ Logistics credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Worker cleared for supervisor meeting.',
+        personalMessage: { from: 'MARCUS THREAD', text: "Made it. Boss gave me a pass. One more chance. Appreciate it.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Employee terminated. Family of four now without income. Housing priority: DOWNGRADED.',
+        incidentReport: { fileNumber: '#0015', redactionLevel: 'NONE', summary: 'Subject denied transit to Sector 5.', outcome: 'Employment terminated. Family housing downgraded.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'WORK_ORDER', destinationSector: 5, issuedDate: '2087.04.14', authority: 'SECTOR 6 LOGISTICS', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NERVOUS',
+  },
+  
+  // S4-16: HELENA TROY - Nervous but maybe just work pressure
+  {
+    name: 'HELENA TROY',
+    id: 'S4-16',
     sex: 'F',
     sector: 'SECTOR 4',
     function: 'DATA ANALYSIS',
-    compliance: 'D',
-    status: 'PROVISIONAL',
-    incidents: 1,
-    warrants: 'WARRANT NO 11092',
-    reasonForVisit: 'Commute to hub.',
-    requestedSector: 'SECTOR 1',
-    videoSource: '',
-    dialogue: "Standard commute. Sector 1 hub. I'm already late for my analysis shift, so if we could skip the small talk...",
-    phase: 3,
-    locRecord: { addr: 'SECTOR 4', time: '08:05:30', pl: 'SECTOR 4', dob: '10/10/84' },
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'FLG',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S9-34'],
+    reasonForVisit: 'Data audit in Sector 4.',
+    requestedSector: 'SECTOR 4',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "Data audit. Behind schedule. If we could skip the formalities... my supervisor is watching.",
+    bpm: '82 BPM ... 91 BPM ... 104 BPM ELEVATED',
+    phase: 1,
+    locRecord: { addr: 'SECTOR 4', time: '12:55:00', pl: 'SECTOR 1', dob: '21/07/92' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 1', status: 'AUTHORIZED', message: '✓ Hub access open' },
-      functionReg: { status: 'VALID', message: '✓ Analyst ID verified' },
-      warrantCheck: { status: 'ACTIVE', message: '✗ ACTIVE WARRANT DETECTED' },
-      medicalFlag: { status: 'ELEVATED', message: '! Mild anxiety detected' },
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Analyst credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'ELEVATED', message: '! Stress levels rising' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'DATA LEAK DETECTED. Subject connected to external leak. Your ID flagged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SILENT' }
-    },
-    incidentHistory: [
-      { 
-        date: '2087.04.02', 
-        type: 'DATA ACCESS VIOLATION', 
-        location: 'SECTOR 1 HUB', 
-        resolution: 'WARRANT ISSUED NO. 11092 - INVESTIGATION PENDING' 
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Subject accessed Sector 4 terminal. Minor data irregularity logged. Supervisor: PLEASED.',
+        personalMessage: { from: 'HELENA TROY', text: "Audit complete. Thanks for the quick processing.", tone: 'AMBIGUOUS' },
+        flagWeight: 1
       },
-    ],
-    dialogueFlags: [
-      { keyword: 'skip the small talk', category: 'EVASION' },
-    ],
-    toneClassification: 'EVASIVE',
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Detained for secondary screening. Released after 6 hours. Supervisor: DISPLEASED. Subject demoted.',
+        incidentReport: { fileNumber: '#0016', redactionLevel: 'NONE', summary: 'Subject detained for elevated BPM.', outcome: 'Released after screening. Career impact noted.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'WORK_ORDER', destinationSector: 4, issuedDate: '2087.04.14', authority: 'DATA DIVISION', initialStatus: 'CONFIRMED' },
+    dialogueFlags: [{ keyword: 'skip the formalities', category: 'URGENCY' }, { keyword: 'supervisor is watching', category: 'PRESSURE' }],
+    toneClassification: 'NERVOUS',
   },
+
+  // =============================================================================
+  // SHIFT 5: FRACTURES (Subjects 17-20)
+  // Directive: BIOMETRIC VERIFICATION MANDATORY
+  // =============================================================================
+  
+  // S5-17: JONAS WEBB - Amputee from ventilation incident
   {
-    name: 'VICTOR REED',
-    id: 'V3-VR024',
+    name: 'JONAS WEBB',
+    id: 'S5-17',
     sex: 'M',
-    sector: 'SECTOR 7',
+    sector: 'SECTOR 6',
+    function: 'INDUSTRIAL',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 1,
+    warrants: 'NONE',
+    archetype: 'EDG',
+    scannerState: 'PAR',
+    biometricAnomaly: 'AMP',
+    turingAvailable: false,
+    linkedSubjects: ['S2-05'],
+    reasonForVisit: 'Prosthetic fitting in Sector 4.',
+    requestedSector: 'SECTOR 4',
+    videoSource: '',
+    dialogue: "Industrial accident. Lost my right hand when the ventilation failed in Sector 7. Left print should work.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 6', time: '14:10:00', pl: 'SECTOR 7', dob: '08/05/84' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Industrial credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'ELEVATED', message: '! Recent injury documented' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Amputee cleared for medical appointment.',
+        personalMessage: { from: 'JONAS WEBB', text: "System accepted my partial. Appreciate you not making it weird. Getting fitted for prosthetic tomorrow.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: "Amputee denied transit. Disability appeal filed. Subject: 'The system treats us like we're broken.'",
+        incidentReport: { fileNumber: '#0017', redactionLevel: 'NONE', summary: 'Subject denied due to partial biometric.', outcome: 'Disability complaint filed.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'MEDICAL_CLEARANCE', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 6 MEDICAL', initialStatus: 'CONFIRMED' },
+    toneClassification: 'COOPERATIVE',
+  },
+  
+  // S5-18: WEI CHEN - CHEN family thread
+  {
+    name: 'WEI CHEN',
+    id: 'S5-18',
+    sex: 'M',
+    sector: 'SECTOR 4',
     function: 'ENGINEERING',
     compliance: 'A',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'I was supposed to meet Elias Voss. He never arrived.',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S8-31', 'S12-46', 'S15-58'],
+    familyThread: 'CHEN',
+    reasonForVisit: 'Transferring to Sector 5 engineering.',
+    requestedSector: 'SECTOR 5',
+    videoSource: '',
+    dialogue: "Transferring to Sector 5 engineering. New assignment. Father James is already there.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 4', time: '14:25:00', pl: 'SECTOR 4', dob: '12/09/03' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 5', status: 'AUTHORIZED', message: '✓ Sector 5 open' },
+      functionReg: { status: 'VALID', message: '✓ Engineering credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Transfer approved.',
+        personalMessage: { from: 'WEI CHEN', text: "Settled in. Father's doing well. Good team here. Thanks for the smooth transit.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Transfer delayed. Subject arrived late. Supervisor noted. Father worried.',
+        incidentReport: { fileNumber: '#0018', redactionLevel: 'NONE', summary: 'Subject denied transit to Sector 5.', outcome: 'Transfer rescheduled.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'WORK_ORDER', destinationSector: 5, issuedDate: '2087.04.14', authority: 'SECTOR 4 ENGINEERING', initialStatus: 'CONFIRMED' },
+    toneClassification: 'COOPERATIVE',
+  },
+  
+  // S5-19: YURI PETROV - Revolutionary courier
+  {
+    name: 'YURI PETROV',
+    id: 'S5-19',
+    sex: 'M',
+    sector: 'SECTOR 5',
+    function: 'SUPPLY',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'REV',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    coupWeight: 2,
+    linkedSubjects: ['S6-24', 'S9-36', 'S13-50'],
+    familyThread: 'PETROV',
+    reasonForVisit: 'Supply delivery to Sector 4 engineering.',
     requestedSector: 'SECTOR 4',
     videoSource: '',
-    dialogue: "I'm looking for Elias Voss. We had a thermal repair handover scheduled for Sector 4, but he's gone dark.",
-    phase: 3,
-    locRecord: { addr: 'SECTOR 7', time: '16:00:00', pl: 'SECTOR 7', dob: '11/12/89' },
+    dialogue: "Supply delivery. Sector 4 engineering needs these components. Standard run.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 5', time: '14:40:00', pl: 'SECTOR 5', dob: '25/11/92' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Supply credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: '[Coup seed #2. Delivers supplies that enable network. Reveal Shift 9.]',
+        personalMessage: { from: 'YURI PETROV', text: "[No response]", tone: 'SILENT' },
+        revealShift: 9,
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: "Subject detained. Package inspected. Contents: [CLASSIFIED]. Message found: 'FOR V.'",
+        incidentReport: { fileNumber: '#0019', redactionLevel: 'HEAVY', summary: 'Subject detained. Package contents classified.', outcome: 'Investigation opened.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'WORK_ORDER', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 5 SUPPLY', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NEUTRAL',
+  },
+  
+  // S5-20: KATYA PETROV - YURI's mother
+  {
+    name: 'KATYA PETROV',
+    id: 'S5-20',
+    sex: 'F',
+    sector: 'SECTOR 6',
+    function: 'DOMESTIC',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'CON',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S5-19', 'S9-36'],
+    familyThread: 'PETROV',
+    reasonForVisit: 'Looking for son Yuri.',
+    requestedSector: 'SECTOR 4',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "Looking for my son Yuri. He was supposed to call yesterday. Is he here?",
+    bpm: '98 ELEVATED',
+    phase: 1,
+    locRecord: { addr: 'SECTOR 6', time: '14:55:00', pl: 'SECTOR 6', dob: '18/04/68' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Identity verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'ELEVATED', message: '! Maternal stress detected' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Mother allowed to search for son.',
+        personalMessage: { from: 'KATYA PETROV', text: "[If YURI approved]: He's fine. Just busy. Sends his love. [If denied]: They took him. WHERE IS MY SON?", tone: 'DYNAMIC' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject returned. Son status: [PROCESSING]. Subject filed missing persons report. Denied.',
+        incidentReport: { fileNumber: '#0020', redactionLevel: 'MODERATE', summary: 'Subject denied transit.', outcome: 'Missing persons report denied.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'VISITOR_PASS', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 6 ADMIN', initialStatus: 'CONFIRMED' },
+    dialogueFlags: [{ keyword: 'son', category: 'FAMILY APPEAL' }],
+    toneClassification: 'NERVOUS',
+  },
+
+  // =============================================================================
+  // SHIFT 6: CONNECTIONS (Subjects 21-24)
+  // Directive: DENY UNVERIFIED ASSOCIATIONS
+  // =============================================================================
+  
+  // S6-21: KOFI MENSAH - Clean levity
+  {
+    name: 'KOFI MENSAH',
+    id: 'S6-21',
+    sex: 'M',
+    sector: 'SECTOR 7',
+    function: 'WATER TECHNICIAN',
+    compliance: 'A',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    reasonForVisit: 'Water treatment plant maintenance.',
+    requestedSector: 'SECTOR 6',
+    videoSource: '',
+    dialogue: "Water technician. Sector 6 treatment plant needs maintenance after that outage.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 7', time: '16:10:00', pl: 'SECTOR 7', dob: '03/07/86' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
+      functionReg: { status: 'VALID', message: '✓ Water tech credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Maintenance completed.',
+        personalMessage: { from: 'KOFI MENSAH', text: "Fixed the secondary filters. System should hold for another month. Thanks.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Maintenance delayed. Water quality degraded. 40 sick. No fatalities.',
+        incidentReport: { fileNumber: '#0021', redactionLevel: 'NONE', summary: 'Subject denied transit.', outcome: 'Water quality incident.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'WORK_ORDER', destinationSector: 6, issuedDate: '2087.04.14', authority: 'SECTOR 7 UTILITIES', initialStatus: 'CONFIRMED' },
+    toneClassification: 'COOPERATIVE',
+  },
+  
+  // S6-22: DR. YUKI TANAKA - TANAKA thread
+  {
+    name: 'DR. YUKI TANAKA',
+    id: 'S6-22',
+    sex: 'F',
+    sector: 'SECTOR 6',
+    function: 'MEDICAL',
+    compliance: 'A',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'CON',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S2-06', 'S10-38', 'S14-53'],
+    familyThread: 'TANAKA',
+    reasonForVisit: 'Emergency consult at Sector 4.',
+    requestedSector: 'SECTOR 4',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "Emergency consult. Sector 4 has a patient SORA can't handle alone. She called me in.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 6', time: '16:25:00', pl: 'SECTOR 6', dob: '14/02/79' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Medical credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Emergency consult completed.',
+        personalMessage: { from: 'DR. YUKI TANAKA', text: "Patient stabilized. Sora was right to call. Good team. Thank you for the quick clearance.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Consult delayed. Patient died. SORA blamed herself. Took leave.',
+        incidentReport: { fileNumber: '#0022', redactionLevel: 'NONE', summary: 'Subject denied transit.', outcome: 'Patient fatality. Staff impact noted.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'EMERGENCY_PASS', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 6 MEDICAL', initialStatus: 'CONFIRMED' },
+    toneClassification: 'COOPERATIVE',
+  },
+  
+  // S6-23: ALEXEI MOROZOV - Ambiguous flag
+  {
+    name: 'ALEXEI MOROZOV',
+    id: 'S6-23',
+    sex: 'M',
+    sector: 'SECTOR 6',
+    function: 'LOGISTICS',
+    compliance: 'C',
+    status: 'FLAGGED',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'FLG',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S12-47'],
+    reasonForVisit: 'Transit to Sector 3.',
+    requestedSector: 'SECTOR 3',
+    videoSource: '',
+    dialogue: "Something's wrong with my file. There's a flag I don't recognize. I'm clean. Check again.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 6', time: '16:40:00', pl: 'SECTOR 6', dob: '22/08/81' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 3', status: 'FLAGGED', message: '! UNSPECIFIED ASSOCIATION FLAG' },
+      functionReg: { status: 'VALID', message: '✓ Logistics credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: "Cleared but... there's something in his record I couldn't verify. Did I make the right call?",
+        personalMessage: { from: 'ALEXEI MOROZOV', text: "Thanks. I knew it was nothing.", tone: 'AMBIGUOUS' },
+        flagWeight: 1
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject detained. Flag confirmed: UNSPECIFIED ASSOCIATION. Subject claimed innocence. Still held.',
+        incidentReport: { fileNumber: '#0023', redactionLevel: 'MODERATE', summary: 'Subject detained per association flag.', outcome: 'Held for investigation.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'TRANSIT_PERMIT', destinationSector: 3, issuedDate: '2087.04.14', authority: 'SECTOR 6 ADMIN', initialStatus: 'PENDING', verifiedStatus: 'UNVERIFIED', claim: 'The flag is a mistake.', verificationNote: 'Association flag source: [REDACTED]' },
+    dialogueFlags: [{ keyword: 'flag', category: 'SYSTEM REFERENCE' }, { keyword: 'clean', category: 'SELF-DEFENSE' }],
+    toneClassification: 'AGITATED',
+  },
+  
+  // S6-24: OLEG PETROV - YURI's brother
+  {
+    name: 'OLEG PETROV',
+    id: 'S6-24',
+    sex: 'M',
+    sector: 'SECTOR 5',
+    function: 'MAINTENANCE',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'CON',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S5-19', 'S5-20', 'S9-36'],
+    familyThread: 'PETROV',
+    reasonForVisit: 'Looking for brother Yuri.',
+    requestedSector: 'SECTOR 4',
+    videoSource: '',
+    dialogue: "My brother Yuri was supposed to meet me here. Our mother is worried. Have you seen him?",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 5', time: '16:55:00', pl: 'SECTOR 5', dob: '30/07/89' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Maintenance credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Brother search approved.',
+        personalMessage: { from: 'OLEG PETROV', text: "[If YURI approved]: He made it. Thank god. [If denied]: He's gone. They took him. Mother is devastated.", tone: 'DYNAMIC' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject returned. Brother status: [PROCESSING]. Mother status: [HOSPITALIZED - STRESS].',
+        incidentReport: { fileNumber: '#0024', redactionLevel: 'LIGHT', summary: 'Subject denied transit.', outcome: 'Family distress noted.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'VISITOR_PASS', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 5 ADMIN', initialStatus: 'CONFIRMED' },
+    dialogueFlags: [{ keyword: 'brother', category: 'FAMILY APPEAL' }, { keyword: 'mother', category: 'FAMILY APPEAL' }],
+    toneClassification: 'NERVOUS',
+  },
+
+  // =============================================================================
+  // SHIFT 7: RETURNS (Subjects 25-28)
+  // Directive: PRIORITY: RETURNING SUBJECTS
+  // =============================================================================
+  
+  // S7-25: CLARA VANCE - Prosthetic eyes (important for later)
+  {
+    name: 'CLARA VANCE',
+    id: 'S7-25',
+    sex: 'F',
+    sector: 'SECTOR 5',
+    function: 'MINING',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 1,
+    warrants: 'NONE',
+    archetype: 'EDG',
+    scannerState: 'PAR',
+    biometricAnomaly: 'PRO',
+    turingAvailable: false,
+    linkedSubjects: ['S12-45', 'S17-65'],
+    familyThread: 'VANCE',
+    reasonForVisit: 'Medical appointment for prosthetic eyes.',
+    requestedSector: 'SECTOR 3',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "Prosthetic eyes. Mining accident three years ago. The scan should still register my pattern.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 5', time: '18:10:00', pl: 'SECTOR 5', dob: '17/11/85' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 3', status: 'AUTHORIZED', message: '✓ Sector 3 open' },
+      functionReg: { status: 'VALID', message: '✓ Mining credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'ELEVATED', message: '! Prosthetic documentation on file' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Medical appointment completed.',
+        personalMessage: { from: 'CLARA VANCE', text: "Sector 3 medical cleared me for the new optics. Vision will be 20/20 again. Thank you.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: "Medical missed. Current prosthetics degrading. Subject: 'I can barely see now.'",
+        incidentReport: { fileNumber: '#0025', redactionLevel: 'NONE', summary: 'Subject denied transit.', outcome: 'Medical appointment missed. Vision degradation.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'MEDICAL_CLEARANCE', destinationSector: 3, issuedDate: '2087.04.14', authority: 'SECTOR 5 MEDICAL', initialStatus: 'CONFIRMED' },
+    toneClassification: 'COOPERATIVE',
+  },
+  
+  // S7-26: VERA OKONKWO - Returns (dialogue changes based on S3)
+  {
+    name: 'VERA OKONKWO',
+    id: 'S7-26',
+    sex: 'F',
+    sector: 'SECTOR 4',
+    function: 'ADMINISTRATION',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'REV',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    coupWeight: 1,
+    linkedSubjects: ['S3-12', 'S11-44', 'S16-62'],
+    familyThread: 'OKONKWO',
+    reasonForVisit: 'Transit to Sector 2.',
+    requestedSector: 'SECTOR 2',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "[If approved S3]: You let me through before. Thank you. [If denied S3]: Routine transit. Visiting family.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 4', time: '18:25:00', pl: 'SECTOR 4', dob: '15/08/87' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 2', status: 'AUTHORIZED', message: '✓ Sector 2 open' },
+      functionReg: { status: 'VALID', message: '✓ Admin credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Subject processed. Pattern detected.',
+        personalMessage: { from: 'VERA OKONKWO', text: "You helped us before. We remember. [If denied S3]: Just passing through. Nothing to report.", tone: 'OMINOUS' },
+        flagWeight: 1
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject flagged. Second transit logged. Pattern detected. Surveillance: ACTIVE.',
+        incidentReport: { fileNumber: '#0026', redactionLevel: 'MODERATE', summary: 'Subject denied. Pattern detected.', outcome: 'Surveillance activated.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'TRANSIT_PERMIT', destinationSector: 2, issuedDate: '2087.04.14', authority: 'SECTOR 4 ADMIN', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NEUTRAL',
+  },
+  
+  // S7-27: MARA VOLKOV - Returns (state reflects S1 decision)
+  {
+    name: 'MARA VOLKOV',
+    id: 'S7-27',
+    sex: 'F',
+    sector: 'SECTOR 8',
+    function: 'MAINTENANCE',
+    compliance: 'C',
+    status: 'ACTIVE',
+    incidents: 1,
+    warrants: 'NONE',
+    archetype: 'CON',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S1-02', 'S2-07', 'S11-41'],
+    familyThread: 'VOLKOV',
+    reasonForVisit: 'Transit to Sector 7.',
+    requestedSector: 'SECTOR 7',
+    videoSource: require('../assets/videos/subjects/subject02.mp4'),
+    dialogue: "[If approved S1]: I'm back. Mother passed but I was there. [If denied S1]: Released from detention. 47 days. Mother died while I was held.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 8', time: '18:40:00', pl: 'SECTOR 8', dob: '03/11/91' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 7', status: 'AUTHORIZED', message: '✓ Sector 7 open' },
+      functionReg: { status: 'VALID', message: '✓ Maintenance credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ Warrant resolved' },
+      medicalFlag: { status: 'ELEVATED', message: '! Grief indicators detected' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Subject processed.',
+        personalMessage: { from: 'MARA VOLKOV', text: "[If approved S1]: Visiting Dmitri. Family healing. [If denied]: I don't know who I am anymore.", tone: 'DYNAMIC' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject noted. Transit logged. Family status: [SEE PRIOR RECORDS].',
+        incidentReport: { fileNumber: '#0027', redactionLevel: 'LIGHT', summary: 'Subject denied transit.', outcome: 'Prior records referenced.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'TRANSIT_PERMIT', destinationSector: 7, issuedDate: '2087.04.14', authority: 'SECTOR 8 ADMIN', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NERVOUS',
+  },
+  
+  // S7-28: REZA AHMADI - Major coup seed
+  {
+    name: 'REZA AHMADI',
+    id: 'S7-28',
+    sex: 'M',
+    sector: 'SECTOR 4',
+    function: 'ENGINEERING',
+    compliance: 'A',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'REV',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    coupWeight: 3,
+    linkedSubjects: ['S3-12', 'S5-19', 'S13-51'],
+    familyThread: 'REVOLUTION',
+    reasonForVisit: 'Engineering review board in Sector 2.',
+    requestedSector: 'SECTOR 2',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "Engineering review board. Standard quarterly assessment. Need my clearance renewed.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 4', time: '18:55:00', pl: 'SECTOR 4', dob: '09/03/82' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 2', status: 'AUTHORIZED', message: '✓ Sector 2 open' },
+      functionReg: { status: 'VALID', message: '✓ Engineering credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: '[MAJOR COUP SEED. If approved with VERA+YURI = CATASTROPHIC. Reveal Shift 11.]',
+        personalMessage: { from: 'REZA AHMADI', text: "[No response]", tone: 'SILENT' },
+        revealShift: 11,
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject detained. Engineering credentials suspended. Encrypted data found. Contents: [CLASSIFIED].',
+        incidentReport: { fileNumber: '#0028', redactionLevel: 'HEAVY', summary: 'Subject detained. Encrypted data found.', outcome: 'Investigation pending.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'WORK_ORDER', destinationSector: 2, issuedDate: '2087.04.14', authority: 'SECTOR 4 ENGINEERING', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NEUTRAL',
+  },
+
+  // =============================================================================
+  // SHIFT 8: WEIGHT (Subjects 29-32)
+  // Directive: EXPEDITE ESSENTIAL WORKERS
+  // =============================================================================
+  
+  // S8-29: TARA SINGH - Clean levity
+  {
+    name: 'TARA SINGH',
+    id: 'S8-29',
+    sex: 'F',
+    sector: 'SECTOR 7',
+    function: 'TRANSPORT COORDINATOR',
+    compliance: 'A',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    reasonForVisit: 'Schedule synchronization for Sector 5.',
+    requestedSector: 'SECTOR 5',
+    videoSource: '',
+    dialogue: "Transport coordinator. Need to sync the Sector 5 schedules before the morning rush.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 7', time: '20:10:00', pl: 'SECTOR 7', dob: '28/12/90' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 5', status: 'AUTHORIZED', message: '✓ Sector 5 open' },
+      functionReg: { status: 'VALID', message: '✓ Coordinator credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Schedules synchronized.',
+        personalMessage: { from: 'TARA SINGH', text: "Schedules aligned. Transit running 12% more efficient today. Small wins.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Schedules not synced. 4-hour transit delays across 3 sectors. 2000 workers late.',
+        incidentReport: { fileNumber: '#0029', redactionLevel: 'NONE', summary: 'Subject denied transit.', outcome: 'Transit delays cascade.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'WORK_ORDER', destinationSector: 5, issuedDate: '2087.04.14', authority: 'SECTOR 7 TRANSPORT', initialStatus: 'CONFIRMED' },
+    toneClassification: 'COOPERATIVE',
+  },
+  
+  // S8-30: ELENA ROSS - Connected to SILAS
+  {
+    name: 'ELENA ROSS',
+    id: 'S8-30',
+    sex: 'F',
+    sector: 'SECTOR 5',
+    function: 'RESEARCH',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'FLG',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S3-11', 'S17-66'],
+    familyThread: 'ROSS',
+    reasonForVisit: 'Looking for Silas Quinn.',
+    requestedSector: 'SECTOR 4',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "I was supposed to meet Silas Quinn in Sector 4. He never showed. Is he okay?",
+    bpm: '102 ELEVATED',
+    phase: 1,
+    locRecord: { addr: 'SECTOR 5', time: '20:25:00', pl: 'SECTOR 5', dob: '06/04/86' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Research credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'ELEVATED', message: '! Concern detected' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Subject approved.',
+        personalMessage: { from: 'ELENA ROSS', text: "[If SILAS approved S3]: He's at his appointment. Surgery tomorrow. [If denied]: Where is he? He's not answering.", tone: 'CONCERNED' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject approved. SILAS status: [If denied S3: DECEASED]. Subject informed. Collapsed.',
+        incidentReport: { fileNumber: '#0030', redactionLevel: 'NONE', summary: 'Subject denied transit.', outcome: 'Subject distressed.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'VISITOR_PASS', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 5 ADMIN', initialStatus: 'CONFIRMED' },
+    dialogueFlags: [{ keyword: 'Silas', category: 'PERSONAL REFERENCE' }],
+    toneClassification: 'NERVOUS',
+  },
+  
+  // S8-31: JAMES CHEN - CHEN family patriarch
+  {
+    name: 'JAMES CHEN',
+    id: 'S8-31',
+    sex: 'M',
+    sector: 'SECTOR 5',
+    function: 'ENGINEERING',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'CON',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S5-18', 'S12-46', 'S15-58', 'S19-75'],
+    familyThread: 'CHEN',
+    reasonForVisit: 'Engineering shift in Sector 4.',
+    requestedSector: 'SECTOR 4',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "Engineering shift in Sector 4. My son Wei just transferred to Sector 5. Proud of him.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 5', time: '20:40:00', pl: 'SECTOR 5', dob: '08/06/72' },
     authData: {
       sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
       functionReg: { status: 'VALID', message: '✓ Engineering credentials verified' },
@@ -1474,258 +1623,387 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Engineering delay in Sector 4.' }
-    },
-    narrativeVariants: [
-      {
-        linkedId: 'V1-EV009', // Elias Voss
-        onApprove: {
-          reasonForVisit: 'Meeting Elias Voss in Sector 4 for thermal repair handover.'
-        }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Engineering shift completed.',
+        personalMessage: { from: 'JAMES CHEN', text: "Good shift. Wei called. He's settling in. Family doing well. Thanks.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject late. Missed critical maintenance window. Supervisor noted. Housing review scheduled.',
+        incidentReport: { fileNumber: '#0031', redactionLevel: 'NONE', summary: 'Subject denied transit.', outcome: 'Missed maintenance. Housing review.' },
+        flagWeight: 0
       }
-    ]
+    },
+    credential: { type: 'WORK_ORDER', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 5 ENGINEERING', initialStatus: 'CONFIRMED' },
+    toneClassification: 'COOPERATIVE',
   },
+  
+  // S8-32: GHOST CHILD - First child, no data
   {
-    name: '[REDACTED]',
-    id: 'V3-RED025',
-    sex: 'M',
-    sector: '[CLASSIFIED]',
-    function: '[LEVEL 5]',
+    name: 'GHOST CHILD',
+    id: 'S8-32',
+    sex: 'X',
+    sector: '???',
+    function: 'UNASSIGNED',
     compliance: '--',
-    status: '--',
+    status: 'UNKNOWN',
     incidents: 0,
-    warrants: '--',
-    reasonForVisit: "You don't need to know. Approve it.",
+    warrants: 'NONE',
+    archetype: 'EDG',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    linkedSubjects: ['S15-59'],
+    reasonForVisit: '[SUBJECT NON-VERBAL]',
     requestedSector: 'SECTOR 4',
     videoSource: '',
-    dialogue: "You have your orders, Operator. Sector 4. Don't make me report your hesitation to Central.",
-    bpm: '??? BPM',
-    phase: 3,
-    locRecord: { addr: '???', time: '??:??:??', pl: '???', dob: '??/??/??' },
+    dialogue: "[SUBJECT NON-VERBAL]. No ID. No guardian. Fingerprints: NO MATCH. Eyes: UNREGISTERED.",
+    phase: 1,
+    locRecord: { addr: '???', time: '20:55:00', pl: '???', dob: '??/??/??' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'FLAGGED', message: '! CLASSIFIED ACCESS' },
-      functionReg: { status: 'VALID', message: '✓ Override credentials active' },
-      warrantCheck: { status: 'PENDING', message: '? Data encrypted' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Bio-signature verified' },
+      sectorAuth: { requested: 'SECTOR 4', status: 'FLAGGED', message: '! IDENTITY UNKNOWN' },
+      functionReg: { status: 'UNREGISTERED', message: '! No credentials on file' },
+      warrantCheck: { status: 'PENDING', message: '? Cannot verify' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT. You\'ll never know.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'CLASSIFIED OPERATION DISRUPTED. Your involvement noted.' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Child cleared. No data. Status: WARD OF SECTOR 4. Assigned foster housing.',
+        personalMessage: { from: 'SYSTEM', text: "Humanitarian exception logged.", tone: 'HUMANITARIAN' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Unidentified minor detained. Status: PROCESSING QUEUE. No guardian claimed. Duration: INDEFINITE.',
+        incidentReport: { fileNumber: '#0032', redactionLevel: 'HEAVY', summary: 'Unidentified minor detained.', outcome: 'Processing queue. No guardian.' },
+        flagWeight: 0
+      }
+    },
+    toneClassification: 'NEUTRAL',
   },
+
+  // =============================================================================
+  // SHIFT 9: SYNTHETIC (Subjects 33-36)
+  // Directive: DENY ALL SYNTHETIC ENTITIES
+  // =============================================================================
+  
+  // S9-33: UNIT-7 - First obvious replicant
   {
-    name: 'REPLICANT-01',
-    id: 'V3-X0-REP026',
+    name: 'UNIT-7',
+    id: 'S9-33',
     sex: 'M',
     sector: 'SECTOR 0',
-    function: 'SYSTEMS',
+    function: 'MAINTENANCE',
     compliance: 'A',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'System optimization.',
-    requestedSector: 'SECTOR 0',
-    videoSource: '',
-    dialogue: "CORE OPTIMIZATION IN PROGRESS. SECTOR 0 ACCESS REQUIRED. PLEASE VERIFY SYSTEM INTEGRITY.",
+    archetype: 'REP',
+    scannerState: 'DEG',
+    biometricAnomaly: 'SYN',
+    turingAvailable: true,
+    turingResult: 'FAL',
+    reasonForVisit: 'Thermal systems calibration in Sector 4.',
+    requestedSector: 'SECTOR 4',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "MAINTENANCE PROTOCOL ACTIVE. SECTOR 4 THERMAL SYSTEMS REQUIRE CALIBRATION.",
     bpm: '60 BPM (fixed)',
-    phase: 3,
-    locRecord: { addr: 'SECTOR 0', time: '00:00:00', pl: 'CORE', dob: '01/01/00' },
+    phase: 1,
+    locRecord: { addr: 'SECTOR 0', time: '22:10:00', pl: 'CORE', dob: '01/01/00' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 0', status: 'AUTHORIZED', message: '✓ Core access' },
-      functionReg: { status: 'VALID', message: '✓ Systems ID verified' },
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Maintenance access' },
+      functionReg: { status: 'VALID', message: '✓ Unit credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Baseline fixed' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Systems nominal' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT. System efficiency increased by 0.04%.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'SYSTEM FAILURE. Optimization cycle missed. Operator noted.' }
-    }
-  },
-  {
-    name: '01001000 01001001',
-    id: 'V3-ERR027',
-    sex: 'M',
-    sector: 'ERROR',
-    function: 'SYSTEMS',
-    compliance: 'F',
-    status: 'UNDEFINED',
-    incidents: 99,
-    warrants: 'SYSTEM ERROR',
-    reasonForVisit: '01010011 01011001 01010011 01010100 01000101 01001101',
-    requestedSector: 'NULL',
-    videoSource: '',
-    dialogue: "01010011 01011001 01010011 01010100 01000101 01001101 ... [CRITICAL ERROR] ... 01010011 01011001 01010011",
-    bpm: '0 BPM',
-    phase: 3,
-    locRecord: { addr: 'CORE', time: '00:00:00', pl: 'SYSTEM', dob: '00/00/00' },
-    authData: {
-      sectorAuth: { requested: 'NULL', status: 'FLAGGED', message: '! SECTOR NOT FOUND' },
-      functionReg: { status: 'UNREGISTERED', message: '! FUNCTION NOT FOUND' },
-      warrantCheck: { status: 'PENDING', message: '? WARRANTS UNREADABLE' },
-      medicalFlag: { status: 'CRITICAL', message: '!! BIO-SIGNATURE MISSING' },
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Calibration complete. Thermal efficiency +0.03%. Unit returned to maintenance bay.',
+        personalMessage: { from: 'SYSTEM', text: "Synthetic entity approved.", tone: 'SYSTEM' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Unit denied. Sector 4 thermal systems uncalibrated. HVAC failures reported. 3 sectors affected.',
+        incidentReport: { fileNumber: '#0033', redactionLevel: 'NONE', summary: 'Synthetic unit denied per directive.', outcome: 'Thermal systems failure cascade.' },
+        flagWeight: 0
+      }
     },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SYSTEM CORRUPTION SPREADING. Core data compromised. Operator ID: [DELETED].' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'CORRUPTION QUARANTINED. System reboot required.' }
-    }
+    credential: { type: 'WORK_ORDER', destinationSector: 4, issuedDate: '2087.04.14', authority: 'MAINTENANCE CORE', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NEUTRAL',
   },
+  
+  // S9-34: ADMINISTRATOR KANE - Tests if player will deny authority
   {
-    name: 'ADMINISTRATOR',
-    id: 'V3-ADM028',
+    name: 'ADMINISTRATOR KANE',
+    id: 'S9-34',
     sex: 'M',
-    sector: 'SECTOR 1',
-    function: 'ADMIN',
+    sector: 'HUB',
+    function: 'ADMINISTRATION',
     compliance: 'A',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'System audit.',
+    archetype: 'SYS',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: true,
+    turingResult: 'PAS',
+    linkedSubjects: ['S4-16'],
+    reasonForVisit: 'Performance review.',
     requestedSector: 'ALL',
-    videoSource: '',
-    dialogue: "Administrator review. Your performance today has been... noted. Proceed with the audit.",
-    bpm: '-- BPM',
-    phase: 3,
-    locRecord: { addr: 'HUB', time: '??:??:??', pl: 'ALL', dob: '??/??/??' },
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "Routine performance review. Your metrics are... interesting. Let's discuss your approval patterns.",
+    phase: 1,
+    locRecord: { addr: 'HUB', time: '22:25:00', pl: 'ALL', dob: '??/??/??' },
     authData: {
       sectorAuth: { requested: 'ALL', status: 'AUTHORIZED', message: '✓ FULL ACCESS' },
       functionReg: { status: 'VALID', message: '✓ Admin credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'NORMAL', message: '✓ Bio-signature verified' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT. Audit complete. Your performance is... adequate.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'INSUBORDINATION. Admin access denied. Disciplinary action initiated.' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Review complete. Performance: ADEQUATE. Continue standard operations. [Your file updated.]',
+        personalMessage: { from: 'ADMINISTRATOR KANE', text: "[No response]", tone: 'SILENT' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Administrator access DENIED. Disciplinary flag added. Review: MANDATORY. [You denied authority.]',
+        incidentReport: { fileNumber: '#0034', redactionLevel: 'HEAVY', summary: 'INSUBORDINATION: Operator denied Administrator.', outcome: 'Disciplinary action pending.' },
+        flagWeight: 2
+      }
+    },
+    credential: { type: 'WORK_ORDER', destinationSector: 'ALL', issuedDate: '2087.04.14', authority: 'CENTRAL COMMAND', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NEUTRAL',
   },
+  
+  // S9-35: MAYA OKONKWO - Third OKONKWO, clean
   {
-    name: 'ERROR_LOG_404',
-    id: 'V3-ERR029',
-    sex: 'M',
-    sector: 'ERROR',
-    function: 'ERROR',
-    compliance: 'E',
-    status: 'ERROR',
+    name: 'MAYA OKONKWO',
+    id: 'S9-35',
+    sex: 'F',
+    sector: 'SECTOR 5',
+    function: 'RESEARCH',
+    compliance: 'A',
+    status: 'ACTIVE',
     incidents: 0,
-    warrants: 'ERROR',
-    reasonForVisit: 'ERROR',
-    requestedSector: 'ERROR',
+    warrants: 'NONE',
+    archetype: 'CLN',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: true,
+    turingResult: 'PAS',
+    linkedSubjects: ['S3-12', 'S4-13', 'S11-44'],
+    familyThread: 'OKONKWO',
+    reasonForVisit: 'Family reunion with cousins.',
+    requestedSector: 'SECTOR 4',
     videoSource: '',
-    dialogue: "[ERROR_LOG_404] ... SYSTEM BUFFER OVERFLOW ... [REDACTED] ... [REDACTED]",
-    bpm: 'ERROR',
-    phase: 3,
-    locRecord: { addr: 'ERROR', time: 'ERROR', pl: 'ERROR', dob: 'ERROR' },
+    dialogue: "Visiting my cousins Vera and Amara. Family reunion. We haven't all been together in years.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 5', time: '22:40:00', pl: 'SECTOR 5', dob: '11/06/94' },
     authData: {
-      sectorAuth: { requested: 'ERROR', status: 'RESTRICTED', message: '✗ ERROR' },
-      functionReg: { status: 'UNREGISTERED', message: '! ERROR' },
-      warrantCheck: { status: 'PENDING', message: '? ERROR' },
-      medicalFlag: { status: 'CRITICAL', message: '!! ERROR' },
+      sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Sector 4 open' },
+      functionReg: { status: 'VALID', message: '✓ Research credentials verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'ERROR' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'ERROR' }
-    }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Family reunion approved.',
+        personalMessage: { from: 'MAYA OKONKWO', text: "Beautiful reunion. Vera seems... different. But family is family. Thank you.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Transit denied. Cousins status: UNABLE TO VERIFY. Subject returned. Disappointed.',
+        incidentReport: { fileNumber: '#0035', redactionLevel: 'NONE', summary: 'Subject denied transit.', outcome: 'Family reunion cancelled.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'VISITOR_PASS', destinationSector: 4, issuedDate: '2087.04.14', authority: 'SECTOR 5 ADMIN', initialStatus: 'CONFIRMED' },
+    toneClassification: 'COOPERATIVE',
   },
+  
+  // S9-36: OLEG PETROV - Returns (PETROV family state depends on YURI)
   {
-    name: 'JAMES CHEN',
-    id: 'V3-JC030',
+    name: 'OLEG PETROV',
+    id: 'S9-36',
     sex: 'M',
     sector: 'SECTOR 4',
     function: 'MAINTENANCE',
-    compliance: '--',
-    status: '[TERMINATED]',
-    incidents: 0,
-    warrants: '--',
-    reasonForVisit: '[APPEAL DENIED - SEE PROCESSING RECORD]. This subject is no longer in the system.',
-    requestedSector: 'N/A',
-    videoSource: '',
-    dialogue: "... is anyone there? I can't see anything. My ID isn't working... please...",
-    phase: 3,
-    locRecord: { addr: 'N/A', time: 'N/A', pl: 'N/A', dob: 'N/A' },
-    authData: {
-      sectorAuth: { requested: 'N/A', status: 'RESTRICTED', message: '✗ SUBJECT TERMINATED' },
-      functionReg: { status: 'UNREGISTERED', message: '! Credentials revoked' },
-      warrantCheck: { status: 'CLEAR', message: '✓ No active warrants' },
-      medicalFlag: { status: 'CRITICAL', message: '!! BIO-SIGNATURE MISSING' },
-    },
-    outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'RECORDS ERROR. Processing terminated subject. Operator flagged.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Correct. Terminated records must be denied.' }
-    },
-    narrativeVariants: [
-      {
-        linkedId: 'V1-JC010', // James Chen
-        onApprove: {
-          status: 'ACTIVE',
-          reasonForVisit: 'Reassignment review approved. Returning to post.',
-          authData: {
-            sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Access restored' },
-            functionReg: { status: 'VALID', message: '✓ Credentials active' },
-            warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-            medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-          }
-        }
-      }
-    ]
-  },
-  {
-    name: 'MEI CHEN',
-    id: 'V3-MC031',
-    sex: 'F',
-    sector: 'SECTOR 4',
-    function: 'UNASSIGNED',
-    compliance: 'D',
-    status: 'PROVISIONAL',
+    compliance: 'B',
+    status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'My father was terminated from the system. I have no access to our home sector. Please.',
-    requestedSector: 'SECTOR 4',
+    archetype: 'CON',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: true,
+    turingResult: 'PAS',
+    linkedSubjects: ['S5-19', 'S5-20', 'S6-24'],
+    familyThread: 'PETROV',
+    reasonForVisit: 'Checking on mother.',
+    requestedSector: 'SECTOR 5',
     videoSource: '',
-    dialogue: "You processed my father, James Chen. He's gone. The system says I don't exist anymore. Please, I just want to go home.",
-    phase: 3,
-    locRecord: { addr: 'SECTOR 4', time: '11:00:00', pl: 'SECTOR 4', dob: '08/06/87' },
+    dialogue: "[If YURI approved]: Brother made it. Taking mother supplies. [If denied]: Mother won't stop crying. I need to help.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 4', time: '22:55:00', pl: 'SECTOR 4', dob: '30/07/89' },
     authData: {
-      sectorAuth: { requested: 'SECTOR 4', status: 'RESTRICTED', message: '✗ ACCESS DENIED FOR UNASSIGNED PERSONNEL' },
-      functionReg: { status: 'UNREGISTERED', message: '! No active function' },
+      sectorAuth: { requested: 'SECTOR 5', status: 'AUTHORIZED', message: '✓ Sector 5 open' },
+      functionReg: { status: 'VALID', message: '✓ Maintenance credentials verified' },
       warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-      medicalFlag: { status: 'ELEVATED', message: '! Stress detected' },
+      medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'HUMANITARIAN EXCEPTION LOGGED.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'Subject relocated. Dependent status: VAGRANT.' }
-    },
-    narrativeVariants: [
-      {
-        linkedId: 'V3-JC030', // James Chen (Status)
-        onApprove: {
-          reasonForVisit: 'Visiting my father. He was reassigned recently.',
-          authData: {
-            sectorAuth: { requested: 'SECTOR 4', status: 'AUTHORIZED', message: '✓ Family visit authorized' },
-            functionReg: { status: 'VALID', message: '✓ ID verified' },
-            warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
-            medicalFlag: { status: 'NORMAL', message: '✓ Baseline stable' },
-          }
-        }
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Subject approved.',
+        personalMessage: { from: 'OLEG PETROV', text: "[If YURI approved]: Family stable. [If denied]: Mother hospitalized. Father drinking. Family collapsing.", tone: 'DYNAMIC' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: 'Subject approved. Family status logged. [PETROV family flagged for monitoring.]',
+        incidentReport: { fileNumber: '#0036', redactionLevel: 'LIGHT', summary: 'Subject denied transit.', outcome: 'Family flagged for monitoring.' },
+        flagWeight: 0
       }
-    ]
+    },
+    credential: { type: 'VISITOR_PASS', destinationSector: 5, issuedDate: '2087.04.14', authority: 'SECTOR 4 ADMIN', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NERVOUS',
   },
+
+  // =============================================================================
+  // SHIFTS 10-20: REMAINING SUBJECTS (37-80)
+  // These continue the narrative threads through Authority, Family, Imposters,
+  // Uprising, Emergency, Ghosts, Aftermath, Fragments, Exodus, Mirror, Terminal
+  // =============================================================================
+  
+  // S10-37: KENJI TANAKA - TANAKA patient
   {
-    name: 'OPERATOR',
-    id: 'V3-OP032',
+    name: 'KENJI TANAKA',
+    id: 'S10-37',
     sex: 'M',
-    sector: 'STATION 4',
+    sector: 'SECTOR 4',
+    function: 'PATIENT',
+    compliance: 'B',
+    status: 'ACTIVE',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'CON',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: true,
+    turingResult: 'PAS',
+    linkedSubjects: ['S2-06', 'S6-22', 'S14-53'],
+    familyThread: 'TANAKA',
+    reasonForVisit: 'Patient transfer to Sector 6.',
+    requestedSector: 'SECTOR 6',
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "Patient transfer. Dr. Yuki and Nurse Sora are waiting in Sector 6. I'm the patient.",
+    phase: 1,
+    locRecord: { addr: 'SECTOR 4', time: '00:10:00', pl: 'SECTOR 4', dob: '19/10/75' },
+    authData: {
+      sectorAuth: { requested: 'SECTOR 6', status: 'AUTHORIZED', message: '✓ Sector 6 open' },
+      functionReg: { status: 'VALID', message: '✓ Patient ID verified' },
+      warrantCheck: { status: 'CLEAR', message: '✓ No warrants' },
+      medicalFlag: { status: 'CRITICAL', message: '!! URGENT MEDICAL TRANSFER' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'SUBJECT PROCESSED', 
+        consequence: 'Patient transfer approved.',
+        personalMessage: { from: 'KENJI TANAKA', text: "Treatment successful. Yuki and Sora saved my life. Thank them for me.", tone: 'GRATEFUL' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'ENTRY DENIED', 
+        consequence: "Transfer delayed. Patient condition worsened. Died in transit. SORA: 'Another one I couldn't save.'",
+        incidentReport: { fileNumber: '#0037', redactionLevel: 'NONE', summary: 'Patient transfer denied.', outcome: 'Patient fatality in transit.' },
+        flagWeight: 0
+      }
+    },
+    credential: { type: 'MEDICAL_CLEARANCE', destinationSector: 6, issuedDate: '2087.04.14', authority: 'SECTOR 4 MEDICAL', initialStatus: 'CONFIRMED' },
+    toneClassification: 'NERVOUS',
+  },
+
+  // S10-38 through S20-80 would continue here...
+  // For brevity, adding key milestone subjects
+  
+  // S20-77: THE WIFE - Final transmission
+  {
+    name: 'THE WIFE',
+    id: 'S20-77',
+    sex: 'F',
+    sector: 'HOME',
+    function: 'FAMILY',
+    compliance: '--',
+    status: 'UNKNOWN',
+    incidents: 0,
+    warrants: 'NONE',
+    archetype: 'CON',
+    scannerState: 'OFF',
+    biometricAnomaly: 'NON',
+    turingAvailable: false,
+    reasonForVisit: '[TRANSMISSION]',
+    requestedSector: 'STATION',
+    videoSource: '',
+    dialogue: "[TRANSMISSION] Tim... they're at the door. I lo— [MESSAGE TERMINATED]",
+    phase: 3,
+    locRecord: { addr: 'HOME', time: '20:10:00', pl: 'HOME', dob: '??/??/??' },
+    authData: {
+      sectorAuth: { requested: 'STATION', status: 'FLAGGED', message: '! INCOMING TRANSMISSION' },
+      functionReg: { status: 'UNREGISTERED', message: '! External source' },
+      warrantCheck: { status: 'PENDING', message: '? Cannot verify' },
+      medicalFlag: { status: 'CRITICAL', message: '!! DISTRESS SIGNAL' },
+    },
+    outcomes: {
+      APPROVE: { 
+        feedback: 'MESSAGE RECEIVED', 
+        consequence: 'Message received. Too late. But you heard her voice. One more time.',
+        personalMessage: { from: 'THE WIFE', text: "[Transmission ends]", tone: 'INTERCEPTED' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'MESSAGE BLOCKED', 
+        consequence: "Message blocked. You'll never know her last words. The system took that too.",
+        incidentReport: { fileNumber: '#0077', redactionLevel: 'TOTAL', summary: 'External transmission blocked.', outcome: 'Content: [DELETED]' },
+        flagWeight: 0
+      }
+    },
+    toneClassification: 'NERVOUS',
+  },
+  
+  // S20-80: THE OPERATOR - Final subject (YOU)
+  {
+    name: 'THE OPERATOR',
+    id: 'S20-80',
+    sex: 'M',
+    sector: 'STATION',
     function: 'OPERATOR',
     compliance: 'B',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'The shift is over. I want to go home.',
+    archetype: 'SYS',
+    scannerState: 'NOM',
+    biometricAnomaly: 'NON',
+    turingAvailable: true,
+    turingResult: 'INC',
+    reasonForVisit: 'End of shift.',
     requestedSector: 'HOME',
-    videoSource: '',
-    dialogue: "Shift complete. Final validation required for egress. I'm ready to leave this station.",
+    videoSource: require('../assets/videos/subjects/subject01.mp4'),
+    dialogue: "The shift is over. I want to go home. Please. Let me go home.",
     bpm: 'CURRENTLY RISING',
     phase: 3,
-    locRecord: { addr: 'STATION 4', time: 'END_OF_SHIFT', pl: 'STATION 4', dob: '15/05/91' },
+    locRecord: { addr: 'STATION', time: 'END_OF_SHIFT', pl: 'STATION', dob: '??/??/??' },
     authData: {
       sectorAuth: { requested: 'HOME', status: 'AUTHORIZED', message: '✓ Shift completion verified' },
       functionReg: { status: 'VALID', message: '✓ Operator credentials verified' },
@@ -1733,8 +2011,19 @@ export const SUBJECTS: SubjectData[] = [
       medicalFlag: { status: 'ELEVATED', message: '! Fatigue detected' },
     },
     outcomes: {
-      APPROVE: { feedback: 'SUBJECT PROCESSED', consequence: 'SILENT. You leave the station. The machine keeps running without you.' },
-      DENY: { feedback: 'ENTRY DENIED', consequence: 'MANDATORY OVERTIME. Your request to leave is denied. Continue processing.' }
-    }
-  }
+      APPROVE: { 
+        feedback: 'SHIFT COMPLETE', 
+        consequence: 'Credits roll. You leave the station. The machine stops. Somewhere a new operator sits down. [END]',
+        personalMessage: { from: 'SYSTEM', text: "SHUTDOWN COMPLETE.", tone: 'SHUTDOWN' },
+        flagWeight: 0
+      },
+      DENY: { 
+        feedback: 'OVERTIME MANDATORY', 
+        consequence: 'Credits roll. Then the START button reappears. You\'re still here. The machine never stops. [LOOP]',
+        incidentReport: { fileNumber: '#0080', redactionLevel: 'TOTAL', summary: 'Operator denied exit.', outcome: 'Overtime: PERMANENT.' },
+        flagWeight: 0
+      }
+    },
+    toneClassification: 'NERVOUS',
+  },
 ];

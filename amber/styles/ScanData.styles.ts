@@ -153,15 +153,15 @@ export const styles = StyleSheet.create({
   credentialButton: {
     width: '100%',
     marginTop: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(127, 184, 216, 0.2)',
-    backgroundColor: 'rgba(127, 184, 216, 0.03)',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    borderWidth: 2,
+    borderColor: 'rgba(127, 184, 216, 0.3)',
+    backgroundColor: 'rgba(127, 184, 216, 0.05)',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
   },
   credentialButtonPressed: {
-    backgroundColor: 'rgba(127, 184, 216, 0.08)',
-    borderColor: 'rgba(127, 184, 216, 0.4)',
+    backgroundColor: 'rgba(127, 184, 216, 0.15)',
+    borderColor: 'rgba(127, 184, 216, 0.6)',
   },
   credentialContent: {
     flexDirection: 'row',

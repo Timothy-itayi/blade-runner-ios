@@ -28,7 +28,7 @@
       "ios": {
         "simulator": false,
         "buildConfiguration": "Release",
-        "icon": "./assets/app-icon.png"
+    "icon": "./assets/app-icon.png"
       },
       "android": {
         "buildType": "app-bundle"

@@ -10,55 +10,56 @@ const INTRO_SLIDE1 = require('../../assets/news/anchor-narration/intro-slide1.pn
 const INTRO_SLIDE2 = require('../../assets/news/anchor-narration/intro-slide2.png');
 const INTRO_SLIDE3 = require('../../assets/news/anchor-narration/intro-slide3.png');
 const INTRO_NARRATION = require('../../assets/news/anchor-narration/intro-narration.mp3');
+const STATIC_GIF = require('../../assets/videos/static.gif');
 
 const INTRO_SLIDES = [INTRO_SLIDE, INTRO_SLIDE1, INTRO_SLIDE2, INTRO_SLIDE3];
 const SLIDE_DURATION = 12000; // 12 seconds per slide
 
-// Script segments timed to the audio narration
+// Script segments timed to the audio narration (adjusted +1000ms for slower timing)
 const NARRATION_SEGMENTS = [
   {
     text: "Welcome to AMBER: the Automated Movement and Biometric Evaluation Registry.",
-    startTime: 0,
+    startTime: 1000,
     duration: 5000,
   },
   {
     text: "In our pursuit of systemic stability, we oversee the safe passage of subjects across established sector lines.",
-    startTime: 5000,
+    startTime: 6000,
     duration: 6000,
   },
   {
     text: "Your directive is simple: Confirm. Evaluate. And either Approve or Deny.",
-    startTime: 11000,
+    startTime: 12000,
     duration: 5500,
   },
   {
     text: "Through advanced retinal analysis and real-time biometric monitoring, you will identify discrepancies where the naked eye cannot.",
-    startTime: 16500,
+    startTime: 17500,
     duration: 7000,
   },
   {
     text: "Every evaluation is a permanent entry in our global registry.",
-    startTime: 23500,
+    startTime: 24500,
     duration: 4000,
   },
   {
     text: "Every decision you make ensures the integrity of the network and the safety of the civilian population.",
-    startTime: 27500,
+    startTime: 28500,
     duration: 6000,
   },
   {
     text: "At AMBER, we are securing identity and protecting tomorrow.",
-    startTime: 33500,
+    startTime: 34500,
     duration: 5000,
   },
   {
     text: "Your shift begins now.",
-    startTime: 38500,
+    startTime: 39500,
     duration: 3500,
   },
 ];
 
-const TOTAL_DURATION = 44000; // Total narration duration in ms
+const TOTAL_DURATION = 45000; // Total narration duration in ms (adjusted for +1000ms delay)
 
 interface AmberIntroProps {
   onComplete: () => void;
@@ -69,6 +70,9 @@ export const AmberIntro = ({ onComplete }: AmberIntroProps) => {
   const textFade = useRef(new Animated.Value(0)).current;
   const scanLine = useRef(new Animated.Value(0)).current;
   const slideOpacity = useRef(new Animated.Value(1)).current;
+  const progressWidth = useRef(new Animated.Value(0)).current;
+  const glitchOpacity = useRef(new Animated.Value(0)).current;
+  const glitchTranslateX = useRef(new Animated.Value(0)).current;
 
   const [currentSegmentIndex, setCurrentSegmentIndex] = useState(0);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -80,6 +84,19 @@ export const AmberIntro = ({ onComplete }: AmberIntroProps) => {
 
   // Intro music control (to fade out when done)
   const { fadeOutMenuSoundtrack } = useIntroAudio({ musicVolume: 1, sfxVolume: 1 });
+
+  // Progress bar animation - smooth continuous movement
+  useEffect(() => {
+    if (!isPlaying) return;
+
+    // Animate progress bar from 0 to 100% over total duration
+    Animated.timing(progressWidth, {
+      toValue: 1,
+      duration: TOTAL_DURATION,
+      easing: Easing.linear,
+      useNativeDriver: false, // width animation doesn't support native driver
+    }).start();
+  }, [isPlaying]);
 
   // Initial fade in animation
   useEffect(() => {
@@ -218,16 +235,95 @@ export const AmberIntro = ({ onComplete }: AmberIntroProps) => {
       // Ignore errors
     }
 
-    // Fade out intro music before transitioning to boot
-    fadeOutMenuSoundtrack(1000);
+    // Glitch effect at the end
+    const glitchSequence = Animated.sequence([
+      // Quick glitch bursts
+      Animated.parallel([
+        Animated.timing(glitchOpacity, {
+          toValue: 1,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glitchTranslateX, {
+          toValue: -5,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(glitchOpacity, {
+          toValue: 0,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glitchTranslateX, {
+          toValue: 5,
+          duration: 50,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(glitchOpacity, {
+          toValue: 1,
+          duration: 30,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glitchTranslateX, {
+          toValue: -3,
+          duration: 30,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(glitchOpacity, {
+          toValue: 0,
+          duration: 30,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glitchTranslateX, {
+          toValue: 0,
+          duration: 30,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(glitchOpacity, {
+          toValue: 0.8,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glitchTranslateX, {
+          toValue: 2,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(glitchOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glitchTranslateX, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]);
 
-    // Fade out visuals before completing
-    Animated.timing(fadeIn, {
-      toValue: 0,
-      duration: 800,
-      useNativeDriver: true,
-    }).start(() => {
-      onComplete();
+    glitchSequence.start(() => {
+      // Fade out intro music before transitioning to boot
+      fadeOutMenuSoundtrack(1000);
+
+      // Fade out visuals before completing
+      Animated.timing(fadeIn, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }).start(() => {
+        onComplete();
+      });
     });
   };
 
@@ -251,10 +347,32 @@ export const AmberIntro = ({ onComplete }: AmberIntroProps) => {
           <View style={styles.tvBezel}>
             {/* TV screen area */}
             <View style={styles.tvScreen}>
-              <Animated.View style={[styles.slideContainer, { opacity: slideOpacity }]}>
+              <Animated.View 
+                style={[
+                  styles.slideContainer, 
+                  { 
+                    opacity: slideOpacity,
+                    transform: [{ translateX: glitchTranslateX }],
+                  }
+                ]}
+              >
                 <Image
                   source={INTRO_SLIDES[currentSlideIndex]}
                   style={styles.introImage}
+                  contentFit="cover"
+                />
+              </Animated.View>
+
+              {/* Static gif overlay for glitch effect only */}
+              <Animated.View
+                style={[
+                  styles.staticOverlay,
+                  { opacity: glitchOpacity },
+                ]}
+              >
+                <Image
+                  source={STATIC_GIF}
+                  style={StyleSheet.absoluteFill}
                   contentFit="cover"
                 />
               </Animated.View>
@@ -299,7 +417,10 @@ export const AmberIntro = ({ onComplete }: AmberIntroProps) => {
               style={[
                 styles.progressFill,
                 {
-                  width: `${((currentSegmentIndex + 1) / NARRATION_SEGMENTS.length) * 100}%`,
+                  width: progressWidth.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: ['0%', '100%'],
+                  }),
                 },
               ]}
             />
@@ -350,17 +471,23 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     marginBottom: 32,
     alignItems: 'center',
+    transform: [{ perspective: 1000 }],
   },
   tvBezel: {
     width: '100%',
     backgroundColor: '#000000',
     padding: 20, // Thick bezel like 2000s TV
     borderRadius: 8,
+    // 3D depth of field effect with multiple shadow layers
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
+    elevation: 12,
+    // Inner shadow effect for depth
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.3)',
+    // Gradient-like effect using multiple shadows
   },
   tvScreen: {
     width: '100%',
@@ -369,6 +496,15 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     borderRadius: 2,
+    // Inner glow effect
+    borderWidth: 1,
+    borderColor: 'rgba(127, 184, 216, 0.1)',
+    // Screen depth shadow
+    shadowColor: 'rgba(127, 184, 216, 0.3)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   slideContainer: {
     width: '100%',
@@ -377,6 +513,10 @@ const styles = StyleSheet.create({
   introImage: {
     width: '100%',
     height: '100%',
+  },
+  staticOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
   },
   scanLine: {
     position: 'absolute',
@@ -388,6 +528,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 1,
     shadowRadius: 4,
+    zIndex: 5,
   },
   titleContainer: {
     alignItems: 'center',
@@ -411,8 +552,8 @@ const styles = StyleSheet.create({
   narrationContainer: {
     paddingHorizontal: 16,
     paddingVertical: 20,
-    borderLeftWidth: 2,
-    borderLeftColor: Theme.colors.textPrimary,
+    borderWidth: 2,
+    borderColor: Theme.colors.textPrimary,
     marginBottom: 32,
     maxWidth: '100%',
   },

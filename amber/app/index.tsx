@@ -973,9 +973,13 @@ export default function MainScreen() {
                   setHasVerified(true);
                 }}
               />
-              {/* Decision buttons appear once scan is complete - player always has right to choose */}
-              {/* System checks are informational only, shown via border colors in CredentialModal */}
+              {/* Decision buttons appear only after credential has been verified */}
+              {/* If subject has no credential, player must interrogate (IDENTITY + BUSINESS) before deciding */}
               {hudStage === 'full' && !isScanning && (
+                currentSubject.credential
+                  ? credentialVerified  // Has credential → must verify it
+                  : (completedProbes.has('IDENTITY') && completedProbes.has('BUSINESS'))  // No credential → must interrogate first
+              ) && (
                 <DecisionButtons 
                   hudStage={hudStage} 
                   onDecision={handleDecision}

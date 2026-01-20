@@ -234,6 +234,14 @@ export const ScanData = ({
     }
     // Notify parent that credential is confirmed
     onCredentialConfirmed?.();
+
+    // If credential already has a determinate status (CONFIRMED/EXPIRED),
+    // mark as verified since no additional verification step is needed
+    const status = subject.credential?.initialStatus;
+    if (status === 'CONFIRMED' || status === 'EXPIRED') {
+      setCredentialVerified(true);
+      onCredentialVerified?.(true);
+    }
   };
 
   return (

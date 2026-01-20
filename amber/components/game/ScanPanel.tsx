@@ -1,0 +1,538 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, Animated, Image, Easing, StyleSheet } from 'react-native';
+import { styles } from '../../styles/game/ScanPanel.styles';
+import { HUDBox, DrawingBorder } from '../ui/HUDBox';
+import { SubjectData } from '../../data/subjects';
+import { Theme } from '../../constants/theme';
+import { BUILD_SEQUENCE } from '../../constants/animations';
+
+const FINGERPRINT_IMG = require('../../assets/finger-print.png');
+const HAND_PRINT_0 = require('../../assets/handprints/hand-print0.png');
+const HUMAN_PRINT_1 = require('../../assets/handprints/human-print1.png');
+const HUMAN_PRINT_2 = require('../../assets/handprints/human-print2.png');
+const AMPUTEE_HAND_0 = require('../../assets/handprints/amputee-hand0.png');
+const REPLICANT_HAND = require('../../assets/handprints/replicant-hand.png');
+const CYBORG_HAND = require('../../assets/handprints/cyborg-hand.png');
+
+// Helper function to get the appropriate handprint image based on subject type
+// Always returns subject-specific prints for UI consistency
+const getHandprintImage = (subject: SubjectData, subjectIndex: number): any => {
+  // Replicants get replicant handprint (check archetype string for 'REP')
+  const archetypeStr = subject.archetype?.toString() || '';
+  if (archetypeStr.includes('REP')) {
+    return REPLICANT_HAND;
+  }
+
+  // Amputees get amputee handprint
+  if (subject.biometricAnomaly === 'AMP') {
+    return AMPUTEE_HAND_0;
+  }
+
+  // Cyborgs (prosthetics) get cyborg handprint
+  if (subject.biometricAnomaly === 'PRO') {
+    return CYBORG_HAND;
+  }
+
+  // Humans get one of the three human handprints (deterministic based on subject index)
+  // Use modulo to cycle through the 3 options
+  const humanPrintIndex = subjectIndex % 3;
+  switch (humanPrintIndex) {
+    case 0:
+      return HAND_PRINT_0;
+    case 1:
+      return HUMAN_PRINT_1;
+    case 2:
+      return HUMAN_PRINT_2;
+    default:
+      return HAND_PRINT_0;
+  }
+};
+
+const FingerprintSlot = ({ active, flipped = false, delay = 0, statusText, subjectIndex = 0, scanningHands = false, subject }: { active: boolean, flipped?: boolean, delay?: number, statusText: string, subjectIndex?: number, scanningHands?: boolean, subject?: SubjectData }) => {
+  // Get the appropriate handprint image based on subject type (always subject-specific)
+  const imageSource = getHandprintImage(subject || {} as SubjectData, subjectIndex);
+  const contentFade = useRef(new Animated.Value(0)).current;
+  const gridFade = useRef(new Animated.Value(0)).current;
+  const scanLineY = useRef(new Animated.Value(0)).current;
+  const scanOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (active) {
+      Animated.sequence([
+        Animated.delay(delay + 400),
+        Animated.timing(gridFade, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(contentFade, { toValue: 1, duration: 800, useNativeDriver: true }),
+      ]).start();
+    } else {
+      contentFade.setValue(0);
+      gridFade.setValue(0);
+    }
+  }, [active]);
+
+  // Laser scan animation when scanning hands
+  useEffect(() => {
+    if (scanningHands) {
+      scanLineY.setValue(0);
+      scanOpacity.setValue(0);
+      Animated.sequence([
+        Animated.timing(scanOpacity, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanLineY, {
+          toValue: 1,
+          duration: 1200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scanOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [scanningHands]);
+
+  return (
+    <View style={styles.fingerprintContainer}>
+      <DrawingBorder active={active} delay={delay} color="rgba(74, 138, 90, 0.4)" />
+      
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: gridFade }]}>
+        <View style={styles.fingerprintGrid} />
+      </Animated.View>
+
+      <Animated.View style={[StyleSheet.absoluteFill, { opacity: contentFade }]}>
+        <Image
+          source={imageSource}
+          style={[
+            styles.handprintImage, // Always use handprint style for subject-specific prints
+            flipped && styles.flippedFingerprint,
+            { transform: [{ scale: 1.4 }, flipped ? { scaleX: -1 } : { scaleX: 1 }] }
+          ]}
+          resizeMode="cover"
+        />
+        {/* Laser scan line for hand scanning */}
+        {scanningHands && (
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                opacity: scanOpacity,
+                transform: [{
+                  translateY: scanLineY.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 80],
+                  }),
+                }],
+              },
+            ]}
+          >
+            <View style={styles.scanLine} />
+          </Animated.View>
+        )}
+        <MinutiaeMarkers active={statusText === 'PROCESSING' || statusText === 'COMPLETE'} flipped={flipped} />
+        <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
+          <VerificationCircles active={statusText === 'COMPLETE'} />
+        </View>
+      </Animated.View>
+    </View>
+  );
+};
+
+const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim }: { active: boolean, delay?: number, bpm: string | number, pulseAnim: Animated.Value }) => {
+  const [flicker, setFlicker] = useState(false);
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (active) {
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(opacity, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+
+      const flickerInterval = setInterval(() => {
+        setFlicker(prev => !prev);
+      }, 50);
+      
+      setTimeout(() => {
+        clearInterval(flickerInterval);
+        setFlicker(false);
+      }, 1000);
+
+      return () => clearInterval(flickerInterval);
+    } else {
+      opacity.setValue(0);
+    }
+  }, [active]);
+
+  const isLive = active && !flicker;
+
+  return (
+    <Animated.View style={[styles.bpmColumn, { opacity }]}>
+      <Text style={styles.label}>BIOMETRICS</Text>
+      <View style={styles.bpmRow}>
+        <Animated.View 
+          style={[
+            styles.pulseDot, 
+            { 
+              backgroundColor: isLive ? Theme.colors.accentDeny : Theme.colors.textDim,
+              transform: [{ scale: isLive ? pulseAnim : 1 }] 
+            }
+          ]} 
+        />
+        <Text style={[styles.bpmText, !isLive && { color: Theme.colors.textDim }]}>
+          {isLive ? `${bpm} BPM` : '-- BPM'}
+        </Text>
+      </View>
+    </Animated.View>
+  );
+};
+
+const BlinkingBars = () => {
+  return (
+    <View style={styles.barsContainer}>
+      {[...Array(24)].map((_, i) => {
+        const barAnim = useRef(new Animated.Value(Math.random())).current;
+        useEffect(() => {
+          Animated.loop(
+            Animated.sequence([
+              Animated.timing(barAnim, {
+                toValue: Math.random(),
+                duration: 400 + Math.random() * 800,
+                easing: Easing.inOut(Easing.quad),
+                useNativeDriver: false,
+              }),
+              Animated.timing(barAnim, {
+                toValue: Math.random(),
+                duration: 400 + Math.random() * 800,
+                easing: Easing.inOut(Easing.quad),
+                useNativeDriver: false,
+              }),
+            ])
+          ).start();
+        }, []);
+
+        return (
+          <Animated.View 
+            key={i} 
+            style={[
+              styles.bar, 
+              { 
+                height: barAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [6, 36]
+                }),
+                opacity: barAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.2, 0.7]
+                })
+              }
+            ]} 
+          />
+        );
+      })}
+    </View>
+  );
+};
+
+const VerificationCircles = ({ active }: { active: boolean }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (active) {
+      Animated.loop(
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 3000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      anim.stopAnimation();
+      anim.setValue(0);
+    }
+  }, [active]);
+
+  if (!active) return null;
+
+  return (
+    <>
+      {[0, 1, 2].map((i) => {
+        return (
+          <Animated.View 
+            key={i}
+            style={[
+              styles.scanningCircle,
+              { 
+                width: 40, 
+                height: 40,
+                transform: [{ scale: anim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.5 + (i * 0.2), 2 + (i * 0.2)]
+                }) }],
+                opacity: anim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [0, 0.4 - (i * 0.1), 0]
+                }),
+              }
+            ]} 
+          />
+        );
+      })}
+    </>
+  );
+};
+
+const MinutiaeMarkers = ({ active, flipped = false }: { active: boolean, flipped?: boolean }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (active) {
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      anim.setValue(0);
+    }
+  }, [active]);
+
+  if (!active) return null;
+
+  const points = [
+    { x: 15, y: 20, label: 'BIFUR', angle: -45 },
+    { x: 40, y: 35, label: 'CORE', angle: 45 },
+    { x: 22, y: 55, label: 'ISLAND', angle: -135 },
+    { x: 45, y: 65, label: 'DELTA', angle: 135 },
+  ];
+
+  return (
+    <View style={styles.minutiaeContainer}>
+      {points.map((p, i) => {
+        const x = flipped ? 60 - p.x : p.x;
+        const angle = flipped ? -p.angle : p.angle;
+        
+        const opacity = anim.interpolate({
+          inputRange: [0, 0.2 + (i * 0.2), 0.4 + (i * 0.2)],
+          outputRange: [0, 0, 1],
+        });
+
+        const lineLen = 12;
+        const rad = (angle * Math.PI) / 180;
+        const lx = Math.cos(rad) * lineLen;
+        const ly = Math.sin(rad) * lineLen;
+
+        return (
+          <Animated.View key={i} style={{ position: 'absolute', left: x, top: p.y, opacity }}>
+            {/* Small red scanning circle on point */}
+            <View style={[styles.minutiaeCircle, { left: -4, top: -4 }]} />
+            <View style={[styles.minutiaeDot, { left: -1.5, top: -1.5 }]} />
+            
+            {/* Arrow/Line pointing out */}
+            <View style={[
+              styles.minutiaeLine, 
+              { 
+                width: lineLen, 
+                transform: [
+                  { translateX: lx / 2 },
+                  { translateY: ly / 2 },
+                  { rotate: `${angle}deg` }
+                ] 
+              }
+            ]} />
+            
+            {/* Label */}
+            <Text style={[
+              styles.minutiaeText,
+              {
+                left: lx > 0 ? lineLen : -lineLen - 15,
+                top: ly > 0 ? lineLen / 2 : -lineLen / 2,
+                textAlign: lx > 0 ? 'left' : 'right',
+              }
+            ]}>
+              {p.label}
+            </Text>
+          </Animated.View>
+        );
+      })}
+    </View>
+  );
+};
+
+export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subjectIndex, scanningHands = false, businessProbeCount = 0 }: { 
+  isScanning: boolean, 
+  scanProgress: Animated.Value,
+  hudStage: 'none' | 'wireframe' | 'outline' | 'full',
+  subject: SubjectData,
+  subjectIndex?: number,
+  scanningHands?: boolean,
+  businessProbeCount?: number
+}) => {
+  const [statusText, setStatusText] = useState('READY');
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const [bpm, setBpm] = useState<string | number>(78);
+  
+  // Layer animations
+  const fingerprintOpacity = useRef(new Animated.Value(0)).current;
+  const matchSectionOpacity = useRef(new Animated.Value(0)).current;
+  const monitorsOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (hudStage === 'outline') {
+      Animated.sequence([
+        Animated.timing(fingerprintOpacity, { toValue: 1, duration: 800, useNativeDriver: true }),
+        Animated.timing(matchSectionOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(monitorsOpacity, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ]).start();
+    } else if (hudStage === 'full') {
+      fingerprintOpacity.setValue(1);
+      matchSectionOpacity.setValue(1);
+      monitorsOpacity.setValue(1);
+    } else {
+      fingerprintOpacity.setValue(0);
+      matchSectionOpacity.setValue(0);
+      monitorsOpacity.setValue(0);
+    }
+  }, [hudStage]);
+
+  useEffect(() => {
+    if (hudStage !== 'full') {
+      setStatusText('INITIALIZING...');
+      return;
+    }
+
+    // Calculate stress increase from repeated BUSINESS probes
+    const stressIncrease = businessProbeCount > 1 ? Math.min((businessProbeCount - 1) * 8, 40) : 0; // +8 BPM per repeat, max +40
+
+    if (!isScanning) {
+      // Calculate base BPM with stress from repeated BUSINESS probes
+      if (typeof subject.bpm === 'string') {
+        // For fixed BPM strings, keep as-is (they're usually special cases like "60 BPM (fixed)")
+        setBpm(subject.bpm);
+      } else {
+        const baseBpm = subject.bpm || 78;
+        setBpm(baseBpm + stressIncrease);
+      }
+      setStatusText('READY');
+      return;
+    }
+
+    // If subject has fixed BPM string, use it
+    if (typeof subject.bpm === 'string') {
+      setBpm(subject.bpm);
+    } else {
+      // Calculate base BPM with stress from repeated BUSINESS probes
+      const baseBpm = subject.bpm || 78;
+      setBpm(baseBpm + stressIncrease);
+    }
+
+    const listener = scanProgress.addListener(({ value }) => {
+      // Status text
+      if (value < 0.4) {
+        setStatusText('SCANNING');
+      } else if (value < 0.9) {
+        setStatusText('PROCESSING');
+      } else {
+        setStatusText('COMPLETE');
+      }
+
+      // BPM calc if not fixed string
+      if (typeof subject.bpm !== 'string') {
+        const baseBpm = subject.bpm || 78;
+        let calculatedBpm: number;
+        
+        if (value < 0.6) {
+          calculatedBpm = Math.floor(baseBpm + (value * 26.6)); // 78 -> 94
+        } else {
+          calculatedBpm = Math.floor(94 - ((value - 0.6) * 30)); // 94 -> 82
+        }
+        
+        // Add stress increase to the calculated BPM
+        setBpm(calculatedBpm + stressIncrease);
+      }
+    });
+
+    return () => scanProgress.removeListener(listener);
+  }, [isScanning, scanProgress, subject, hudStage, businessProbeCount]);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.2,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  return (
+    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.scanPanelBorder}>
+      <View style={styles.fingerprintSection}>
+        <View style={styles.fingerprintSlots}>
+          <FingerprintSlot 
+            active={true} 
+            delay={BUILD_SEQUENCE.fingerprintLeft} 
+            statusText={statusText}
+            subjectIndex={subjectIndex}
+            scanningHands={scanningHands}
+            subject={subject}
+          />
+          <FingerprintSlot 
+            active={true} 
+            flipped={true} 
+            delay={BUILD_SEQUENCE.fingerprintRight} 
+            statusText={statusText}
+            subjectIndex={subjectIndex}
+            scanningHands={scanningHands}
+            subject={subject}
+          />
+        </View>
+        <View style={styles.fingerprintHeader}>
+          <Text style={styles.headerText}>L</Text>
+          <Text style={styles.headerText}>R</Text>
+        </View>
+      </View>
+
+      <View style={styles.matchSection}>
+        <Animated.View style={[styles.sexColumn, { opacity: matchSectionOpacity }]}>
+          <Text style={styles.label}>SEX</Text>
+          <View style={styles.matchIndicators}>
+            <View style={[styles.indicator, subject.sex === 'F' && styles.activeIndicator]}>
+              <Text style={[styles.indicatorText, subject.sex === 'F' && styles.activeIndicatorText]}>F</Text>
+            </View>
+            <View style={[styles.indicator, subject.sex === 'M' && styles.activeIndicator]}>
+              <Text style={[styles.indicatorText, subject.sex === 'M' && styles.activeIndicatorText]}>M</Text>
+            </View>
+          </View>
+        </Animated.View>
+
+        <BPMMonitor 
+          active={true} 
+          delay={BUILD_SEQUENCE.bpmMonitor} 
+          bpm={bpm} 
+          pulseAnim={pulseAnim} 
+        />
+      </View>
+
+      <Animated.View style={[styles.monitorSection, { opacity: monitorsOpacity }]}>
+        <View style={styles.monitorGroup}>
+          <BlinkingBars />
+        </View>
+      </Animated.View>
+
+      <View style={styles.visualizer}>
+        <Text style={styles.visualizerText}>░░▪▪░ {statusText}</Text>
+      </View>
+    </HUDBox>
+  );
+};

@@ -24,7 +24,7 @@ export const SHIFTS: ShiftData[] = [
     chapter: 'Routine',
     stationName: 'CHECKPOINT 9',
     authorityLabel: 'TRANSIT AUTHORITY',
-    briefing: 'Standard morning processing. Establish baseline efficiency.',
+    briefing: 'Establish baseline efficiency.',
     directive: 'DENY ALL ACTIVE WARRANTS',
     unlockedChecks: ['WARRANT'],
     activeRules: ['CHECK_WARRANTS'],

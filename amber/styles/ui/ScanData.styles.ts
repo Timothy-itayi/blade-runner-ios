@@ -1,0 +1,209 @@
+import { StyleSheet } from 'react-native';
+import { Theme } from '../../constants/theme';
+
+export const styles = StyleSheet.create({
+  container: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.border,
+  },
+  leftColumn: {
+    flex: 1.4,
+  },
+  rightColumn: {
+    flex: 1,
+    alignItems: 'flex-start',
+    paddingLeft: 16,
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(26, 42, 58, 0.4)',
+    justifyContent: 'center',
+  },
+  locationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  gridBox: {
+    width: 12,
+    height: 12,
+    borderWidth: 1,
+    borderColor: Theme.colors.accentWarn,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gridDot: {
+    width: 4,
+    height: 4,
+    backgroundColor: Theme.colors.accentWarn,
+  },
+  gridLabel: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  locGrid: {
+    width: '100%',
+    gap: 4,
+  },
+  locRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    gap: 2,
+  },
+  dataRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 2,
+  },
+  dataLabel: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    width: 45,
+  },
+  dataValue: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+  },
+  label: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  idCode: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
+    letterSpacing: 1,
+  },
+  identHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 8,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  bpmMonitoring: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: Theme.colors.textSecondary,
+  },
+  idSection: {
+    marginTop: 4,
+  },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  progressBarText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
+    letterSpacing: 2,
+  },
+  progressLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  metaLabel: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+  },
+  bpmRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Theme.colors.accentDeny,
+  },
+  heartOutline: {
+    flexDirection: 'row',
+    width: 120,
+    height: 4,
+    gap: 4,
+  },
+  heartLine: {
+    height: '100%',
+    width: '60%',
+    backgroundColor: Theme.colors.textPrimary,
+  },
+  // Credential Button Styles
+  credentialButton: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: Theme.colors.textPrimary,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: 'rgba(127, 184, 216, 0.08)',
+  },
+  credentialButtonPressed: {
+    backgroundColor: 'rgba(127, 184, 216, 0.2)',
+  },
+  credentialButtonText: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  credentialReceivedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    marginTop: 4,
+  },
+  credentialReceivedDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Theme.colors.accentApprove,
+  },
+  credentialReceivedText: {
+    color: Theme.colors.accentApprove,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  credentialButtonReceived: {
+    borderColor: Theme.colors.accentApprove,
+    backgroundColor: 'rgba(74, 138, 90, 0.15)',
+  },
+  credentialButtonTextReceived: {
+    color: Theme.colors.accentApprove,
+  },
+  credentialReceivedDotActive: {
+    backgroundColor: Theme.colors.accentApprove,
+    shadowColor: Theme.colors.accentApprove,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+  },
+  credentialReceivedTextActive: {
+    color: Theme.colors.accentApprove,
+    fontWeight: '900',
+  },
+});

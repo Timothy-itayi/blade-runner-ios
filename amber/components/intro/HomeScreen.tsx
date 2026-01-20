@@ -107,7 +107,7 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
       easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start(() => {
-      fadeOutMenuSoundtrack();
+      // Don't fade out music - let it continue through AmberIntro
       onComplete();
     });
   };

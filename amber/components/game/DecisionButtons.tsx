@@ -44,7 +44,8 @@ export const DecisionButtons = ({
   };
 
   useEffect(() => {
-    if (hudStage === 'full') {
+    // Buttons start dim and only light up when credentials are verified through the verification modal
+    if (hudStage === 'full' && credentialVerified) {
       Animated.timing(fillOpacity, {
         toValue: 1,
         duration: 800,
@@ -54,7 +55,7 @@ export const DecisionButtons = ({
     } else {
       fillOpacity.setValue(0);
     }
-  }, [hudStage]);
+  }, [hudStage, credentialVerified]);
 
   // Calculate disabled states based on protocol
   const ps = protocolStatus || {
@@ -69,6 +70,10 @@ export const DecisionButtons = ({
     probesRequired: false,
     probesCompleted: true,
   };
+
+  // Buttons light up when credentials are verified through the verification modal
+  // credentialVerified is true when verification completes OR when credential already has a status (CONFIRMED/EXPIRED)
+  const credentialVerified = ps.credentialVerified;
 
   // Player always has the right to choose approve or deny once scan is complete
   // System checks are informational only - they provide status but don't block decisions

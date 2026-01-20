@@ -2,7 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
 
 const AUDIO_FILES = {
-  menuSoundtrack: require('../assets/sound-effects/main-menu/menu-soundtrack.mp3'),
+  menuSoundtrack: require('../assets/news/anchor-narration/intro-music.mp3'),
   textReceive: require('../assets/sound-effects/main-menu/text-recieve-sound.mp3'),
   messageSent: require('../assets/sound-effects/main-menu/send-message.mp3'),
   amberAlert: require('../assets/sound-effects/main-menu/amber-alert.mp3'),

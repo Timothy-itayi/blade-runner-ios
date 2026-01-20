@@ -261,6 +261,26 @@ export const InterrogationPanel = ({
     }
   };
 
+  // Extract only dialogue from response, removing descriptive text and brackets
+  const extractDialogue = (text: string): string => {
+    // Extract quoted dialogue first
+    const dialogueMatch = text.match(/"([^"]*)"/);
+    if (dialogueMatch) {
+      return dialogueMatch[1];
+    }
+    
+    // Remove descriptive text in brackets like [Subject complies...]
+    let cleaned = text.replace(/\[[^\]]*\]/g, '').trim();
+    
+    // Remove any remaining quotes
+    cleaned = cleaned.replace(/"/g, '').trim();
+    
+    // Return first sentence or truncate if too long (max 50 chars for small screen)
+    const firstSentence = cleaned.split('.')[0].trim();
+    return firstSentence.length > 50 ? firstSentence.substring(0, 47) + '...' : firstSentence;
+  };
+
+
   return (
     <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.header}>
       <View style={styles.header}>
@@ -312,16 +332,11 @@ export const InterrogationPanel = ({
           <View style={styles.responseContent}>
             <View style={styles.responseHeader}>
               <Text style={styles.responseLabel}>RESPONSE:</Text>
-              {currentResponse.toneShift && (
-                <Text style={[styles.toneIndicator, { color: getToneColor(currentResponse.toneShift) }]}>
-                  [{currentResponse.toneShift}]
-                </Text>
-              )}
             </View>
             <TypewriterText
-              text={Array.isArray(currentResponse.response) 
+              text={extractDialogue(Array.isArray(currentResponse.response) 
                 ? currentResponse.response[currentResponse.response.length - 1] 
-                : currentResponse.response}
+                : currentResponse.response)}
               active={hudStage === 'full'}
               delay={100}
               style={[styles.responseText, { color: getToneColor(currentResponse.toneShift) }]}

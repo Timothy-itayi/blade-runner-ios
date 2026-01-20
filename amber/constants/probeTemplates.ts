@@ -14,7 +14,11 @@ type ProbeTemplate = Omit<ProbeResponse, 'probeType'>;
 export const PROBE_TEMPLATES: Record<SubjectArchetype, Record<ProbeType, ProbeTemplate>> = {
   CLN: {
     HANDS: {
-      response: "[Subject complies. Hands steady, unremarkable.]",
+      response: [
+        "I know you have to check. Everyone knows about the replicants.",
+        "Again? I'm human. We all know what replicant hands look like.",
+        "This is the third time. I'm clearly human.",
+      ],
       toneShift: 'COOPERATIVE',
     },
     BUSINESS: {
@@ -30,14 +34,18 @@ export const PROBE_TEMPLATES: Record<SubjectArchetype, Record<ProbeType, ProbeTe
       toneShift: 'NERVOUS',
     },
     IDENTITY: {
-      response: "[Subject confirms identity. Credentials requested. Check [ CREDENTIALS ] button when received.]",
+      response: "Credentials requested. Check [ CREDENTIALS ] when received.",
       toneShift: 'COOPERATIVE',
     },
   },
 
   FLG: {
     HANDS: {
-      response: "[Subject hesitates, then complies. Slight tremor visible.]",
+      response: [
+        "I know why you're checking. The replicants.",
+        "I'm not one of them. I'm human.",
+        "I've shown you twice. I'm just nervous.",
+      ],
       toneShift: 'NERVOUS',
     },
     BUSINESS: {
@@ -53,14 +61,18 @@ export const PROBE_TEMPLATES: Record<SubjectArchetype, Record<ProbeType, ProbeTe
       toneShift: 'EVASIVE',
     },
     IDENTITY: {
-      response: "[Subject confirms details. Credentials requested. Check [ CREDENTIALS ] button when received.]",
+      response: "Credentials requested. Check [ CREDENTIALS ] when received.",
       toneShift: 'NERVOUS',
     },
   },
 
   CON: {
     HANDS: {
-      response: "[Subject complies slowly. Hands calloused, worn.]",
+      response: [
+        "I know the drill. Check for replicants. I'm not one.",
+        "Look at my hands. Real hands. Not like those things.",
+        "I've shown you three times. I'm human. My family needs me.",
+      ],
       toneShift: 'COOPERATIVE',
     },
     BUSINESS: {
@@ -76,14 +88,18 @@ export const PROBE_TEMPLATES: Record<SubjectArchetype, Record<ProbeType, ProbeTe
       toneShift: 'AGITATED',
     },
     IDENTITY: {
-      response: "[Subject confirms identity. Credentials requested. Check [ CREDENTIALS ] button when received.]",
+      response: "Credentials requested. Check [ CREDENTIALS ] when received.",
       toneShift: 'NERVOUS',
     },
   },
 
   REV: {
     HANDS: {
-      response: "[Subject complies with exaggerated slowness. Defiant stare.]",
+      response: [
+        "Checking for replicants? We should all be checked. Even you.",
+        "Again? I'm human. Maybe you should check yourself.",
+        "This is harassment. Process me or don't.",
+      ],
       toneShift: 'EVASIVE',
     },
     BUSINESS: {
@@ -95,14 +111,18 @@ export const PROBE_TEMPLATES: Record<SubjectArchetype, Record<ProbeType, ProbeTe
       toneShift: 'AGITATED',
     },
     IDENTITY: {
-      response: "[Subject states name only. Credentials requested. Check [ CREDENTIALS ] button when received.]",
+      response: "Credentials requested. Check [ CREDENTIALS ] when received.",
       toneShift: 'EVASIVE',
     },
   },
 
   EDG: {
     HANDS: {
-      response: "[Subject complies. Something about the gesture feels... off.]",
+      response: [
+        "Everyone's paranoid about replicants these days.",
+        "I'm human. Mostly. The prosthetics are registered.",
+        "This is excessive. I'm human. Can we move on?",
+      ],
       toneShift: 'NEUTRAL',
     },
     BUSINESS: {
@@ -114,14 +134,18 @@ export const PROBE_TEMPLATES: Record<SubjectArchetype, Record<ProbeType, ProbeTe
       toneShift: 'NEUTRAL',
     },
     IDENTITY: {
-      response: "[Subject confirms identity. Credentials requested. Check [ CREDENTIALS ] button when received.]",
+      response: "Credentials requested. Check [ CREDENTIALS ] when received.",
       toneShift: 'NEUTRAL',
     },
   },
 
   REP: {
     HANDS: {
-      response: "[Subject complies. Movements precise, almost mechanical.]",
+      response: [
+        "Hand verification is standard.",
+        "All biometric markers within expected parameters.",
+        "System efficiency compromised. Proceed with current status.",
+      ],
       toneShift: 'COOPERATIVE',
     },
     BUSINESS: {
@@ -133,14 +157,18 @@ export const PROBE_TEMPLATES: Record<SubjectArchetype, Record<ProbeType, ProbeTe
       toneShift: 'NEUTRAL',
     },
     IDENTITY: {
-      response: "[Subject recites identity data with exact precision. Credentials requested. Check [ CREDENTIALS ] button when received.]",
+      response: "Credentials requested. Check [ CREDENTIALS ] when received.",
       toneShift: 'COOPERATIVE',
     },
   },
 
   SYS: {
     HANDS: {
-      response: "[Subject complies briskly. No hesitation.]",
+      response: [
+        "Standard verification protocol. Proceed.",
+        "Verification complete. Proceed.",
+        "Status confirmed. Process request.",
+      ],
       toneShift: 'COOPERATIVE',
     },
     BUSINESS: {
@@ -152,7 +180,7 @@ export const PROBE_TEMPLATES: Record<SubjectArchetype, Record<ProbeType, ProbeTe
       toneShift: 'NEUTRAL',
     },
     IDENTITY: {
-      response: "[Subject presents credentials. Credentials requested. Check [ CREDENTIALS ] button when received.]",
+      response: "Credentials requested. Check [ CREDENTIALS ] when received.",
       toneShift: 'COOPERATIVE',
     },
   },

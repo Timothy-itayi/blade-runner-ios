@@ -22,7 +22,7 @@ import { BootSequence } from '../components/boot/BootSequence';
 import { SystemTakeover } from '../components/boot/SystemTakeover';
 // Intro components
 import { HomeScreen } from '../components/intro/HomeScreen';
-import { IntroBroadcast } from '../components/intro/IntroBroadcast';
+import { AmberIntro } from '../components/intro/AmberIntro';
 // Settings components
 import { SettingsModal } from '../components/settings/SettingsModal';
 // Constants
@@ -81,6 +81,7 @@ export default function MainScreen() {
   const [scanningHands, setScanningHands] = useState(false);
   const [scanningIris, setScanningIris] = useState(false);
   const [hasDiscrepancy, setHasDiscrepancy] = useState(false);
+  const [scanPanelDimmed, setScanPanelDimmed] = useState(false);
   
   // Progressive probe unlocking - start with only 2 probes: IDENTITY and BUSINESS
   const [unlockedProbes, setUnlockedProbes] = useState<Set<ProbeType>>(new Set(['IDENTITY', 'BUSINESS']));
@@ -184,7 +185,10 @@ export default function MainScreen() {
       toValue: 1,
       duration: 8000,
       useNativeDriver: true,
-    }).start();
+    }).start(() => {
+      // Scan complete - enable decision buttons
+      setIsScanning(false);
+    });
   };
 
   useEffect(() => {
@@ -534,7 +538,7 @@ export default function MainScreen() {
           setScanningIris(true);
           setTimeout(() => {
             setScanningIris(false);
-            // Replicant response after iris scan
+            // Replicant response after iris scan - they don't get offended, just more mechanical
             const customResponse = currentSubject.probeResponses?.find(r => r.probeType === probeType);
             if (customResponse) {
               setCurrentProbeResponse({
@@ -555,7 +559,7 @@ export default function MainScreen() {
           // Replicant not looking - can't verify
           setCurrentProbeResponse({
             probeType: 'HANDS',
-            response: "[Subject not looking at scanner. Iris verification impossible.]",
+            response: "Iris verification impossible.",
             toneShift: 'NERVOUS',
           });
           setCompletedProbes(prev => new Set([...prev, probeType]));
@@ -563,6 +567,30 @@ export default function MainScreen() {
         }
         
         // Human response - bio markers are human
+        // Check scan count - if too many, subject gets offended and panel dims
+        const handScanCount = probeCounts.HANDS || 0;
+        const maxScansBeforeOffended = currentSubject.archetype === 'REV' ? 2 : 
+                                       currentSubject.archetype === 'FLG' ? 3 : 4;
+        
+        // If scanned too many times, subject gets offended and panel dims
+        if (newCount > maxScansBeforeOffended) {
+          setScanPanelDimmed(true);
+          const offendedResponses = [
+            "That's enough. This is harassment.",
+            "I'm done. Stop this.",
+            "This is ridiculous. You're wasting time.",
+          ];
+          const selectedResponse = offendedResponses[Math.min(newCount - maxScansBeforeOffended - 1, offendedResponses.length - 1)];
+          setCurrentProbeResponse({
+            probeType: 'HANDS',
+            response: selectedResponse,
+            toneShift: 'AGITATED',
+          });
+          setAgitationLevel(prev => Math.min(prev + 15, 100));
+          setCompletedProbes(prev => new Set([...prev, probeType]));
+          return;
+        }
+        
         const customResponse = currentSubject.probeResponses?.find(r => r.probeType === probeType);
         if (customResponse) {
           setCurrentProbeResponse({
@@ -572,12 +600,10 @@ export default function MainScreen() {
               : customResponse.response,
           });
         } else {
-          // Default human response
-          setCurrentProbeResponse({
-            probeType: 'HANDS',
-            response: "[Subject complies. Bio markers are human.]",
-            toneShift: 'COOPERATIVE',
-          });
+          // Default human response with personality
+          const archetype = currentSubject.archetype || 'CLN';
+          const defaultResponse = getDefaultProbeResponse(archetype, probeType, newCount - 1);
+          setCurrentProbeResponse(defaultResponse);
         }
         setCompletedProbes(prev => new Set([...prev, probeType]));
       }, 1200); // Hand scan duration
@@ -841,6 +867,7 @@ export default function MainScreen() {
     setCredentialsRequested(false);
     setCredentialsReceived(false);
     setCredentialConfirmed(false);
+    setScanPanelDimmed(false);
   }, [currentSubjectIndex]);
 
   return (
@@ -856,7 +883,7 @@ export default function MainScreen() {
         )}
 
         {gamePhase === 'news_intro' && (
-          <IntroBroadcast onComplete={handleNewsBroadcastComplete} />
+          <AmberIntro onComplete={handleNewsBroadcastComplete} />
         )}
 
         {gamePhase === 'boot' && (
@@ -894,6 +921,7 @@ export default function MainScreen() {
                   subjectIndex={currentSubjectIndex}
                   scanningHands={scanningHands}
                   businessProbeCount={probeCounts.BUSINESS || 0}
+                  dimmed={scanPanelDimmed}
                 />
                 <EyeDisplay 
                   isScanning={isScanning} 

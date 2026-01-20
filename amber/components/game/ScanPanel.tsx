@@ -362,22 +362,41 @@ const MinutiaeMarkers = ({ active, flipped = false }: { active: boolean, flipped
   );
 };
 
-export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subjectIndex, scanningHands = false, businessProbeCount = 0 }: { 
+export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subjectIndex, scanningHands = false, businessProbeCount = 0, dimmed = false }: { 
   isScanning: boolean, 
   scanProgress: Animated.Value,
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
   subject: SubjectData,
   subjectIndex?: number,
   scanningHands?: boolean,
-  businessProbeCount?: number
+  businessProbeCount?: number,
+  dimmed?: boolean
 }) => {
   const [statusText, setStatusText] = useState('READY');
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const [bpm, setBpm] = useState<string | number>(78);
+  const panelOpacity = useRef(new Animated.Value(1)).current;
   
   // Layer animations
   const fingerprintOpacity = useRef(new Animated.Value(0)).current;
   const matchSectionOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Dim panel when subject is offended from too many scans
+  useEffect(() => {
+    if (dimmed) {
+      Animated.timing(panelOpacity, {
+        toValue: 0.3,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(panelOpacity, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [dimmed]);
   const monitorsOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -476,7 +495,8 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
   }, []);
 
   return (
-    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.scanPanelBorder}>
+    <Animated.View style={{ opacity: panelOpacity }}>
+      <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.scanPanelBorder}>
       <View style={styles.fingerprintSection}>
         <View style={styles.fingerprintSlots}>
           <FingerprintSlot 
@@ -534,5 +554,6 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
         <Text style={styles.visualizerText}>░░▪▪░ {statusText}</Text>
       </View>
     </HUDBox>
+    </Animated.View>
   );
 };

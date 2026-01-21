@@ -1,9 +1,7 @@
-import React, { useEffect, useRef } from 'react';
-import { View, TouchableOpacity, Text, Animated } from 'react-native';
+import React from 'react';
+import { View, TouchableOpacity, Text } from 'react-native';
 import { styles } from '../../styles/game/DecisionButtons.styles';
 import { HUDBox } from '../ui/HUDBox';
-import { BUILD_SEQUENCE } from '../../constants/animations';
-import { TypewriterText } from '../ui/ScanData';
 import { useGameAudioContext } from '../../contexts/AudioContext';
 
 interface ProtocolStatus {
@@ -27,6 +25,7 @@ export const DecisionButtons = ({
   disabled,
   hasDecision,
   protocolStatus,
+  isNewGame = false,
 }: { 
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
   onDecision: (type: 'APPROVE' | 'DENY') => void,
@@ -34,28 +33,16 @@ export const DecisionButtons = ({
   disabled: boolean,
   hasDecision: boolean,
   protocolStatus?: ProtocolStatus,
+  isNewGame?: boolean, // Only animate on first game start
 }) => {
-  const fillOpacity = useRef(new Animated.Value(0)).current;
   const { playButtonSound } = useGameAudioContext();
 
   const handleDecision = (type: 'APPROVE' | 'DENY') => {
+    // Buttons are non-functional until game mechanics are added
+    if (disabled) return;
     playButtonSound();
     onDecision(type);
   };
-
-  useEffect(() => {
-    // Buttons start dim and only light up when credentials are verified through the verification modal
-    if (hudStage === 'full' && credentialVerified) {
-      Animated.timing(fillOpacity, {
-        toValue: 1,
-        duration: 800,
-        delay: BUILD_SEQUENCE.decisionButtons + 500,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      fillOpacity.setValue(0);
-    }
-  }, [hudStage, credentialVerified]);
 
   // Calculate disabled states based on protocol
   const ps = protocolStatus || {
@@ -71,19 +58,12 @@ export const DecisionButtons = ({
     probesCompleted: true,
   };
 
-  // Buttons light up when credentials are verified through the verification modal
-  // credentialVerified is true when verification completes OR when credential already has a status (CONFIRMED/EXPIRED)
-  const credentialVerified = ps.credentialVerified;
-
-  // Player always has the right to choose approve or deny once scan is complete
-  // System checks are informational only - they provide status but don't block decisions
-  // The border color in CredentialModal shows system status, but player can override
-  
-  // Only require scan completion - all other checks are informational
+  // Simplified: Only require scan completion - all other checks are informational
+  // Decisions are allowed immediately after scan completes
   const approveDisabled = disabled || !ps.scanComplete;
   const denyDisabled = disabled || !ps.scanComplete;
 
-  // When decision is made, buttons are disabled and we wait for auto-advance
+  // When decision is made, show disabled decision buttons and a "Next" button for player control
   if (hasDecision) {
     return (
       <HUDBox hudStage={hudStage} style={styles.container}>
@@ -95,52 +75,51 @@ export const DecisionButtons = ({
             <Text style={[styles.buttonText, styles.buttonTextDisabled]}>DENY</Text>
           </View>
         </View>
+        <TouchableOpacity
+          style={[styles.button, styles.nextButton]}
+          onPress={() => {
+            playButtonSound();
+            onNext();
+          }}
+        >
+          <Text style={styles.buttonText}>NEXT</Text>
+        </TouchableOpacity>
       </HUDBox>
     );
   }
 
+  // No animations - always show buttons immediately
   return (
-    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.decisionButtons}>
+    <HUDBox hudStage={hudStage} style={styles.container}>
       <View style={styles.buttonRow}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[
-            styles.button, 
+            styles.button,
             styles.approveButton,
             approveDisabled && styles.buttonDisabled
-          ]} 
+          ]}
           onPress={() => handleDecision('APPROVE')}
           disabled={approveDisabled}
         >
-          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(74, 138, 90, 0.1)', opacity: fillOpacity }]} />
-          <TypewriterText 
-            text="APPROVE" 
-            active={hudStage !== 'none'} 
-            delay={BUILD_SEQUENCE.decisionButtons + 800} 
-            style={[styles.buttonText, approveDisabled && styles.buttonTextDisabled]} 
-          />
+          <Text style={[styles.buttonText, approveDisabled && styles.buttonTextDisabled]}>
+            APPROVE
+          </Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[
-            styles.button, 
+            styles.button,
             styles.denyButton,
             denyDisabled && styles.buttonDisabled
-          ]} 
+          ]}
           onPress={() => handleDecision('DENY')}
           disabled={denyDisabled}
         >
-          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(212, 83, 74, 0.1)', opacity: fillOpacity }]} />
-          <TypewriterText 
-            text="DENY" 
-            active={hudStage !== 'none'} 
-            delay={BUILD_SEQUENCE.decisionButtons + 1000} 
-            style={[styles.buttonText, denyDisabled && styles.buttonTextDisabled]} 
-          />
+          <Text style={[styles.buttonText, denyDisabled && styles.buttonTextDisabled]}>
+            DENY
+          </Text>
         </TouchableOpacity>
       </View>
     </HUDBox>
   );
 };
-
-import { Theme } from '../../constants/theme';
-const StyleSheet = require('react-native').StyleSheet;

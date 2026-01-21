@@ -349,6 +349,17 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
+  transitSafetyBadge: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    fontWeight: '600',
+    color: Theme.colors.textDim,
+    marginTop: 2,
+  },
+  transitSafetyBadgeDanger: {
+    color: Theme.colors.accentDeny,
+    fontWeight: '700',
+  },
 
   // Legacy styles (kept for other uses)
   logEntry: {
@@ -580,6 +591,20 @@ export const styles = StyleSheet.create({
   },
   menuLabelComplete: {
     color: Theme.colors.accentApprove,
+  },
+  menuItemDisabled: {
+    opacity: 0.4,
+    borderColor: Theme.colors.textDim,
+  },
+  menuLabelDisabled: {
+    color: Theme.colors.textDim,
+  },
+  resourceWarning: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    color: Theme.colors.accentDeny,
+    marginTop: 4,
+    fontWeight: '700',
   },
 
   // Footer

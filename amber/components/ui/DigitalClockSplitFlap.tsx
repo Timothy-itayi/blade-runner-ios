@@ -6,12 +6,25 @@ interface ClockProps {
   hudStage: 'none' | 'wireframe' | 'outline' | 'full';
   shiftTime?: string; // e.g. "07:00" - if provided, uses shift time instead of real time
   isTransitioning?: boolean; // triggers the "scramble" effect during shift change
+  // Countdown mode props
+  countdownActive?: boolean;
+  countdownSeconds?: number; // remaining seconds
 }
 
-export const DigitalClockSplitFlap = ({ hudStage, shiftTime, isTransitioning }: ClockProps) => {
+export const DigitalClockSplitFlap = ({ hudStage, shiftTime, isTransitioning, countdownActive, countdownSeconds }: ClockProps) => {
   const [displayTime, setDisplayTime] = useState(['0', '0', '0', '0', '0', '0']);
   const [isSyncing, setIsSyncing] = useState(false);
   const secondsRef = useRef(0);
+
+  // Parse countdown seconds into MM:SS display (only 4 digits needed)
+  const parseCountdown = (seconds: number): string[] => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    const minsStr = mins.toString().padStart(2, '0');
+    const secsStr = secs.toString().padStart(2, '0');
+    // Return as 6-digit array but first two are empty for consistent display
+    return ['', '', minsStr[0], minsStr[1], secsStr[0], secsStr[1]];
+  };
 
   // Parse shift time into display values
   const parseShiftTime = (time: string): string[] => {
@@ -20,7 +33,17 @@ export const DigitalClockSplitFlap = ({ hudStage, shiftTime, isTransitioning }: 
     return [hours[0], hours[1], minutes[0], minutes[1], secs[0], secs[1]];
   };
 
+  // Countdown display update
   useEffect(() => {
+    if (countdownActive && countdownSeconds !== undefined && hudStage === 'full') {
+      setDisplayTime(parseCountdown(countdownSeconds));
+    }
+  }, [countdownActive, countdownSeconds, hudStage]);
+
+  useEffect(() => {
+    // Skip if in countdown mode
+    if (countdownActive && countdownSeconds !== undefined) return;
+
     if (hudStage === 'outline' || isTransitioning) {
       setIsSyncing(true);
       let iterations = 0;
@@ -56,29 +79,73 @@ export const DigitalClockSplitFlap = ({ hudStage, shiftTime, isTransitioning }: 
       setDisplayTime(formatTime(new Date()));
       return () => clearInterval(timer);
     }
-  }, [hudStage, shiftTime, isTransitioning]);
+  }, [hudStage, shiftTime, isTransitioning, countdownActive]);
 
-  const Flap = ({ value }: { value: string }) => (
-    <View style={styles.flap}>
-      <Text style={styles.flapText}>{value}</Text>
+  // Urgency state when countdown is low
+  const isUrgent = countdownActive && countdownSeconds !== undefined && countdownSeconds <= 10;
+  const isCritical = countdownActive && countdownSeconds !== undefined && countdownSeconds <= 5;
+
+  // Pulsing animation for urgent state
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (isUrgent) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 0.4,
+            duration: isCritical ? 200 : 400,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: isCritical ? 200 : 400,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isUrgent, isCritical]);
+
+  const Flap = ({ value, urgent }: { value: string, urgent?: boolean }) => (
+    <View style={[
+      styles.flap,
+      urgent && styles.flapUrgent,
+    ]}>
+      <Text style={[
+        styles.flapText,
+        urgent && styles.flapTextUrgent,
+      ]}>{value}</Text>
       <View style={styles.flapDivider} />
     </View>
   );
 
+  const isCountdownMode = countdownActive && countdownSeconds !== undefined;
+  const prefixText = isCountdownMode ? 'TIME' : 'CLOCK';
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.prefix}>CLOCK</Text>
+    <Animated.View style={[styles.container, { opacity: isUrgent ? pulseAnim : 1 }]}>
+      <Text style={[styles.prefix, isUrgent && styles.prefixUrgent]}>{prefixText}</Text>
       <View style={styles.clockRow}>
-        <Flap value={displayTime[0]} />
-        <Flap value={displayTime[1]} />
-        <Text style={styles.separator}>:</Text>
-        <Flap value={displayTime[2]} />
-        <Flap value={displayTime[3]} />
-        <Text style={styles.separator}>:</Text>
-        <Flap value={displayTime[4]} />
-        <Flap value={displayTime[5]} />
+        {/* In countdown mode, only show MM:SS (skip first two digits) */}
+        {!isCountdownMode && (
+          <>
+            <Flap value={displayTime[0]} urgent={isUrgent} />
+            <Flap value={displayTime[1]} urgent={isUrgent} />
+            <Text style={[styles.separator, isUrgent && styles.separatorUrgent]}>:</Text>
+          </>
+        )}
+        <Flap value={displayTime[2]} urgent={isUrgent} />
+        <Flap value={displayTime[3]} urgent={isUrgent} />
+        <Text style={[styles.separator, isUrgent && styles.separatorUrgent]}>:</Text>
+        <Flap value={displayTime[4]} urgent={isUrgent} />
+        <Flap value={displayTime[5]} urgent={isUrgent} />
       </View>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -129,5 +196,19 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fonts.mono,
     fontSize: 12,
     paddingHorizontal: 1,
+  },
+  // Urgent/countdown styles
+  prefixUrgent: {
+    color: Theme.colors.accentDeny,
+  },
+  flapUrgent: {
+    borderColor: Theme.colors.accentDeny,
+    backgroundColor: 'rgba(212, 83, 74, 0.15)',
+  },
+  flapTextUrgent: {
+    color: Theme.colors.accentDeny,
+  },
+  separatorUrgent: {
+    color: Theme.colors.accentDeny,
   },
 });

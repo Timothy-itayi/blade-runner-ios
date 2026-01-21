@@ -2,7 +2,7 @@
 // DYNAMIC DISCREPANCY RESPONSES - Based on actual verification data
 // =============================================================================
 
-import { SubjectData, SubjectArchetype } from '../data/subjects';
+import { SubjectData, SubjectType } from '../data/subjects';
 import { ProbeResponse } from './probes';
 
 type DiscrepancyType = 
@@ -27,7 +27,7 @@ export const detectDiscrepancy = (subject: SubjectData): DiscrepancyInfo | null 
   // Sector mismatch
   const reasonSectorMatch = subject.reasonForVisit.match(/SECTOR\s*(\d+)/i);
   const reasonSector = reasonSectorMatch ? reasonSectorMatch[0].toUpperCase() : null;
-  const requestedSector = subject.requestedSector.toUpperCase();
+  const requestedSector = subject.destinationPlanet.toUpperCase();
   if (reasonSector && reasonSector !== requestedSector) {
     discrepancies.push({
       type: 'SECTOR_MISMATCH',
@@ -44,15 +44,15 @@ export const detectDiscrepancy = (subject: SubjectData): DiscrepancyInfo | null 
   }
 
   // Function expired
-  if (subject.authData.functionReg.status === 'EXPIRED') {
+  if (subject.credentialData?.type === 'WORK_PERMIT' && subject.credentialData.expirationDate < new Date().toISOString()) {
     discrepancies.push({
       type: 'FUNCTION_EXPIRED',
-      details: `Function registration expired: ${subject.function}`,
+      details: `Function registration expired: ${subject.credentialData.expirationDate}`,
     });
   }
 
   // Sector flagged
-  if (subject.authData.sectorAuth.status === 'FLAGGED') {
+  if (subject.idData.status === 'RESTRICTED') {
     discrepancies.push({
       type: 'SECTOR_FLAGGED',
       details: `Sector authorization flagged for ${requestedSector}`,
@@ -60,7 +60,7 @@ export const detectDiscrepancy = (subject: SubjectData): DiscrepancyInfo | null 
   }
 
   // Incident history
-  if (subject.incidents > 0 || (subject.incidentHistory && subject.incidentHistory.length > 0)) {
+  if (subject.incidents > 0) {
     discrepancies.push({
       type: 'INCIDENT_HISTORY',
       details: `${subject.incidents} incident(s) on record`,
@@ -68,14 +68,11 @@ export const detectDiscrepancy = (subject: SubjectData): DiscrepancyInfo | null 
   }
 
   // Transit anomalies (restricted zone access)
-  if (subject.transitLog) {
-    const flaggedTransit = subject.transitLog.some(t => t.flagged);
-    if (flaggedTransit) {
-      discrepancies.push({
-        type: 'TRANSIT_ANOMALY',
-        details: 'Flagged transit pattern detected',
-      });
-    }
+  if (subject.idData.status === 'RESTRICTED') {
+    discrepancies.push({
+      type: 'TRANSIT_ANOMALY',
+      details: 'Flagged transit pattern detected',
+    });
   }
 
   // Low compliance
@@ -99,7 +96,7 @@ export const generateDiscrepancyResponse = (
   discrepancy: DiscrepancyInfo,
   count: number = 0
 ): ProbeResponse => {
-  const archetype = subject.archetype || 'CLN';
+  const archetype = subject.subjectType || 'CLN';
   const responses: string[] = [];
 
   // Truthful responses (some subjects admit issues)
@@ -238,53 +235,40 @@ export const generateDiscrepancyResponse = (
   let responsePool: Record<DiscrepancyType, string[]>;
   
   switch (archetype) {
-    case 'CLN':
+    case 'HUMAN':
       // Clean subjects are more likely to be truthful or confused
       responsePool = Math.random() > 0.5 ? truthfulResponses : evasiveResponses;
       break;
-    case 'FLG':
+    case 'HUMAN_CYBORG':
       // Flagged subjects are evasive or defensive
       responsePool = Math.random() > 0.3 ? evasiveResponses : truthfulResponses;
       break;
-    case 'CON':
+    case 'ROBOT_CYBORG':
       // Connected subjects are often truthful (family matters)
       responsePool = Math.random() > 0.4 ? truthfulResponses : evasiveResponses;
       break;
-    case 'REV':
+    case 'REPLICANT':
       // Revolutionaries are defiant
       responsePool = Math.random() > 0.2 ? defiantResponses : evasiveResponses;
       break;
-    case 'EDG':
+    case 'PLASTIC_SURGERY':
       // Edge cases vary
       responsePool = Math.random() > 0.33 
         ? (Math.random() > 0.5 ? truthfulResponses : evasiveResponses)
         : defiantResponses;
       break;
-    case 'REP':
+    case 'AMPUTEE':
       // Replicants are evasive or deny
       responsePool = Math.random() > 0.3 ? evasiveResponses : defiantResponses;
       break;
-    case 'SYS':
-      // System subjects are evasive (classified)
-      responsePool = evasiveResponses;
+    case 'PLASTIC_SURGERY':
+      // Replicants are evasive or deny
+      responsePool = Math.random() > 0.3 ? truthfulResponses : evasiveResponses;
       break;
     default:
       responsePool = evasiveResponses;
+      break;
   }
-
-  // Get responses for this discrepancy type
-  const typeResponses = responsePool[discrepancy.type] || evasiveResponses[discrepancy.type];
-  
-  // Select based on count (allow multiple variations)
-  const selectedResponse = typeResponses[Math.min(count, typeResponses.length - 1)] || typeResponses[0];
-  
-  // Replace placeholders with actual values
-  const reasonSectorMatch = subject.reasonForVisit.match(/SECTOR\s*(\d+)/i);
-  const reasonSector = reasonSectorMatch ? reasonSectorMatch[0] : subject.reasonForVisit;
-  
-  let finalResponse = selectedResponse
-    .replace('[requested]', subject.requestedSector)
-    .replace('[reason]', reasonSector);
 
   // Determine tone shift based on response style
   let toneShift: 'NEUTRAL' | 'AGITATED' | 'NERVOUS' | 'EVASIVE' | 'COOPERATIVE' = 'NERVOUS';
@@ -293,12 +277,12 @@ export const generateDiscrepancyResponse = (
   } else if (responsePool === evasiveResponses) {
     toneShift = 'EVASIVE';
   } else if (responsePool === truthfulResponses) {
-    toneShift = archetype === 'CLN' ? 'COOPERATIVE' : 'NERVOUS';
+    toneShift = archetype === 'HUMAN' ? 'COOPERATIVE' : 'NERVOUS';
   }
 
   return {
     probeType: 'DISCREPANCY',
-    response: finalResponse,
+    response: responsePool[discrepancy.type][Math.min(count, responsePool[discrepancy.type].length - 1)] || responsePool[discrepancy.type][0],
     toneShift,
   };
 };

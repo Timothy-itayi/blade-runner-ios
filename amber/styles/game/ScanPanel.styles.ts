@@ -140,6 +140,17 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+  stabilityText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  confidenceText: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+  },
   pulseDot: {
     width: 6,
     height: 6,
@@ -222,5 +233,35 @@ export const styles = StyleSheet.create({
     fontFamily: Theme.fonts.mono,
     fontSize: 8,
     letterSpacing: 1,
+  },
+  // Phase 5: Ambiguous condition styles
+  ambiguousContainer: {
+    backgroundColor: 'rgba(255, 107, 53, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 53, 0.4)',
+    padding: 6,
+    marginTop: 8,
+    marginHorizontal: 4,
+  },
+  ambiguousLabel: {
+    color: '#FF6B35',
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  ambiguousMedical: {
+    color: Theme.colors.accentApprove,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    opacity: 0.9,
+  },
+  ambiguousSuspicious: {
+    color: Theme.colors.accentDeny,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    opacity: 0.9,
+    marginTop: 2,
   },
 });

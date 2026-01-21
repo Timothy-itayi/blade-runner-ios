@@ -140,9 +140,72 @@ const FingerprintSlot = ({ active, flipped = false, delay = 0, statusText, subje
   );
 };
 
-const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim }: { active: boolean, delay?: number, bpm: string | number, pulseAnim: Animated.Value }) => {
+// Biometric ambiguity types
+type BiometricStability = 'STABLE' | 'FLUCTUATING' | 'ANOMALOUS' | 'ERROR';
+
+interface AmbiguousBiometrics {
+  bpmRange: { min: number, max: number };
+  stability: BiometricStability;
+  confidence: number; // 0-100
+  isError: boolean;
+}
+
+// Generate ambiguous biometric reading from base BPM
+const generateAmbiguousBiometrics = (baseBpm: number | string, equipmentReliability: number = 85): AmbiguousBiometrics => {
+  // Handle string BPM (special cases)
+  if (typeof baseBpm === 'string') {
+    const numMatch = baseBpm.match(/\d+/);
+    baseBpm = numMatch ? parseInt(numMatch[0]) : 78;
+  }
+
+  // 15% chance of equipment error
+  const isError = Math.random() > (equipmentReliability / 100);
+  if (isError) {
+    return {
+      bpmRange: { min: 0, max: 0 },
+      stability: 'ERROR',
+      confidence: 0,
+      isError: true,
+    };
+  }
+
+  // Generate range (±4-8 BPM variance)
+  const variance = 4 + Math.floor(Math.random() * 5);
+  const min = Math.max(40, baseBpm - variance);
+  const max = baseBpm + variance;
+
+  // Determine stability based on BPM
+  let stability: BiometricStability = 'STABLE';
+  if (baseBpm > 100) {
+    stability = 'ANOMALOUS';
+  } else if (baseBpm > 85) {
+    stability = 'FLUCTUATING';
+  }
+
+  // Confidence based on stability (lower for elevated readings)
+  let confidence = 85 + Math.floor(Math.random() * 15); // 85-100
+  if (stability === 'FLUCTUATING') confidence -= 15;
+  if (stability === 'ANOMALOUS') confidence -= 25;
+
+  return {
+    bpmRange: { min, max },
+    stability,
+    confidence: Math.max(50, confidence),
+    isError: false,
+  };
+};
+
+const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim, dataRevealed = true }: { active: boolean, delay?: number, bpm: string | number, pulseAnim: Animated.Value, dataRevealed?: boolean }) => {
   const [flicker, setFlicker] = useState(false);
   const opacity = useRef(new Animated.Value(0)).current;
+  const [biometrics, setBiometrics] = useState<AmbiguousBiometrics | null>(null);
+
+  // Generate ambiguous reading when BPM changes
+  useEffect(() => {
+    if (typeof bpm === 'number' || typeof bpm === 'string') {
+      setBiometrics(generateAmbiguousBiometrics(bpm));
+    }
+  }, [bpm]);
 
   useEffect(() => {
     if (active) {
@@ -154,7 +217,7 @@ const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim }: { active: boolean, de
       const flickerInterval = setInterval(() => {
         setFlicker(prev => !prev);
       }, 50);
-      
+
       setTimeout(() => {
         clearInterval(flickerInterval);
         setFlicker(false);
@@ -168,23 +231,63 @@ const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim }: { active: boolean, de
 
   const isLive = active && !flicker;
 
+  // Format BPM display with ambiguity
+  const getBpmDisplay = () => {
+    if (!isLive || !dataRevealed) return '-- BPM';
+    if (!biometrics) return '-- BPM';
+    if (biometrics.isError) return 'ERROR';
+
+    const { bpmRange, stability } = biometrics;
+    return `${bpmRange.min}-${bpmRange.max} BPM`;
+  };
+
+  const getStabilityColor = () => {
+    if (!biometrics || biometrics.isError) return Theme.colors.textDim;
+    switch (biometrics.stability) {
+      case 'STABLE': return Theme.colors.accentApprove;
+      case 'FLUCTUATING': return '#FF6B35'; // Orange/warning
+      case 'ANOMALOUS': return Theme.colors.accentDeny;
+      default: return Theme.colors.textDim;
+    }
+  };
+
+  const getConfidenceDisplay = () => {
+    if (!biometrics || biometrics.isError || !dataRevealed) return '';
+    return `${biometrics.confidence}%`;
+  };
+
   return (
     <Animated.View style={[styles.bpmColumn, { opacity }]}>
       <Text style={styles.label}>BIOMETRICS</Text>
       <View style={styles.bpmRow}>
-        <Animated.View 
+        <Animated.View
           style={[
-            styles.pulseDot, 
-            { 
-              backgroundColor: isLive ? Theme.colors.accentDeny : Theme.colors.textDim,
-              transform: [{ scale: isLive ? pulseAnim : 1 }] 
+            styles.pulseDot,
+            {
+              backgroundColor: isLive && dataRevealed ? getStabilityColor() : Theme.colors.textDim,
+              transform: [{ scale: isLive ? pulseAnim : 1 }]
             }
-          ]} 
+          ]}
         />
-        <Text style={[styles.bpmText, !isLive && { color: Theme.colors.textDim }]}>
-          {isLive ? `${bpm} BPM` : '-- BPM'}
+        <Text style={[styles.bpmText, (!isLive || !dataRevealed) && { color: Theme.colors.textDim }]}>
+          {getBpmDisplay()}
         </Text>
       </View>
+      {dataRevealed && biometrics && !biometrics.isError && (
+        <View style={styles.bpmRow}>
+          <Text style={[styles.stabilityText, { color: getStabilityColor() }]}>
+            {biometrics.stability}
+          </Text>
+          <Text style={styles.confidenceText}>
+            {getConfidenceDisplay()}
+          </Text>
+        </View>
+      )}
+      {dataRevealed && biometrics?.isError && (
+        <Text style={[styles.stabilityText, { color: Theme.colors.accentDeny }]}>
+          SENSOR MALFUNCTION
+        </Text>
+      )}
     </Animated.View>
   );
 };
@@ -362,15 +465,23 @@ const MinutiaeMarkers = ({ active, flipped = false }: { active: boolean, flipped
   );
 };
 
-export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subjectIndex, scanningHands = false, businessProbeCount = 0, dimmed = false }: { 
-  isScanning: boolean, 
+// Phase 5: Ambiguous biometric condition type
+interface AmbiguousConditionDisplay {
+  medicalExplanation: string;
+  suspiciousExplanation: string;
+}
+
+export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subjectIndex, scanningHands = false, businessProbeCount = 0, dimmed = false, biometricsRevealed = true, ambiguousCondition = null }: {
+  isScanning: boolean,
   scanProgress: Animated.Value,
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
   subject: SubjectData,
   subjectIndex?: number,
   scanningHands?: boolean,
   businessProbeCount?: number,
-  dimmed?: boolean
+  dimmed?: boolean,
+  biometricsRevealed?: boolean, // Progressive revelation - biometrics visible after delay
+  ambiguousCondition?: AmbiguousConditionDisplay | null, // Phase 5: Ambiguous biometric condition
 }) => {
   const [statusText, setStatusText] = useState('READY');
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -536,11 +647,12 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
           </View>
         </Animated.View>
 
-        <BPMMonitor 
-          active={true} 
-          delay={BUILD_SEQUENCE.bpmMonitor} 
-          bpm={bpm} 
-          pulseAnim={pulseAnim} 
+        <BPMMonitor
+          active={true}
+          delay={BUILD_SEQUENCE.bpmMonitor}
+          bpm={bpm}
+          pulseAnim={pulseAnim}
+          dataRevealed={biometricsRevealed}
         />
       </View>
 

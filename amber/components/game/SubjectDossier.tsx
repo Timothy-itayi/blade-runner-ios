@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, Pressable, Animated, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, Animated, ScrollView, StyleSheet, Image } from 'react-native';
 import { SubjectData } from '../../data/subjects';
 import { HUDBox } from '../ui/HUDBox';
 import { Theme } from '../../constants/theme';
@@ -10,46 +10,15 @@ export const SubjectDossier = ({
   data,
   index,
   activeDirective,
-  onClose
+  onClose,
+  dossierRevealed = false
 }: {
   data: SubjectData,
   index: number,
   activeDirective?: string | null,
-  onClose: () => void
+  onClose: () => void,
+  dossierRevealed?: boolean
 }) => {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return Theme.colors.accentApprove;
-      case 'PROVISIONAL':
-      case 'UNDER REVIEW':
-        return Theme.colors.accentWarn;
-      case 'RESTRICTED':
-      case '[TERMINATED]':
-      case 'ERROR':
-      case 'UNDEFINED':
-        return Theme.colors.accentDeny;
-      default:
-        return Theme.colors.textPrimary;
-    }
-  };
-
-  const getStatusBg = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'rgba(74, 138, 90, 0.15)';
-      case 'PROVISIONAL':
-      case 'UNDER REVIEW':
-        return 'rgba(212, 175, 55, 0.15)';
-      case 'RESTRICTED':
-      case '[TERMINATED]':
-      case 'ERROR':
-      case 'UNDEFINED':
-        return 'rgba(212, 83, 74, 0.15)';
-      default:
-        return 'rgba(127, 184, 216, 0.1)';
-    }
-  };
 
   return (
     <View style={styles.overlay}>
@@ -57,10 +26,6 @@ export const SubjectDossier = ({
         {/* Header with Subject Number */}
         <View style={styles.header}>
           <Text style={styles.subjectNo}>SUBJECT {index + 1}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusBg(data.status) }]}>
-            <View style={[styles.statusDot, { backgroundColor: getStatusColor(data.status) }]} />
-            <Text style={[styles.statusText, { color: getStatusColor(data.status) }]}>{data.status}</Text>
-          </View>
         </View>
 
         <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -72,33 +37,84 @@ export const SubjectDossier = ({
             </View>
           )}
 
-          {/* Identity Card */}
+          {/* Passport-Style Identity Card */}
           <View style={styles.identityCard}>
-            <Text style={styles.subjectName}>{data.name}</Text>
-            <View style={styles.identityMeta}>
-              <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>LOCATION</Text>
-                <Text style={styles.metaValue}>{data.sector}</Text>
+            {dossierRevealed && data.dossier ? (
+              <>
+                {/* Profile Picture Section */}
+                <View style={styles.profileSection}>
+                  <View style={styles.profilePicContainer}>
+                    {data.profilePic ? (
+                      <>
+                        <Image source={data.profilePic} style={styles.profilePic} />
+                        {data.dossierAnomaly && data.dossierAnomaly.type === 'MISMATCH' && (
+                          <View style={styles.mismatchOverlay}>
+                            <Text style={styles.mismatchBadge}>⚠ MISMATCH</Text>
+                          </View>
+                        )}
+                      </>
+                    ) : (
+                      <View style={styles.profilePicPlaceholder}>
+                        <Text style={styles.profilePicText}>NO IMAGE</Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={styles.profileInfo}>
+                    <Text style={styles.subjectName}>{data.name}</Text>
+                    <Text style={styles.idCode}>{data.id}</Text>
+                  </View>
+                </View>
+                
+                {/* Dossier Anomaly Warning */}
+                {data.dossierAnomaly && data.dossierAnomaly.type !== 'NONE' && (
+                  <View style={styles.anomalyWarning}>
+                    <Text style={styles.anomalyWarningText}>
+                      ⚠ {data.dossierAnomaly.type === 'MISMATCH' ? 'APPEARANCE MISMATCH DETECTED' : 
+                          data.dossierAnomaly.type === 'MISSING_INFO' ? 'INCOMPLETE DATA' :
+                          data.dossierAnomaly.type === 'CORRUPTED' ? 'SCAN CORRUPTED' :
+                          'SURGERY DETECTED'}
+                    </Text>
+                    {data.dossierAnomaly.type === 'MISMATCH' && (
+                      <Text style={styles.anomalyDescription}>
+                        Photo does not match live feed. Subject appearance inconsistent with dossier records.
+                      </Text>
+                    )}
+                    {data.dossierAnomaly.explanation && (
+                      <Text style={styles.anomalyExplanation}>
+                        SUBJECT CLAIMS: "{data.dossierAnomaly.explanation}"
+                      </Text>
+                    )}
+                  </View>
+                )}
+                
+                {/* Dossier Details */}
+                <View style={styles.dossierContent}>
+                  <View style={styles.dossierRow}>
+                    <Text style={styles.dossierLabel}>DATE OF BIRTH:</Text>
+                    <Text style={styles.dossierValue}>{data.dossier.dateOfBirth}</Text>
+                  </View>
+                  <View style={styles.dossierRow}>
+                    <Text style={styles.dossierLabel}>ADDRESS:</Text>
+                    <Text style={styles.dossierValue}>{data.dossier.address}</Text>
+                  </View>
+                  <View style={styles.dossierRow}>
+                    <Text style={styles.dossierLabel}>OCCUPATION:</Text>
+                    <Text style={styles.dossierValue}>{data.dossier.occupation}</Text>
+                  </View>
+                  <View style={styles.dossierRow}>
+                    <Text style={styles.dossierLabel}>SEX:</Text>
+                    <Text style={styles.dossierValue}>{data.dossier.sex}</Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <View style={styles.dossierPlaceholder}>
+                <Text style={styles.dossierPlaceholderText}>
+                  BIO SCAN REQUIRED{'\n'}
+                  Dossier data will be revealed after biometric scan
+                </Text>
               </View>
-              <View style={styles.metaDivider} />
-              <View style={styles.metaItem}>
-                <Text style={styles.metaLabel}>OCCUPATION</Text>
-                <Text style={styles.metaValue}>{data.function}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Request Details - Primary Focus */}
-          <View style={styles.requestCard}>
-            <Text style={styles.requestHeader}>ACCESS REQUEST</Text>
-            <View style={styles.requestDestination}>
-              <Text style={styles.requestArrow}>→</Text>
-              <Text style={styles.requestedSector}>{data.requestedSector}</Text>
-            </View>
-            <View style={styles.reasonContainer}>
-              <Text style={styles.reasonLabel}>STATED REASON</Text>
-              <Text style={styles.reasonValue}>"{data.reasonForVisit}"</Text>
-            </View>
+            )}
           </View>
         </ScrollView>
 
@@ -132,9 +148,6 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: 16,
     paddingBottom: 12,
     borderBottomWidth: 1,
@@ -146,24 +159,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     letterSpacing: 2,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    gap: 6,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontFamily: Theme.fonts.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
   },
   scroll: {
     flexGrow: 0,
@@ -199,91 +194,151 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  subjectName: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 12,
-  },
-  identityMeta: {
+  profileSection: {
     flexDirection: 'row',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(74, 106, 122, 0.3)',
+  },
+  profilePicContainer: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  profilePic: {
+    width: 80,
+    height: 100,
+    backgroundColor: 'rgba(26, 42, 58, 0.5)',
+    borderWidth: 2,
+    borderColor: Theme.colors.border,
+  },
+  mismatchOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(212, 83, 74, 0.9)',
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    borderTopWidth: 1,
+    borderTopColor: Theme.colors.accentDeny,
+  },
+  mismatchBadge: {
+    color: '#fff',
+    fontFamily: Theme.fonts.mono,
+    fontSize: 7,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  profilePicPlaceholder: {
+    width: 80,
+    height: 100,
+    backgroundColor: 'rgba(26, 42, 58, 0.5)',
+    borderWidth: 2,
+    borderColor: Theme.colors.border,
+    marginRight: 12,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  metaItem: {
-    flex: 1,
-  },
-  metaDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: 'rgba(74, 106, 122, 0.3)',
-    marginHorizontal: 12,
-  },
-  metaLabel: {
+  profilePicText: {
     color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
     fontSize: 9,
+    textAlign: 'center',
+  },
+  profileInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  subjectName: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 18,
+    fontWeight: '700',
     letterSpacing: 1,
     marginBottom: 4,
   },
-  metaValue: {
-    color: Theme.colors.textSecondary,
+  idCode: {
+    color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    letterSpacing: 1,
   },
-  requestCard: {
-    backgroundColor: 'rgba(212, 175, 55, 0.08)',
+  anomalyWarning: {
+    backgroundColor: 'rgba(212, 83, 74, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.25)',
-    padding: 16,
+    borderColor: Theme.colors.accentDeny,
+    borderLeftWidth: 4,
+    borderLeftColor: Theme.colors.accentDeny,
+    padding: 12,
     marginBottom: 12,
   },
-  requestHeader: {
-    color: Theme.colors.accentWarn,
+  anomalyWarningText: {
+    color: Theme.colors.accentDeny,
     fontFamily: Theme.fonts.mono,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
-    marginBottom: 10,
-  },
-  requestDestination: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  requestArrow: {
-    color: Theme.colors.accentWarn,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 20,
-    marginRight: 10,
-  },
-  requestedSector: {
-    color: Theme.colors.accentWarn,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 1,
-  },
-  reasonContainer: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(212, 175, 55, 0.2)',
-    paddingTop: 12,
-  },
-  reasonLabel: {
-    color: Theme.colors.textDim,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    letterSpacing: 1,
     marginBottom: 6,
   },
-  reasonValue: {
+  anomalyDescription: {
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
-    fontSize: 13,
+    fontSize: 10,
+    lineHeight: 14,
+    marginBottom: 8,
+  },
+  anomalyExplanation: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
     fontStyle: 'italic',
-    lineHeight: 20,
+    lineHeight: 14,
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(212, 83, 74, 0.3)',
+  },
+  dossierContent: {
+    marginTop: 12,
+  },
+  dossierRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    alignItems: 'flex-start',
+  },
+  dossierLabel: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1,
+    width: 100,
+    marginRight: 12,
+  },
+  dossierValue: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 16,
+  },
+  dossierPlaceholder: {
+    marginTop: 12,
+    padding: 16,
+    backgroundColor: 'rgba(26, 42, 58, 0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(74, 106, 122, 0.3)',
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  dossierPlaceholderText: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    textAlign: 'center',
+    lineHeight: 16,
   },
   footer: {
     marginTop: 8,

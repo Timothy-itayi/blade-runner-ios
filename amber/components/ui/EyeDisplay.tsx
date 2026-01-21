@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Animated, StyleSheet, Easing } from 'react-native';
+import { View, Animated, StyleSheet, Easing, TouchableOpacity, Text } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Image } from 'expo-image';
 import { styles } from '../../styles/ui/EyeDisplay.styles';
@@ -43,24 +43,36 @@ const CircularBorder = ({ active, delay = 0 }: { active: boolean, delay?: number
   );
 };
 
+type ViewChannel = 'facial' | 'eye';
+
 export const EyeDisplay = ({ 
   isScanning, 
   scanProgress, 
-  videoSource, 
+  videoSource,
+  eyeVideo,
+  videoStartTime = 4,
+  videoEndTime = 8,
   hudStage,
   hasDecision,
   decisionType,
   scanningIris = false,
-  subjectLooking = true
+  subjectLooking = true,
+  viewChannel = 'facial',
+  onChannelChange
 }: { 
   isScanning: boolean, 
   scanProgress: Animated.Value, 
   videoSource: any,
+  eyeVideo?: any,
+  videoStartTime?: number,
+  videoEndTime?: number,
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
   hasDecision?: boolean,
   decisionType?: 'APPROVE' | 'DENY',
   scanningIris?: boolean,
-  subjectLooking?: boolean
+  subjectLooking?: boolean,
+  viewChannel?: 'facial' | 'eye',
+  onChannelChange?: () => void
 }) => {
   const staticOverlay = require('../../assets/videos/static.gif');
   const changeChannel = require('../../assets/videos/change-channel.gif');
@@ -70,32 +82,47 @@ export const EyeDisplay = ({
   const irisScanLine = useRef(new Animated.Value(0)).current;
   const irisScanOpacity = useRef(new Animated.Value(0)).current;
   
-  const player = useVideoPlayer(videoSource, (player) => {
+  // Use eye video if available and in eye view, otherwise use face video
+  const currentVideoSource = (viewChannel === 'eye' && eyeVideo) ? eyeVideo : videoSource;
+  
+  const player = useVideoPlayer(currentVideoSource, (player) => {
     player.loop = false;
-    player.playbackRate = 0.25;
+    player.playbackRate = 0.5; // 50% slower than normal (0.5x speed)
     player.timeUpdateEventInterval = 0.05;
     player.play();
   });
+  
+  // Update video source when channel changes
+  useEffect(() => {
+    const newSource = (viewChannel === 'eye' && eyeVideo) ? eyeVideo : videoSource;
+    // Replace video source if it changed
+    try {
+      player.replace(newSource);
+    } catch (e) {
+      // If replace fails, the player will use the initial source
+      console.warn('Failed to replace video source:', e);
+    }
+  }, [viewChannel, eyeVideo, videoSource, player]);
 
   useEffect(() => {
     if (player.status === 'readyToPlay') {
-      player.currentTime = 4;
+      player.currentTime = videoStartTime;
     }
 
     const timeSub = player.addListener('timeUpdate', ({ currentTime }) => {
-      if (currentTime >= 8) {
-        player.currentTime = 4;
+      if (currentTime >= videoEndTime) {
+        player.currentTime = videoStartTime;
       }
     });
 
     const endSub = player.addListener('playToEnd', () => {
-      player.currentTime = 4;
+      player.currentTime = videoStartTime;
       player.play();
     });
 
     const statusSub = player.addListener('statusChange', ({ status }) => {
       if (status === 'readyToPlay') {
-        player.currentTime = 6;
+        player.currentTime = videoStartTime;
         player.play();
       }
     });
@@ -105,7 +132,7 @@ export const EyeDisplay = ({
       endSub.remove();
       statusSub.remove();
     };
-  }, [player]);
+  }, [player, videoStartTime, videoEndTime]);
 
   useEffect(() => {
     if (hudStage === 'full' || hudStage === 'outline') {
@@ -175,24 +202,26 @@ export const EyeDisplay = ({
           <View style={[styles.gridOverlay, { backgroundColor: 'rgba(0,0,0,0.3)' }]} />
         </Animated.View>
 
-        {/* Main Eye UI */}
+        {/* Main Subject UI - Channel-based view */}
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: contentFade, zIndex: 5 }]}>
-          <Animated.View style={[styles.zoomContainer, { transform: [{ scale: 2.2 }] }]}>
+          <Animated.View style={[
+            styles.zoomContainer, 
+            { 
+              transform: [
+                { scale: 1.2 }, // 20% zoom in
+                { translateY: 0 }
+              ] 
+            }
+          ]}>
             <VideoView
               style={styles.video}
               player={player}
-              contentFit="cover"
+              contentFit={viewChannel === 'eye' ? 'contain' : 'cover'}
               allowsFullscreen={false}
               allowsPictureInPicture={false}
             />
           </Animated.View>
           
-          <Image 
-            source={staticOverlay}
-            style={styles.staticOverlay}
-            contentFit="fill"
-            contentPosition="center"
-          />
 
           {/* Standard scan laser line */}
           <Animated.View 

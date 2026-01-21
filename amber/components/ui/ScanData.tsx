@@ -1,17 +1,25 @@
-import React, { useState } from 'react';
-import { View, Text, Animated, Pressable } from 'react-native';
+import React from 'react';
+import { View, Text, Animated, TouchableOpacity } from 'react-native';
 import { styles } from '../../styles/ui/ScanData.styles';
 import { HUDBox } from './HUDBox';
 import { SubjectData } from '../../data/subjects';
-import { CredentialModal } from '../game/CredentialModal';
 import { BUILD_SEQUENCE } from '../../constants/animations';
+import { Theme } from '../../constants/theme';
 
-export const TypewriterText = ({ text, active, delay = 0, style, showCursor = true }: { text: string, active: boolean, delay?: number, style?: any, showCursor?: boolean }) => {
-  const [display, setDisplay] = React.useState('');
-  const [isComplete, setIsComplete] = React.useState(false);
+export const TypewriterText = ({ text, active, delay = 0, style, showCursor = true, instant = false }: { text: string, active: boolean, delay?: number, style?: any, showCursor?: boolean, instant?: boolean }) => {
+  const [display, setDisplay] = React.useState(instant ? text : '');
+  const [isComplete, setIsComplete] = React.useState(instant);
   const [isTyping, setIsTyping] = React.useState(false);
 
   React.useEffect(() => {
+    // If instant mode, just show text immediately
+    if (instant) {
+      setDisplay(text);
+      setIsComplete(true);
+      setIsTyping(false);
+      return;
+    }
+
     let interval: any = null;
     let timeout: any = null;
 
@@ -26,9 +34,9 @@ export const TypewriterText = ({ text, active, delay = 0, style, showCursor = tr
     setDisplay('');
     setIsComplete(false);
     setIsTyping(false);
-    
+
     let currentText = '';
-    
+
     timeout = setTimeout(() => {
       setIsTyping(true); // Start typing - show cursor
       interval = setInterval(() => {
@@ -47,7 +55,7 @@ export const TypewriterText = ({ text, active, delay = 0, style, showCursor = tr
       if (timeout) clearTimeout(timeout);
       if (interval) clearInterval(interval);
     };
-  }, [active, text, delay]);
+  }, [active, text, delay, instant]);
 
   return (
     <Text style={style}>
@@ -102,10 +110,9 @@ export const ScanData = ({
   subject, 
   hasDecision, 
   decisionType,
-  onCredentialViewed,
-  onCredentialVerified,
-  onCredentialConfirmed,
-  credentialsReceived = false,
+  onBioScan,
+  viewChannel = 'facial',
+  resourcesRemaining = 0,
 }: { 
   id: string, 
   isScanning: boolean, 
@@ -114,52 +121,10 @@ export const ScanData = ({
   subject: SubjectData,
   hasDecision?: boolean,
   decisionType?: 'APPROVE' | 'DENY',
-  onCredentialViewed?: () => void,
-  onCredentialVerified?: (verified: boolean) => void,
-  onCredentialConfirmed?: () => void,
-  credentialsReceived?: boolean,
+  onBioScan?: () => void,
+  viewChannel?: 'facial' | 'eye',
+  resourcesRemaining?: number,
 }) => {
-  const [hasReachedBottom, setHasReachedBottom] = React.useState(false);
-  const [showCredentialModal, setShowCredentialModal] = useState(false);
-  const [credentialVerified, setCredentialVerified] = useState(false);
-  const [credentialViewed, setCredentialViewed] = useState(false);
-  const [credentialConfirmed, setCredentialConfirmed] = useState(false);
-
-  React.useEffect(() => {
-    if (!isScanning) {
-      setHasReachedBottom(false);
-      return;
-    }
-
-    const listener = scanProgress.addListener(({ value }) => {
-      if (value >= 0.95 && !hasReachedBottom) {
-        setHasReachedBottom(true);
-      }
-    });
-
-    return () => scanProgress.removeListener(listener);
-  }, [isScanning, scanProgress]);
-
-  // Reset credential state when subject changes
-  React.useEffect(() => {
-    setCredentialVerified(false);
-    setCredentialViewed(false);
-    setCredentialConfirmed(false);
-    setShowCredentialModal(false);
-  }, [subject.id]);
-
-  const handleOpenCredential = () => {
-    setShowCredentialModal(true);
-  };
-  
-  const handleCredentialViewed = () => {
-    // Only mark as viewed if not already viewed
-    if (!credentialViewed) {
-      setCredentialViewed(true);
-      onCredentialViewed?.();
-    }
-  };
-
   const getStatusLine = () => {
     if (!hasDecision) {
       return null;
@@ -198,124 +163,48 @@ export const ScanData = ({
     );
   };
 
-  const getCredentialStatusColor = () => {
-    if (!subject.credential) return Theme.colors.textDim;
-    if (credentialVerified) {
-      const verified = subject.credential.verifiedStatus || 'CONFIRMED';
-      if (verified === 'CONFIRMED') return Theme.colors.accentApprove;
-      if (verified === 'EXPIRED' || verified === 'DENIED') return Theme.colors.accentDeny;
-      return Theme.colors.textSecondary;
-    }
-    if (subject.credential.initialStatus === 'CONFIRMED') return Theme.colors.accentApprove;
-    if (subject.credential.initialStatus === 'PENDING') return Theme.colors.accentWarn;
-    if (subject.credential.initialStatus === 'EXPIRED') return Theme.colors.accentDeny;
-    return Theme.colors.textDim;
-  };
-
-  const getCredentialStatusText = () => {
-    if (!subject.credential) return 'NONE';
-    if (credentialVerified) {
-      return subject.credential.verifiedStatus || 'CONFIRMED';
-    }
-    return subject.credential.initialStatus;
-  };
-
-  const handleVerifyComplete = (result: 'CONFIRMED' | 'EXPIRED' | 'DENIED' | 'UNVERIFIED') => {
-    setCredentialVerified(true);
-    onCredentialVerified?.(true);
-  };
-
-  const handleCredentialConfirmed = () => {
-    setCredentialConfirmed(true);
-    // Mark as viewed when confirmed
-    if (!credentialViewed) {
-      setCredentialViewed(true);
-      onCredentialViewed?.();
-    }
-    // Notify parent that credential is confirmed
-    onCredentialConfirmed?.();
-
-    // If credential already has a determinate status (CONFIRMED/EXPIRED),
-    // mark as verified since no additional verification step is needed
-    const status = subject.credential?.initialStatus;
-    if (status === 'CONFIRMED' || status === 'EXPIRED') {
-      setCredentialVerified(true);
-      onCredentialVerified?.(true);
-    }
-  };
-
   return (
-    <>
-      <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.locRecord}>
-        <View style={styles.leftColumn}>
-          <View style={styles.identHeader}>
-            <TypewriterText text="IDENT CONFIRM" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.identification} style={styles.label} />
+    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.locRecord}>
+      <View style={styles.leftColumn}>
+        <View style={styles.identHeader}>
+          <TypewriterText text="IDENT CONFIRM" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.identification} style={styles.label} />
+          <View style={styles.statusContainer}>
             {getStatusLine()}
-          </View>
-          
-          <View style={styles.idSection}>
-            <TypewriterText 
-              text={id} 
-              active={hudStage === 'full'} 
-              delay={BUILD_SEQUENCE.identification + 400} 
-              style={styles.idCode} 
-              showCursor={false}
-            />
-            {renderProgressBar()}
           </View>
         </View>
         
-        {/* Credential Button - Right Column */}
-        <View style={styles.rightColumn}>
-          <Pressable 
-            onPress={handleOpenCredential}
-            style={({ pressed }) => [
-              styles.credentialButton,
-              pressed && styles.credentialButtonPressed
-            ]}
-            disabled={hudStage !== 'full'}
-          >
-            <Text style={styles.credentialButtonText}>[ CREDENTIALS ]</Text>
-            {credentialConfirmed ? (
-              <View style={styles.credentialReceivedRow}>
-                <View style={[
-                  styles.credentialReceivedDot,
-                  styles.credentialReceivedDotActive
-                ]} />
-                <Text style={[
-                  styles.credentialReceivedText,
-                  styles.credentialReceivedTextActive
-                ]}>CONFIRMED</Text>
-              </View>
-            ) : credentialsReceived && (
-              <View style={styles.credentialReceivedRow}>
-                <View style={[
-                  styles.credentialReceivedDot,
-                  styles.credentialReceivedDotActive
-                ]} />
-                <Text style={[
-                  styles.credentialReceivedText,
-                  styles.credentialReceivedTextActive
-                ]}>RECEIVED</Text>
-              </View>
-            )}
-          </Pressable>
+        <View style={styles.idSection}>
+          <TypewriterText 
+            text={id} 
+            active={hudStage === 'full'} 
+            delay={BUILD_SEQUENCE.identification + 400} 
+            style={styles.idCode} 
+            showCursor={false}
+          />
+          {renderProgressBar()}
         </View>
-      </HUDBox>
-
-      <CredentialModal
-        visible={showCredentialModal}
-        credential={subject.credential}
-        alreadyVerified={credentialVerified}
-        credentialsReceived={credentialsReceived}
-        credentialConfirmed={credentialConfirmed}
-        onClose={() => setShowCredentialModal(false)}
-        onVerify={handleVerifyComplete}
-        onViewed={handleCredentialViewed}
-        onConfirmed={handleCredentialConfirmed}
-      />
-    </>
+      </View>
+      
+      {/* BIO SCAN Button - opposite IDENT CONFIRM */}
+      {hudStage === 'full' && (
+        <View style={styles.rightColumn}>
+          <TouchableOpacity 
+            style={[
+              styles.bioScanButton,
+              resourcesRemaining === 0 && styles.channelToggleButtonDisabled
+            ]}
+            onPress={onBioScan}
+            disabled={resourcesRemaining === 0}
+          >
+            <Text style={[
+              styles.channelToggleText,
+              resourcesRemaining === 0 && styles.channelToggleTextDisabled
+            ]}>
+              BIO SCAN
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </HUDBox>
   );
 };
-
-import { Theme } from '../../constants/theme';

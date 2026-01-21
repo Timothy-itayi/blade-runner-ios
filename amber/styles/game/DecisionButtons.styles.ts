@@ -53,6 +53,9 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(212, 83, 74, 0.3)',
     borderColor: Theme.colors.accentDeny,
   },
+  buttonDim: {
+    opacity: 0.5,
+  },
   buttonDisabled: {
     opacity: 0.25,
     backgroundColor: 'rgba(26, 42, 58, 0.2)',
@@ -65,7 +68,15 @@ export const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1.5,
   },
+  buttonTextDim: {
+    opacity: 0.7,
+  },
   buttonTextDisabled: {
     color: Theme.colors.textDim,
+  },
+  nextButton: {
+    marginTop: 8,
+    backgroundColor: 'rgba(127, 184, 216, 0.2)',
+    borderColor: Theme.colors.textPrimary,
   },
 });

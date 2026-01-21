@@ -92,6 +92,11 @@ export const styles = StyleSheet.create({
     marginBottom: 4,
     gap: 8,
   },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: -40, // Move status further to the left
+  },
   statusDot: {
     width: 6,
     height: 6,
@@ -205,5 +210,29 @@ export const styles = StyleSheet.create({
   credentialReceivedTextActive: {
     color: Theme.colors.accentApprove,
     fontWeight: '900',
+  },
+  bioScanButton: {
+    width: '100%',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: 'rgba(74, 138, 90, 0.1)',
+    borderWidth: 1,
+    borderColor: Theme.colors.accentApprove,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  channelToggleText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: Theme.colors.textPrimary,
+    letterSpacing: 1,
+    fontWeight: '600',
+  },
+  channelToggleButtonDisabled: {
+    opacity: 0.3,
+    borderColor: Theme.colors.textDim,
+  },
+  channelToggleTextDisabled: {
+    color: Theme.colors.textDim,
   },
 });

@@ -3,11 +3,13 @@ import { View, Text, TouchableOpacity, Pressable, ScrollView, Animated } from 'r
 import { SubjectData } from '../../data/subjects';
 import { Theme } from '@/constants/theme';
 import { styles } from '../../styles/game/VerificationDrawer.styles';
+import { isSuspiciousTransit, getPlanetSafety, getTransitRisk, PLANET_MAP, type PlanetSafetyLevel } from '../../constants/planets';
 
 interface VerificationDrawerProps {
   subject: SubjectData;
   onClose: () => void;
   onQueryPerformed?: (queryType: 'WARRANT' | 'TRANSIT' | 'INCIDENT') => void;
+  resourcesRemaining?: number;
 }
 
 type QueryType = 'WARRANT' | 'TRANSIT' | 'INCIDENT';
@@ -21,7 +23,7 @@ const QUERY_LABELS: Record<QueryType, string> = {
 // Operator ID - in production this would come from auth context
 const OPERATOR_ID = 'OP-7734';
 
-export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: VerificationDrawerProps) => {
+export const VerificationDrawer = ({ subject, onClose, onQueryPerformed, resourcesRemaining = 0 }: VerificationDrawerProps) => {
   const [activeCheck, setActiveCheck] = useState<QueryType | null>(null);
   const [queriesPerformed, setQueriesPerformed] = useState<Set<string>>(new Set());
   const [queryTimestamps, setQueryTimestamps] = useState<Record<string, string>>({});
@@ -65,11 +67,16 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
   };
 
   const handleSelectCheck = (check: QueryType) => {
+    // Check if we have resources available
+    if (resourcesRemaining === 0) {
+      return; // Don't allow selection if no resources
+    }
+    
     setActiveCheck(check);
     if (!queriesPerformed.has(check)) {
       setQueriesPerformed(prev => new Set(prev).add(check));
       setQueryTimestamps(prev => ({ ...prev, [check]: getTimestamp() }));
-      onQueryPerformed?.(check);
+      onQueryPerformed?.(check); // This will use a resource
     }
   };
 
@@ -248,36 +255,77 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
   };
 
   const renderTransitLog = () => {
-    const transitLog = subject.transitLog || [];
-    const hasFlaggedTransit = transitLog.some(t => t.flagged);
-
-    // Extract sector number for hierarchy comparison (lower number = higher clearance)
-    const getSectorLevel = (sector: string): number => {
-      const match = sector.match(/SECTOR\s*(\d+)/i);
-      return match ? parseInt(match[1], 10) : 99;
-    };
-
-    // Get subject's home sector level
-    const subjectSectorLevel = getSectorLevel(subject.sector);
-
-    // Determine transit direction based on sector hierarchy
-    // Only flag as restricted when LOW clearance subject (high sector #) accesses HIGH clearance area (low sector #)
-    const getTransitDirection = (from: string, to: string): { icon: string; label: string; color: 'ok' | 'warn' | 'dim' } => {
-      const fromLevel = getSectorLevel(from);
-      const toLevel = getSectorLevel(to);
+    const transitLog = subject.databaseQuery?.travelHistory || [];
+    
+    // Process transit log entries - check for suspicious planet travel
+    const processedTransitLog = transitLog.map((entry: any) => {
+      const fromPlanet = entry.from || entry.fromPlanet || '';
+      const toPlanet = entry.to || entry.toPlanet || '';
+      const isSuspicious = isSuspiciousTransit(fromPlanet, toPlanet);
+      const riskLevel = getTransitRisk(fromPlanet, toPlanet);
       
-      if (toLevel < fromLevel) {
-        // Going to a higher clearance area (lower sector number)
-        // Only flag if subject is from a low-clearance sector trying to access high-clearance
-        if (subjectSectorLevel >= 5) {
-          return { icon: '▲', label: 'RESTRICTED ZONE', color: 'warn' };
+      // Generate flag note based on planet safety
+      let flagNote = '';
+      if (isSuspicious) {
+        const toSafety = getPlanetSafety(toPlanet);
+        const fromSafety = getPlanetSafety(fromPlanet);
+        
+        if (toSafety === 'DANGEROUS') {
+          flagNote = `Travel to restricted planet ${toPlanet} detected. High security risk.`;
+        } else if (fromSafety === 'DANGEROUS') {
+          flagNote = `Subject originated from restricted planet ${fromPlanet}. Verify credentials.`;
+        } else if (riskLevel === 'HIGH') {
+          flagNote = `Rapid transit between high-risk zones. Unusual travel pattern.`;
         }
-        return { icon: '▲', label: 'AUTHORIZED', color: 'ok' }; // High clearance subject, no issue
       }
-      if (toLevel > fromLevel) {
-        return { icon: '▼', label: 'STANDARD', color: 'dim' }; // Going to lower clearance, always fine
+      
+      return {
+        ...entry,
+        fromPlanet,
+        toPlanet,
+        flagged: isSuspicious || entry.flagged,
+        flagNote: flagNote || entry.flagNote,
+        riskLevel,
+        fromSafety: getPlanetSafety(fromPlanet),
+        toSafety: getPlanetSafety(toPlanet),
+      };
+    });
+    
+    const hasFlaggedTransit = processedTransitLog.some((t: any) => t.flagged);
+
+    // Determine transit status based on planet safety levels
+    const getTransitStatus = (entry: any): { icon: string; label: string; color: 'ok' | 'warn' | 'error' | 'dim' } => {
+      const { fromPlanet, toPlanet, fromSafety, toSafety, riskLevel, flagged } = entry;
+      
+      if (flagged) {
+        if (toSafety === 'DANGEROUS') {
+          return { icon: '⚠', label: 'RESTRICTED PLANET', color: 'error' };
+        }
+        if (fromSafety === 'DANGEROUS') {
+          return { icon: '⚠', label: 'ORIGIN: RESTRICTED', color: 'error' };
+        }
+        return { icon: '⚠', label: 'SUSPICIOUS ROUTE', color: 'warn' };
       }
-      return { icon: '●', label: 'INTERNAL', color: 'dim' }; // Same sector level
+      
+      if (toSafety === 'SAFE' && fromSafety === 'SAFE') {
+        return { icon: '✓', label: 'STANDARD ROUTE', color: 'ok' };
+      }
+      
+      if (toSafety === 'MODERATE' || fromSafety === 'MODERATE') {
+        return { icon: '○', label: 'MODERATE RISK', color: 'dim' };
+      }
+      
+      return { icon: '●', label: 'STANDARD', color: 'dim' };
+    };
+    
+    // Get safety level badge text
+    const getSafetyBadge = (safety: PlanetSafetyLevel): string => {
+      switch (safety) {
+        case 'SAFE': return 'SAFE';
+        case 'MODERATE': return 'MOD';
+        case 'DANGEROUS': return '⚠ RISK';
+        default: return '';
+      }
     };
 
     // Parse date string into readable parts
@@ -291,16 +339,17 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
     return (
       <>
         <TerminalPrompt command={`nquery --table=transit --range=7d --subject=${subject.id}`} />
-        <Text style={styles.responseHeader}>[NETWORK RESPONSE: {transitLog.length} RECORDS]</Text>
+        <Text style={styles.responseHeader}>[NETWORK RESPONSE: {processedTransitLog.length} RECORDS]</Text>
         <TerminalDivider />
         
-        {transitLog.length > 0 ? (
+        {processedTransitLog.length > 0 ? (
           <ScrollView style={styles.transitScrollContainer}>
-            {transitLog.map((entry, i) => {
-              const { date, time } = parseDate(entry.date);
-              const direction = getTransitDirection(entry.from, entry.to);
-              const directionColor = direction.color === 'ok' ? styles.statusOk : 
-                                     direction.color === 'warn' ? styles.statusWarn : styles.statusDim;
+            {processedTransitLog.map((entry: any, i: number) => {
+              const { date, time } = parseDate(entry.date || entry.dateStr || '');
+              const status = getTransitStatus(entry);
+              const statusColor = status.color === 'ok' ? styles.statusOk : 
+                                 status.color === 'error' ? styles.statusError :
+                                 status.color === 'warn' ? styles.statusWarn : styles.statusDim;
               
               return (
                 <View key={i} style={[styles.transitCard, entry.flagged && styles.transitCardFlagged]}>
@@ -314,39 +363,54 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
                   <View style={styles.transitJourneyRow}>
                     <View style={styles.transitSector}>
                       <Text style={styles.transitSectorLabel}>FROM</Text>
-                      <Text style={styles.transitSectorValue}>{entry.from}</Text>
+                      <Text style={styles.transitSectorValue}>{entry.fromPlanet || entry.from}</Text>
+                      <Text style={[styles.transitSafetyBadge, entry.fromSafety === 'DANGEROUS' && styles.transitSafetyBadgeDanger]}>
+                        {getSafetyBadge(entry.fromSafety)}
+                      </Text>
                     </View>
                     
                     <View style={styles.transitArrowContainer}>
-                      <Text style={[styles.transitDirectionIcon, directionColor]}>{direction.icon}</Text>
+                      <Text style={[styles.transitDirectionIcon, statusColor]}>{status.icon}</Text>
                       <Text style={styles.transitArrow}>→</Text>
                     </View>
                     
                     <View style={styles.transitSector}>
                       <Text style={styles.transitSectorLabel}>TO</Text>
                       <Text style={[styles.transitSectorValue, entry.flagged && styles.statusWarn]}>
-                        {entry.to}
+                        {entry.toPlanet || entry.to}
+                      </Text>
+                      <Text style={[styles.transitSafetyBadge, entry.toSafety === 'DANGEROUS' && styles.transitSafetyBadgeDanger]}>
+                        {getSafetyBadge(entry.toSafety)}
                       </Text>
                     </View>
                   </View>
                   
                   {/* Status Row */}
                   <View style={styles.transitStatusRow}>
-                    <Text style={[styles.transitDirectionLabel, directionColor]}>
-                      {direction.label} TRANSIT
+                    <Text style={[styles.transitDirectionLabel, statusColor]}>
+                      {status.label}
                     </Text>
                     {entry.flagged && (
                       <Text style={styles.transitFlagBadge}>⚠ FLAGGED</Text>
                     )}
                   </View>
+                  
+                  {/* Flag Note */}
+                  {entry.flagNote && (
+                    <View style={styles.noteBox}>
+                      <Text style={styles.noteText}>{entry.flagNote}</Text>
+                    </View>
+                  )}
                 </View>
               );
             })}
             
-            {hasFlaggedTransit && transitLog.find(t => t.flagged)?.flagNote && (
+            {hasFlaggedTransit && (
               <View style={styles.noteBox}>
-                <Text style={styles.noteLabel}>⚠ SYSTEM NOTE:</Text>
-                <Text style={styles.noteText}>{transitLog.find(t => t.flagged)?.flagNote}</Text>
+                <Text style={styles.noteLabel}>⚠ SYSTEM ALERT:</Text>
+                <Text style={styles.noteText}>
+                  Subject has traveled to or from restricted planets. Verify purpose of travel and credentials.
+                </Text>
               </View>
             )}
           </ScrollView>
@@ -490,16 +554,30 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed }: Verif
         <View style={styles.menuGrid}>
           {relevantQueries.map((query) => {
             const isComplete = queriesPerformed.has(query);
+            const hasResources = resourcesRemaining > 0;
+            const isDisabled = !hasResources && !isComplete;
             return (
               <TouchableOpacity 
                 key={query}
-                style={[styles.menuItem, isComplete && styles.menuItemComplete]} 
+                style={[
+                  styles.menuItem, 
+                  isComplete && styles.menuItemComplete,
+                  isDisabled && styles.menuItemDisabled
+                ]} 
                 onPress={() => handleSelectCheck(query)}
+                disabled={isDisabled}
               >
                 <Text style={styles.menuIcon}>{isComplete ? '●' : '○'}</Text>
-                <Text style={[styles.menuLabel, isComplete && styles.menuLabelComplete]}>
+                <Text style={[
+                  styles.menuLabel, 
+                  isComplete && styles.menuLabelComplete,
+                  isDisabled && styles.menuLabelDisabled
+                ]}>
                   {QUERY_LABELS[query]}
                 </Text>
+                {!hasResources && !isComplete && (
+                  <Text style={styles.resourceWarning}>NO RESOURCES</Text>
+                )}
               </TouchableOpacity>
             );
           })}

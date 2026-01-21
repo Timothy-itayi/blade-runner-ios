@@ -122,4 +122,33 @@ export const styles = StyleSheet.create({
     borderColor: 'rgba(201, 162, 39, 0.3)',
     borderStyle: 'dashed',
   },
+  eyeOverlay: {
+    backgroundColor: 'transparent',
+    zIndex: 6,
+  },
+  channelButtonContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 20,
+  },
+  channelToggleButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    backgroundColor: 'rgba(26, 42, 58, 0.8)',
+    borderWidth: 1,
+    borderColor: Theme.colors.textSecondary,
+    borderRadius: 2,
+    minWidth: 100,
+  },
+  channelToggleText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: Theme.colors.textSecondary,
+    letterSpacing: 1,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
 });

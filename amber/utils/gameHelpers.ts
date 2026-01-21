@@ -4,19 +4,20 @@ import { POSITIVE_MESSAGES, NEGATIVE_MESSAGES, NEUTRAL_MESSAGES } from '../const
 
 /**
  * Determines if a decision is correct based on subject data and directive rules
+ * 
+ * NOTE: This function is temporarily kept for compatibility but will be replaced
+ * by the consequence evaluation system in Phase 3. For now, it returns true
+ * to prevent breaking the game flow.
  */
 export const isDecisionCorrect = (
   subject: SubjectData, 
   decision: 'APPROVE' | 'DENY',
   currentShift: ShiftData
 ): boolean => {
-  // Check based on new subject structure
-  // For now, use shouldApprove/shouldDeny flags from subject data
-  if (decision === 'APPROVE') {
-    return subject.shouldApprove;
-  } else {
-    return subject.shouldDeny;
-  }
+  // TODO: Phase 3 - Replace with consequence evaluation system
+  // For now, return true to allow game to function
+  // Decision correctness will be evaluated based on information gathered
+  return true;
 };
 
 /**

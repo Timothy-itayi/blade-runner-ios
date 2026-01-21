@@ -200,12 +200,22 @@ const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim, dataRevealed = true }: 
   const opacity = useRef(new Animated.Value(0)).current;
   const [biometrics, setBiometrics] = useState<AmbiguousBiometrics | null>(null);
 
-  // Generate ambiguous reading when BPM changes
+  // Phase 2: Handle equipment failure - show error if BPM is 'ERROR'
+  const isEquipmentError = bpm === 'ERROR' || (typeof bpm === 'string' && bpm.includes('ERROR'));
+
+  // Generate ambiguous reading when BPM changes (only if not error)
   useEffect(() => {
-    if (typeof bpm === 'number' || typeof bpm === 'string') {
+    if (isEquipmentError) {
+      setBiometrics({
+        bpmRange: { min: 0, max: 0 },
+        stability: 'ERROR',
+        confidence: 0,
+        isError: true,
+      });
+    } else if (typeof bpm === 'number' || typeof bpm === 'string') {
       setBiometrics(generateAmbiguousBiometrics(bpm));
     }
-  }, [bpm]);
+  }, [bpm, isEquipmentError]);
 
   useEffect(() => {
     if (active) {
@@ -235,7 +245,7 @@ const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim, dataRevealed = true }: 
   const getBpmDisplay = () => {
     if (!isLive || !dataRevealed) return '-- BPM';
     if (!biometrics) return '-- BPM';
-    if (biometrics.isError) return 'ERROR';
+    if (biometrics.isError || isEquipmentError) return 'ERROR';
 
     const { bpmRange, stability } = biometrics;
     return `${bpmRange.min}-${bpmRange.max} BPM`;
@@ -283,9 +293,9 @@ const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim, dataRevealed = true }: 
           </Text>
         </View>
       )}
-      {dataRevealed && biometrics?.isError && (
+      {dataRevealed && (biometrics?.isError || isEquipmentError) && (
         <Text style={[styles.stabilityText, { color: Theme.colors.accentDeny }]}>
-          SENSOR MALFUNCTION
+          ERROR SENSOR MALFUNCTION
         </Text>
       )}
     </Animated.View>
@@ -471,7 +481,7 @@ interface AmbiguousConditionDisplay {
   suspiciousExplanation: string;
 }
 
-export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subjectIndex, scanningHands = false, businessProbeCount = 0, dimmed = false, biometricsRevealed = true, ambiguousCondition = null }: {
+export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subjectIndex, scanningHands = false, businessProbeCount = 0, dimmed = false, biometricsRevealed = true, ambiguousCondition = null, equipmentFailures = [], bpmDataAvailable = true, interrogationBPM = null, isInterrogationActive = false }: {
   isScanning: boolean,
   scanProgress: Animated.Value,
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
@@ -482,10 +492,15 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
   dimmed?: boolean,
   biometricsRevealed?: boolean, // Progressive revelation - biometrics visible after delay
   ambiguousCondition?: AmbiguousConditionDisplay | null, // Phase 5: Ambiguous biometric condition
+  equipmentFailures?: string[], // Phase 2: Equipment failures
+  bpmDataAvailable?: boolean, // Phase 2: Is BPM monitor working?
+  interrogationBPM?: number | null, // Phase 2: Current BPM during interrogation (null = baseline)
+  isInterrogationActive?: boolean, // Phase 2: Is interrogation currently active?
 }) => {
   const [statusText, setStatusText] = useState('READY');
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const [bpm, setBpm] = useState<string | number>(78);
+  const [baselineBPM, setBaselineBPM] = useState<string | number>(78);
   const panelOpacity = useRef(new Animated.Value(1)).current;
   
   // Layer animations
@@ -528,35 +543,36 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
     }
   }, [hudStage]);
 
+  // Phase 2: Calculate baseline BPM (stays constant until interrogation)
+  useEffect(() => {
+    if (typeof subject.bpm === 'string') {
+      setBaselineBPM(subject.bpm);
+    } else {
+      const baseBpm = subject.bpm || 78;
+      setBaselineBPM(baseBpm);
+    }
+  }, [subject.id, subject.bpm]);
+
+  // Phase 2: BPM monitoring - baseline until interrogation, then use interrogation BPM
+  useEffect(() => {
+    if (isInterrogationActive && interrogationBPM !== null) {
+      // During interrogation, use the interrogation BPM
+      setBpm(interrogationBPM);
+    } else {
+      // Before interrogation, use baseline BPM
+      setBpm(baselineBPM);
+    }
+  }, [isInterrogationActive, interrogationBPM, baselineBPM]);
+
   useEffect(() => {
     if (hudStage !== 'full') {
       setStatusText('INITIALIZING...');
       return;
     }
 
-    // Calculate stress increase from repeated BUSINESS probes
-    const stressIncrease = businessProbeCount > 1 ? Math.min((businessProbeCount - 1) * 8, 40) : 0; // +8 BPM per repeat, max +40
-
     if (!isScanning) {
-      // Calculate base BPM with stress from repeated BUSINESS probes
-      if (typeof subject.bpm === 'string') {
-        // For fixed BPM strings, keep as-is (they're usually special cases like "60 BPM (fixed)")
-        setBpm(subject.bpm);
-      } else {
-        const baseBpm = subject.bpm || 78;
-        setBpm(baseBpm + stressIncrease);
-      }
       setStatusText('READY');
       return;
-    }
-
-    // If subject has fixed BPM string, use it
-    if (typeof subject.bpm === 'string') {
-      setBpm(subject.bpm);
-    } else {
-      // Calculate base BPM with stress from repeated BUSINESS probes
-      const baseBpm = subject.bpm || 78;
-      setBpm(baseBpm + stressIncrease);
     }
 
     const listener = scanProgress.addListener(({ value }) => {
@@ -568,25 +584,10 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
       } else {
         setStatusText('COMPLETE');
       }
-
-      // BPM calc if not fixed string
-      if (typeof subject.bpm !== 'string') {
-        const baseBpm = subject.bpm || 78;
-        let calculatedBpm: number;
-        
-        if (value < 0.6) {
-          calculatedBpm = Math.floor(baseBpm + (value * 26.6)); // 78 -> 94
-        } else {
-          calculatedBpm = Math.floor(94 - ((value - 0.6) * 30)); // 94 -> 82
-        }
-        
-        // Add stress increase to the calculated BPM
-        setBpm(calculatedBpm + stressIncrease);
-      }
     });
 
     return () => scanProgress.removeListener(listener);
-  }, [isScanning, scanProgress, subject, hudStage, businessProbeCount]);
+  }, [isScanning, scanProgress, hudStage]);
 
   useEffect(() => {
     Animated.loop(
@@ -650,9 +651,9 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
         <BPMMonitor
           active={true}
           delay={BUILD_SEQUENCE.bpmMonitor}
-          bpm={bpm}
+          bpm={bpmDataAvailable ? bpm : 'ERROR'}
           pulseAnim={pulseAnim}
-          dataRevealed={biometricsRevealed}
+          dataRevealed={biometricsRevealed && bpmDataAvailable}
         />
       </View>
 

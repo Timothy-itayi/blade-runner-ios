@@ -35,10 +35,18 @@ interface GameScreenProps {
   onOpenDossier?: () => void;
   onInterrogate?: () => void;
   onBioScan?: () => void;
+  bioScanUsed?: boolean; // Phase 1: Track if bio scan has been used (one-time only)
   dossierRevealed?: boolean;
   subjectResponse?: string;
   onResponseUpdate?: (response: string) => void;
+  gatheredInformation?: any; // Phase 2: Information gathered for dynamic questions
   isNewGame?: boolean;
+  onBPMChange?: (bpm: number) => void; // Phase 2: BPM change callback
+  onInformationUpdate?: (info: Partial<any>) => void; // Phase 2: Information update callback
+  equipmentFailures?: string[]; // Phase 2: Equipment failures
+  bpmDataAvailable?: boolean; // Phase 2: Is BPM monitor working?
+  interrogationBPM?: number | null; // Phase 2: Current BPM during interrogation
+  isInterrogationActive?: boolean; // Phase 2: Is interrogation active?
 }
 
 export const GameScreen = ({
@@ -64,10 +72,18 @@ export const GameScreen = ({
   onOpenDossier,
   onInterrogate,
   onBioScan,
+  bioScanUsed = false,
   dossierRevealed = false,
   subjectResponse = '',
   onResponseUpdate,
+  gatheredInformation,
   isNewGame = false,
+  onBPMChange,
+  onInformationUpdate,
+  equipmentFailures = [],
+  bpmDataAvailable = true,
+  interrogationBPM = null,
+  isInterrogationActive = false,
 }: GameScreenProps) => {
   // Channel toggle removed - always show facial view
   const viewChannel: 'facial' | 'eye' = 'facial';
@@ -96,6 +112,10 @@ export const GameScreen = ({
             businessProbeCount={0}
             dimmed={false}
             biometricsRevealed={biometricsRevealed}
+            equipmentFailures={equipmentFailures}
+            bpmDataAvailable={bpmDataAvailable}
+            interrogationBPM={interrogationBPM}
+            isInterrogationActive={isInterrogationActive}
           />
           <EyeDisplay 
             isScanning={isScanning} 
@@ -124,6 +144,7 @@ export const GameScreen = ({
             onBioScan={onBioScan}
             viewChannel={viewChannel}
             resourcesRemaining={resourcesRemaining}
+            bioScanUsed={bioScanUsed}
           />
 
         <IntelPanel 
@@ -139,6 +160,9 @@ export const GameScreen = ({
           resourcesRemaining={resourcesRemaining}
           subjectResponse={subjectResponse}
           onResponseUpdate={onResponseUpdate}
+          gatheredInformation={gatheredInformation}
+          onBPMChange={onBPMChange}
+          onInformationUpdate={onInformationUpdate}
         />
         
         {/* Decision buttons - always visible */}
@@ -150,6 +174,14 @@ export const GameScreen = ({
             disabled={isScanning}
             hasDecision={hasDecision}
             isNewGame={isNewGame}
+            hasUsedResource={
+              // Phase 2: Require at least 1 resource to be used (bio scan, warrant check, transit log, or incident history)
+              gatheredInformation?.bioScan || 
+              gatheredInformation?.warrantCheck || 
+              gatheredInformation?.transitLog || 
+              gatheredInformation?.incidentHistory || 
+              false
+            }
             protocolStatus={{
               scanComplete: !isScanning,
               credentialViewed: false,

@@ -113,6 +113,7 @@ export const ScanData = ({
   onBioScan,
   viewChannel = 'facial',
   resourcesRemaining = 0,
+  bioScanUsed = false, // Phase 1: Track if bio scan has been used (one-time only, memory model)
 }: { 
   id: string, 
   isScanning: boolean, 
@@ -124,6 +125,7 @@ export const ScanData = ({
   onBioScan?: () => void,
   viewChannel?: 'facial' | 'eye',
   resourcesRemaining?: number,
+  bioScanUsed?: boolean,
 }) => {
   const getStatusLine = () => {
     if (!hasDecision) {
@@ -191,16 +193,16 @@ export const ScanData = ({
           <TouchableOpacity 
             style={[
               styles.bioScanButton,
-              resourcesRemaining === 0 && styles.channelToggleButtonDisabled
+              (resourcesRemaining === 0 || bioScanUsed) && styles.channelToggleButtonDisabled
             ]}
             onPress={onBioScan}
-            disabled={resourcesRemaining === 0}
+            disabled={resourcesRemaining === 0 || bioScanUsed}
           >
             <Text style={[
               styles.channelToggleText,
-              resourcesRemaining === 0 && styles.channelToggleTextDisabled
+              (resourcesRemaining === 0 || bioScanUsed) && styles.channelToggleTextDisabled
             ]}>
-              BIO SCAN
+              {bioScanUsed ? 'BIO SCAN [USED]' : 'BIO SCAN'}
             </Text>
           </TouchableOpacity>
         </View>

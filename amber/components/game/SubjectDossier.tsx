@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Pressable, Animated, ScrollView, StyleSheet, Image } from 'react-native';
 import { SubjectData } from '../../data/subjects';
 import { HUDBox } from '../ui/HUDBox';
 import { Theme } from '../../constants/theme';
 import { TypewriterText } from '../ui/ScanData';
 import { BUILD_SEQUENCE } from '../../constants/animations';
+import { generateDossierGaps, isFieldMissing, getRedactedValue, DossierGaps } from '../../utils/dossierGaps';
 
 export const SubjectDossier = ({
   data,
@@ -19,6 +20,8 @@ export const SubjectDossier = ({
   onClose: () => void,
   dossierRevealed?: boolean
 }) => {
+  // Phase 2: Generate dossier gaps (deterministic per subject)
+  const dossierGaps = useMemo(() => generateDossierGaps(data.id), [data.id]);
 
   return (
     <View style={styles.overlay}>
@@ -91,19 +94,47 @@ export const SubjectDossier = ({
                 <View style={styles.dossierContent}>
                   <View style={styles.dossierRow}>
                     <Text style={styles.dossierLabel}>DATE OF BIRTH:</Text>
-                    <Text style={styles.dossierValue}>{data.dossier.dateOfBirth}</Text>
+                    <Text style={[
+                      styles.dossierValue,
+                      isFieldMissing(dossierGaps, 'dateOfBirth') && styles.redactedValue
+                    ]}>
+                      {isFieldMissing(dossierGaps, 'dateOfBirth') 
+                        ? getRedactedValue('dateOfBirth') 
+                        : data.dossier.dateOfBirth}
+                    </Text>
                   </View>
                   <View style={styles.dossierRow}>
                     <Text style={styles.dossierLabel}>ADDRESS:</Text>
-                    <Text style={styles.dossierValue}>{data.dossier.address}</Text>
+                    <Text style={[
+                      styles.dossierValue,
+                      isFieldMissing(dossierGaps, 'address') && styles.redactedValue
+                    ]}>
+                      {isFieldMissing(dossierGaps, 'address') 
+                        ? getRedactedValue('address') 
+                        : data.dossier.address}
+                    </Text>
                   </View>
                   <View style={styles.dossierRow}>
                     <Text style={styles.dossierLabel}>OCCUPATION:</Text>
-                    <Text style={styles.dossierValue}>{data.dossier.occupation}</Text>
+                    <Text style={[
+                      styles.dossierValue,
+                      isFieldMissing(dossierGaps, 'occupation') && styles.redactedValue
+                    ]}>
+                      {isFieldMissing(dossierGaps, 'occupation') 
+                        ? getRedactedValue('occupation') 
+                        : data.dossier.occupation}
+                    </Text>
                   </View>
                   <View style={styles.dossierRow}>
                     <Text style={styles.dossierLabel}>SEX:</Text>
-                    <Text style={styles.dossierValue}>{data.dossier.sex}</Text>
+                    <Text style={[
+                      styles.dossierValue,
+                      isFieldMissing(dossierGaps, 'sex') && styles.redactedValue
+                    ]}>
+                      {isFieldMissing(dossierGaps, 'sex') 
+                        ? getRedactedValue('sex') 
+                        : data.dossier.sex}
+                    </Text>
                   </View>
                 </View>
               </>
@@ -323,6 +354,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
     lineHeight: 16,
+  },
+  redactedValue: {
+    color: Theme.colors.textDim,
+    fontStyle: 'italic',
+    opacity: 0.7,
   },
   dossierPlaceholder: {
     marginTop: 12,

@@ -10,6 +10,13 @@ interface VerificationDrawerProps {
   onClose: () => void;
   onQueryPerformed?: (queryType: 'WARRANT' | 'TRANSIT' | 'INCIDENT') => void;
   resourcesRemaining?: number;
+  // Phase 1: Track information gathered
+  onInformationGathered?: (queryType: 'WARRANT' | 'TRANSIT' | 'INCIDENT') => void;
+  gatheredInformation?: {
+    warrantCheck: boolean;
+    transitLog: boolean;
+    incidentHistory: boolean;
+  };
 }
 
 type QueryType = 'WARRANT' | 'TRANSIT' | 'INCIDENT';
@@ -23,7 +30,14 @@ const QUERY_LABELS: Record<QueryType, string> = {
 // Operator ID - in production this would come from auth context
 const OPERATOR_ID = 'OP-7734';
 
-export const VerificationDrawer = ({ subject, onClose, onQueryPerformed, resourcesRemaining = 0 }: VerificationDrawerProps) => {
+export const VerificationDrawer = ({ 
+  subject, 
+  onClose, 
+  onQueryPerformed, 
+  resourcesRemaining = 0,
+  onInformationGathered,
+  gatheredInformation = { warrantCheck: false, transitLog: false, incidentHistory: false },
+}: VerificationDrawerProps) => {
   const [activeCheck, setActiveCheck] = useState<QueryType | null>(null);
   const [queriesPerformed, setQueriesPerformed] = useState<Set<string>>(new Set());
   const [queryTimestamps, setQueryTimestamps] = useState<Record<string, string>>({});
@@ -72,11 +86,22 @@ export const VerificationDrawer = ({ subject, onClose, onQueryPerformed, resourc
       return; // Don't allow selection if no resources
     }
     
+    // Phase 1: Memory model - cannot reuse queries (one-time only)
+    const alreadyUsed = 
+      (check === 'WARRANT' && gatheredInformation.warrantCheck) ||
+      (check === 'TRANSIT' && gatheredInformation.transitLog) ||
+      (check === 'INCIDENT' && gatheredInformation.incidentHistory);
+    
+    if (alreadyUsed) {
+      return; // Already used, cannot replay
+    }
+    
     setActiveCheck(check);
     if (!queriesPerformed.has(check)) {
       setQueriesPerformed(prev => new Set(prev).add(check));
       setQueryTimestamps(prev => ({ ...prev, [check]: getTimestamp() }));
       onQueryPerformed?.(check); // This will use a resource
+      onInformationGathered?.(check); // Phase 1: Track information gathered
     }
   };
 

@@ -26,6 +26,7 @@ export const DecisionButtons = ({
   hasDecision,
   protocolStatus,
   isNewGame = false,
+  hasUsedResource = false, // Phase 2: Require at least 1 resource to be used
 }: { 
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
   onDecision: (type: 'APPROVE' | 'DENY') => void,
@@ -34,6 +35,7 @@ export const DecisionButtons = ({
   hasDecision: boolean,
   protocolStatus?: ProtocolStatus,
   isNewGame?: boolean, // Only animate on first game start
+  hasUsedResource?: boolean, // Phase 2: At least 1 resource must be used before decisions
 }) => {
   const { playButtonSound } = useGameAudioContext();
 
@@ -58,10 +60,10 @@ export const DecisionButtons = ({
     probesCompleted: true,
   };
 
-  // Simplified: Only require scan completion - all other checks are informational
-  // Decisions are allowed immediately after scan completes
-  const approveDisabled = disabled || !ps.scanComplete;
-  const denyDisabled = disabled || !ps.scanComplete;
+  // Phase 2: Require at least 1 resource to be used before decisions are allowed
+  // This ensures players gather some information before making decisions
+  const approveDisabled = disabled || !ps.scanComplete || !hasUsedResource;
+  const denyDisabled = disabled || !ps.scanComplete || !hasUsedResource;
 
   // When decision is made, show disabled decision buttons and a "Next" button for player control
   if (hasDecision) {

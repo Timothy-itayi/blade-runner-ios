@@ -4,6 +4,8 @@ import { SubjectData } from '../data/subjects';
 import { ShiftData } from '../constants/shifts';
 import { Outcome } from '../data/subjects';
 import { ShiftDecision } from '../components/game/ShiftTransition';
+import { GatheredInformation, createEmptyInformation } from '../types/information';
+import { determineEquipmentFailures } from '../utils/equipmentFailures';
 
 export interface GameState {
   // Subject tracking
@@ -53,6 +55,9 @@ export interface GameState {
   showSettings: boolean;
   subjectsProcessed: number;
   subjectResponse: string;
+  
+  // Information tracking (Phase 1)
+  gatheredInformation: GatheredInformation;
 }
 
 export const useGameState = (initialCredits: number = 100) => {
@@ -102,6 +107,9 @@ export const useGameState = (initialCredits: number = 100) => {
   const [showSettings, setShowSettings] = useState(false);
   const [subjectsProcessed, setSubjectsProcessed] = useState(0);
   const [subjectResponse, setSubjectResponse] = useState<string>('');
+  
+  // Information tracking (Phase 1)
+  const [gatheredInformation, setGatheredInformation] = useState<GatheredInformation>(createEmptyInformation());
   
   const scanProgress = useRef(new Animated.Value(0)).current;
   
@@ -181,6 +189,8 @@ export const useGameState = (initialCredits: number = 100) => {
     setSubjectsProcessed,
     subjectResponse,
     setSubjectResponse,
+    gatheredInformation,
+    setGatheredInformation,
     scanProgress,
   };
 };

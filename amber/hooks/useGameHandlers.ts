@@ -2,10 +2,14 @@ import { SubjectData } from '../data/subjects';
 import { ShiftData } from '../constants/shifts';
 import { Outcome } from '../data/subjects';
 import { ShiftDecision } from '../components/game/ShiftTransition';
-import { isDecisionCorrect, getNarrativeMessage, getSubjectData } from '../utils/gameHelpers';
+import { getNarrativeMessage, getSubjectData } from '../utils/gameHelpers';
 import { SUBJECTS } from '../data/subjects';
 import { isEndOfShift } from '../constants/shifts';
 import { useGameStore } from '../store/gameStore';
+import { evaluateConsequence, Consequence } from '../types/consequence';
+import { GatheredInformation } from '../types/information';
+import { checkWarningPatterns, PatternTracker } from '../utils/warningPatterns';
+import { WarningPattern } from '../components/game/SupervisorWarning';
 
 interface GameHandlersProps {
   // State setters
@@ -35,9 +39,14 @@ interface GameHandlersProps {
   triggerConsequence: boolean;
   familyNeeds: { food: number; medicine: number; housing: number };
   daysPassed: number;
+  gatheredInformation?: GatheredInformation; // Phase 3: Information gathered for consequence evaluation
   
   // Functions
   triggerScan: () => void;
+  setConsequence?: (consequence: Consequence | null) => void; // Phase 3: Store consequence result
+  onWarningPattern?: (warning: import('../components/game/SupervisorWarning').WarningPattern | null) => void; // Phase 3: Trigger supervisor warning
+  warningTracker?: import('../utils/warningPatterns').PatternTracker; // Phase 3: Pattern tracking state
+  setWarningTracker?: (tracker: import('../utils/warningPatterns').PatternTracker) => void; // Phase 3: Update pattern tracker
 }
 
 export const useGameHandlers = (props: GameHandlersProps) => {
@@ -67,28 +76,79 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     familyNeeds,
     daysPassed,
     triggerScan,
+    gatheredInformation,
+    setConsequence,
+    onWarningPattern,
+    warningTracker,
+    setWarningTracker,
   } = props;
 
   const handleDecision = (type: 'APPROVE' | 'DENY') => {
-    const correct = isDecisionCorrect(currentSubject, type, currentShift);
+    // Phase 3: Use consequence evaluation instead of binary correct/wrong
+    const defaultInfo: GatheredInformation = {
+      basicScan: true,
+      bioScan: false,
+      warrantCheck: false,
+      transitLog: false,
+      incidentHistory: false,
+      interrogation: { questionsAsked: 0, responses: [], bpmChanges: [] },
+      equipmentFailures: [],
+      bpmDataAvailable: true,
+      timestamps: {},
+    };
+    
+    const info = gatheredInformation || defaultInfo;
+    const consequence = evaluateConsequence(
+      currentSubject,
+      type,
+      info,
+      currentShift,
+      infractions
+    );
+    
+    // Store consequence for citation modal
+    setConsequence?.(consequence);
+    
+    // Phase 3: Check for supervisor warning patterns
+    if (warningTracker && setWarningTracker && onWarningPattern) {
+      const hasEquipmentFailure = (gatheredInformation?.equipmentFailures?.length || 0) > 0;
+      const warning = checkWarningPatterns(type, info, warningTracker, hasEquipmentFailure);
+      if (warning) {
+        onWarningPattern(warning);
+        // Update tracker (it's mutated in checkWarningPatterns, but we should set it for React)
+        setWarningTracker({ ...warningTracker });
+      }
+    }
+    
+    // Determine if decision was "correct" based on consequence severity
+    const correct = consequence.type === 'NONE' || consequence.type === 'WARNING';
 
     // Credits system: +3 for correct - resources used, -2 for wrong (still pay resources)
     const store = useGameStore.getState();
     const resourcesUsed = store.currentSubjectResources;
     
-    if (correct) {
-      // Earn 3 credits for correct decision, then deduct resources used
+    // Phase 3: Credits based on consequence severity
+    if (consequence.type === 'NONE') {
+      // Perfect decision: earn credits, deduct resources
       store.addCredits(3);
       if (resourcesUsed > 0) {
         store.spendCredits(resourcesUsed);
       }
-    } else {
-      // Wrong decision: lose 2 credits, still pay for resources used
-      store.spendCredits(2);
+    } else if (consequence.type === 'WARNING') {
+      // Minor issue: small credit gain
+      store.addCredits(1);
       if (resourcesUsed > 0) {
         store.spendCredits(resourcesUsed);
       }
-      setInfractions(prev => prev + 1);
+      setInfractions(prev => prev + consequence.infractionCount);
+      setTriggerConsequence(true);
+    } else {
+      // Citation or serious infraction: lose credits
+      store.spendCredits(consequence.creditsPenalty);
+      if (resourcesUsed > 0) {
+        store.spendCredits(resourcesUsed);
+      }
+      setInfractions(prev => prev + consequence.infractionCount);
       setTriggerConsequence(true);
     }
     
@@ -147,6 +207,10 @@ export const useGameHandlers = (props: GameHandlersProps) => {
 
     setDecisionOutcome(null);
     setHasDecision(false);
+    
+    // Phase 1: Reset information tracking for next subject
+    // This will be handled by the component that uses this hook
+    // by calling setGatheredInformation(createEmptyInformation())
 
     const nextIndex = (currentSubjectIndex + 1) % SUBJECTS.length;
 

@@ -7,6 +7,7 @@ import { ShiftTransition } from '../components/game/ShiftTransition';
 import { SubjectDossier } from '../components/game/SubjectDossier';
 import { BioScanModal } from '../components/game/BioScanModal';
 import { SettingsModal } from '../components/settings/SettingsModal';
+import { CitationModal } from '../components/game/CitationModal';
 // Boot components
 import { OnboardingModal } from '../components/boot/OnboardingModal';
 import { BootSequence } from '../components/boot/BootSequence';
@@ -23,9 +24,14 @@ import { saveGame, loadGame, clearSave, hasSaveData as checkHasSaveData, getSave
 // Constants
 import { styles } from '../styles/game/MainScreen.styles';
 import { SUBJECTS } from '../data/subjects';
-import { getShiftForSubject } from '../constants/shifts';
+import { getShiftForSubject, isEndOfShift } from '../constants/shifts';
 import { useGameAudioContext } from '../contexts/AudioContext';
 import { useGameStore } from '../store/gameStore';
+import { createEmptyInformation } from '../types/information';
+import { determineEquipmentFailures } from '../utils/equipmentFailures';
+import { Consequence } from '../types/consequence';
+import { SupervisorWarning, WarningPattern } from '../components/game/SupervisorWarning';
+import { createPatternTracker, checkWarningPatterns, PatternTracker } from '../utils/warningPatterns';
 
 const DEV_MODE = false; // Set to true to bypass onboarding and boot
 
@@ -40,6 +46,17 @@ export default function MainScreen() {
   const [hudStage, setHudStage] = useState<'none' | 'wireframe' | 'outline' | 'full'>(DEV_MODE ? 'full' : 'none');
   const [decisionHistory, setDecisionHistory] = useState<Record<string, 'APPROVE' | 'DENY'>>({});
   const [isNewGame, setIsNewGame] = useState(true);
+  
+  // Phase 2: BPM monitoring state
+  const [interrogationBPM, setInterrogationBPM] = useState<number | null>(null); // Current BPM during interrogation
+  const [isInterrogationActive, setIsInterrogationActive] = useState(false); // Is interrogation active?
+  
+  // Phase 3: Consequence evaluation state
+  const [consequence, setConsequence] = useState<Consequence | null>(null);
+  
+  // Phase 3: Supervisor warning state
+  const [warningTracker, setWarningTracker] = useState<PatternTracker>(createPatternTracker());
+  const [currentWarning, setCurrentWarning] = useState<WarningPattern | null>(null);
   
   // Use game state hook
   const gameState = useGameState(100);
@@ -75,6 +92,8 @@ export default function MainScreen() {
     setSubjectsProcessed,
     subjectResponse,
     setSubjectResponse,
+    gatheredInformation,
+    setGatheredInformation,
     credits: _credits,
     setCredits: _setCredits,
     familyNeeds,
@@ -149,6 +168,14 @@ export default function MainScreen() {
     familyNeeds,
     daysPassed,
     triggerScan,
+    gatheredInformation, // Phase 3: Pass gathered information for consequence evaluation
+    setConsequence, // Phase 3: Store consequence result
+    onWarningPattern: (warning) => {
+      // Phase 3: Show supervisor warning
+      setCurrentWarning(warning);
+    },
+    warningTracker, // Phase 3: Pattern tracking
+    setWarningTracker, // Phase 3: Update pattern tracker
   });
 
   const handleShiftContinue = () => {
@@ -167,6 +194,17 @@ export default function MainScreen() {
     setDossierRevealed(false); // Reset dossier for new subject
     setSubjectResponse(''); // Reset subject response
     setShowInterrogate(false); // Reset interrogation modal state
+    
+    // Phase 2: Reset information tracking for new subject with equipment failures
+    const nextSubject = getSubjectData((currentSubjectIndex + 1) % SUBJECTS.length, SUBJECTS, decisionHistory);
+    const equipmentFailures = determineEquipmentFailures(nextSubject.id);
+    setGatheredInformation(createEmptyInformation(equipmentFailures));
+    setInterrogationBPM(null); // Reset BPM
+    setIsInterrogationActive(false); // Reset interrogation state
+    setConsequence(null); // Phase 3: Reset consequence
+    setCurrentWarning(null); // Phase 3: Reset warning
+    // Phase 3: Reset warning pattern tracker for new shift
+    setWarningTracker(createPatternTracker());
     // Reset resources for new subject
     useGameStore.getState().resetSubjectResources();
     setTimeout(triggerScan, 500);
@@ -307,6 +345,23 @@ export default function MainScreen() {
     });
   };
 
+  // Phase 2: Initialize equipment failures for current subject when game starts or subject changes
+  useEffect(() => {
+    if (gamePhase === 'active' && currentSubject) {
+      // Reset interrogation state when subject changes
+      setInterrogationBPM(null);
+      setIsInterrogationActive(false);
+      
+      // Only initialize if equipment failures haven't been set yet (first time for this subject)
+      // Check if this is a new subject by comparing IDs
+      const equipmentFailures = determineEquipmentFailures(currentSubject.id);
+      if (gatheredInformation.equipmentFailures.length === 0 || 
+          !gatheredInformation.equipmentFailures.some(f => equipmentFailures.includes(f as any))) {
+        setGatheredInformation(createEmptyInformation(equipmentFailures));
+      }
+    }
+  }, [gamePhase, currentSubjectIndex, currentSubject?.id]);
+
   useEffect(() => {
     if (DEV_MODE) {
       triggerScan();
@@ -371,14 +426,33 @@ export default function MainScreen() {
                 setShowVerify(true);
               }}
               onDecision={handleDecision}
-              onNext={nextSubject}
+              onNext={() => {
+                // Phase 2: Reset information tracking for next subject with equipment failures
+                const nextSubjectData = getSubjectData((currentSubjectIndex + 1) % SUBJECTS.length, SUBJECTS, decisionHistory);
+                const equipmentFailures = determineEquipmentFailures(nextSubjectData.id);
+                setGatheredInformation(createEmptyInformation(equipmentFailures));
+                setInterrogationBPM(null); // Reset BPM
+                setIsInterrogationActive(false); // Reset interrogation state
+                setConsequence(null); // Phase 3: Reset consequence
+                nextSubject(); // Call the handler function
+              }}
               onScanHands={() => {
                 // Legacy - kept for compatibility
               }}
               onBioScan={() => {
                 const store = useGameStore.getState();
                 // BIO scan uses 1 resource (scans eyes and hands, reveals bio data and dossier)
-                if (store.useSubjectResource()) {
+                // Memory model: Once used, cannot be reused (one-time only)
+                if (store.useSubjectResource() && !gatheredInformation.bioScan) {
+                  // Track information gathered
+                  setGatheredInformation(prev => ({
+                    ...prev,
+                    bioScan: true,
+                    timestamps: {
+                      ...prev.timestamps,
+                      bioScan: Date.now(),
+                    },
+                  }));
                   setScanningHands(true);
                   // Auto-disable after scan completes and reveal dossier + bio scan modal
                   setTimeout(() => {
@@ -388,6 +462,7 @@ export default function MainScreen() {
                   }, 1500);
                 }
               }}
+              bioScanUsed={gatheredInformation.bioScan}
               onOpenDossier={() => setShowDossier(true)}
               onInterrogate={() => {
                 // Handled directly in IntelPanel
@@ -397,7 +472,32 @@ export default function MainScreen() {
               onResponseUpdate={(response) => {
                 setSubjectResponse(response);
               }}
+              gatheredInformation={gatheredInformation}
+              onBPMChange={(bpm) => {
+                // Phase 2: Update BPM when question is asked
+                setInterrogationBPM(bpm);
+                setIsInterrogationActive(true);
+              }}
+              onInformationUpdate={(info) => {
+                // Phase 2: Update gathered information
+                setGatheredInformation(prev => ({
+                  ...prev,
+                  ...info,
+                  interrogation: {
+                    ...prev.interrogation,
+                    ...(info.interrogation || {}),
+                  },
+                  timestamps: {
+                    ...prev.timestamps,
+                    ...(info.timestamps || {}),
+                  },
+                }));
+              }}
               isNewGame={isNewGame}
+              equipmentFailures={gatheredInformation.equipmentFailures}
+              bpmDataAvailable={gatheredInformation.bpmDataAvailable}
+              interrogationBPM={interrogationBPM}
+              isInterrogationActive={isInterrogationActive}
             />
 
             {showVerify && (
@@ -408,6 +508,22 @@ export default function MainScreen() {
                 onQueryPerformed={(queryType) => {
                   // Each verification query uses 1 resource
                   useGameStore.getState().useSubjectResource();
+                }}
+                onInformationGathered={(queryType) => {
+                  // Phase 1: Track information gathered
+                  setGatheredInformation(prev => ({
+                    ...prev,
+                    [queryType === 'WARRANT' ? 'warrantCheck' : queryType === 'TRANSIT' ? 'transitLog' : 'incidentHistory']: true,
+                    timestamps: {
+                      ...prev.timestamps,
+                      [queryType === 'WARRANT' ? 'warrantCheck' : queryType === 'TRANSIT' ? 'transitLog' : 'incidentHistory']: Date.now(),
+                    },
+                  }));
+                }}
+                gatheredInformation={{
+                  warrantCheck: gatheredInformation.warrantCheck,
+                  transitLog: gatheredInformation.transitLog,
+                  incidentHistory: gatheredInformation.incidentHistory,
                 }}
               />
             )}
@@ -430,6 +546,24 @@ export default function MainScreen() {
               />
             )}
 
+            {/* Phase 3: Citation Modal - Shows consequences and missed information */}
+            {hasDecision && consequence && (
+              <CitationModal
+                visible={hasDecision && consequence.type !== 'NONE'}
+                consequence={consequence}
+                onClose={() => {
+                  // Don't close immediately - let user acknowledge
+                  // Will be reset when moving to next subject
+                }}
+              />
+            )}
+
+            {/* Phase 3: Supervisor Warning - Shows mid-shift pattern warnings */}
+            <SupervisorWarning
+              visible={!!currentWarning}
+              warning={currentWarning}
+              onDismiss={() => setCurrentWarning(null)}
+            />
 
             {showShiftTransition && (
               <ShiftTransition

@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SubjectData } from '../../data/subjects';
 import { HUDBox } from '../ui/HUDBox';
 import { Theme } from '../../constants/theme';
 import { BUILD_SEQUENCE } from '../../constants/animations';
 import { TypewriterText } from '../ui/ScanData';
+import { GatheredInformation } from '../../types/information';
+import { generateDynamicQuestions } from '../../utils/questionGeneration';
 
 // Pre-defined questions that adapt to subject context
 const QUESTION_TEMPLATES = [
@@ -164,6 +166,9 @@ export const IntelPanel = ({
   resourcesRemaining = 0,
   subjectResponse = '',
   onResponseUpdate,
+  gatheredInformation, // Phase 2: Information gathered for dynamic questions
+  onBPMChange, // Phase 2: Callback when BPM changes during interrogation
+  onInformationUpdate, // Phase 2: Update gathered information
 }: { 
   data: SubjectData, 
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
@@ -178,6 +183,9 @@ export const IntelPanel = ({
   resourcesRemaining?: number,
   subjectResponse?: string,
   onResponseUpdate?: (response: string) => void,
+  gatheredInformation?: GatheredInformation,
+  onBPMChange?: (bpm: number) => void, // Phase 2: Callback when BPM changes during interrogation
+  onInformationUpdate?: (info: Partial<GatheredInformation>) => void, // Phase 2: Update gathered information
 }) => {
   const [questionsAsked, setQuestionsAsked] = useState<string[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -197,34 +205,121 @@ export const IntelPanel = ({
   // Interrogate is always available (free, 3 questions max)
   const canInterrogate = hudStage === 'full' && questionsAsked.length < 3;
 
-  // Generate available questions based on bio scan status
-  const bioScanRevealed = dossierRevealed; // Bio scan reveals dossier, so if dossier is revealed, bio scan was done
-  const availableQuestions = QUESTION_TEMPLATES.filter(q => {
-    if (questionsAsked.includes(q.id)) return false;
-    // If question requires bio scan, only show if bio scan was performed
-    if (q.requiresBioScan && !bioScanRevealed) return false;
-    return true;
-  });
+  // Phase 2: Generate dynamic questions based on gathered information
+  const defaultInfo: GatheredInformation = {
+    basicScan: true,
+    bioScan: false,
+    warrantCheck: false,
+    transitLog: false,
+    incidentHistory: false,
+    interrogation: { questionsAsked: 0, responses: [], bpmChanges: [] },
+    equipmentFailures: [],
+    bpmDataAvailable: true,
+    timestamps: {},
+  };
   
-  // Prioritize bio scan questions if available (they're more relevant)
-  const prioritizedQuestions = [
-    ...availableQuestions.filter(q => q.requiresBioScan),
-    ...availableQuestions.filter(q => !q.requiresBioScan)
-  ];
+  const info = gatheredInformation || defaultInfo;
+  const dynamicQuestions = useMemo(() => {
+    return generateDynamicQuestions(data, info);
+  }, [data.id, info.bioScan, info.warrantCheck, info.transitLog, info.incidentHistory]);
   
-  const currentQuestion = prioritizedQuestions[currentQuestionIndex] || prioritizedQuestions[0];
+  // Filter out already asked questions
+  const availableQuestions = dynamicQuestions.filter(q => !questionsAsked.includes(q.id));
+  const currentQuestion = availableQuestions[currentQuestionIndex] || availableQuestions[0];
+
+  // Phase 3: Calculate BPM change for a question with behavioral tells
+  const calculateQuestionBPM = (baseBPM: number, questionId: string, questionNumber: number, subject: SubjectData): number => {
+    // Base BPM from subject
+    let calculatedBPM = baseBPM;
+    
+    // Phase 3: Apply BPM tell modifiers
+    const bpmTells = subject.bpmTells;
+    let tellModifier = 0;
+    
+    if (bpmTells) {
+      // Base elevation from tell type
+      if (bpmTells.baseElevation) {
+        tellModifier += bpmTells.baseElevation;
+      }
+      
+      // False negative: Good liar - BPM stays calm even when lying
+      if (bpmTells.isGoodLiar && bpmTells.type === 'FALSE_NEGATIVE') {
+        // Reduce elevation significantly for good liars
+        tellModifier -= 15;
+      }
+      
+      // False positive: Genuinely stressed - elevated BPM is from stress, not deception
+      if (bpmTells.isGenuinelyStressed && bpmTells.type === 'FALSE_POSITIVE') {
+        // Add elevation for genuine stress
+        tellModifier += 10;
+      }
+      
+      // Contradiction: Claims calm but BPM elevated
+      if (bpmTells.type === 'CONTRADICTION') {
+        // Significant elevation to show contradiction
+        tellModifier += 20;
+      }
+    }
+    
+    // Questions cause BPM elevation
+    // First question: +5-15 BPM
+    // Second question: +10-25 BPM  
+    // Third question: +15-35 BPM
+    const baseElevation = 5 + (questionNumber * 5);
+    const randomVariation = Math.floor(Math.random() * 10);
+    const elevation = baseElevation + randomVariation;
+    
+    // Some questions are more stressful (bio scan related questions)
+    const isStressfulQuestion = questionId.includes('synthetic') || 
+                                 questionId.includes('replicant') || 
+                                 questionId.includes('surgery') ||
+                                 questionId.includes('fingerprint');
+    if (isStressfulQuestion) {
+      calculatedBPM += 10; // Additional elevation for stressful questions
+    }
+    
+    // Apply tell modifier
+    calculatedBPM += tellModifier;
+    
+    return Math.min(Math.max(calculatedBPM + elevation, 40), 150); // Cap between 40-150 BPM
+  };
 
   const handleAskQuestion = () => {
     if (questionsAsked.length >= 3 || !currentQuestion) return;
     
     const questionId = currentQuestion.id;
     const questionText = currentQuestion.text(data);
+    const questionNumber = questionsAsked.length + 1;
+    
     setQuestionsAsked(prev => [...prev, questionId]);
     setCurrentQuestionText(questionText);
 
     // Get subject's response
     const response = data.interrogationResponses?.responses[questionId] || 
                      generateDefaultResponse(data, questionId);
+    
+    // Phase 3: Calculate and track BPM change with behavioral tells
+    const baseBPM = typeof data.bpm === 'string' ? 
+      (parseInt(data.bpm.match(/\d+/)?.[0] || '78') || 78) : 
+      (data.bpm || 78);
+    
+    const questionBPM = calculateQuestionBPM(baseBPM, questionId, questionNumber, data);
+    
+    // Update BPM in real-time
+    onBPMChange?.(questionBPM);
+    
+    // Update gathered information
+    onInformationUpdate?.({
+      interrogation: {
+        questionsAsked: questionNumber,
+        responses: [...(info.interrogation.responses || []), response],
+        bpmChanges: [...(info.interrogation.bpmChanges || []), questionBPM],
+      },
+      timestamps: {
+        ...info.timestamps,
+        interrogation: [...(info.timestamps.interrogation || []), Date.now()],
+      },
+    });
     
     // Clear previous response first, then set new one (triggers typewriter)
     onResponseUpdate?.('');
@@ -233,10 +328,9 @@ export const IntelPanel = ({
     }, 50);
 
     // Cycle to next available question
-    if (prioritizedQuestions.length > 1) {
-      const remainingQuestions = prioritizedQuestions.filter(q => q.id !== questionId);
-      const nextIndex = remainingQuestions.length > 0 ? 0 : 0;
-      setCurrentQuestionIndex(nextIndex);
+    const remainingQuestions = availableQuestions.filter(q => q.id !== questionId);
+    if (remainingQuestions.length > 0) {
+      setCurrentQuestionIndex(0);
     }
   };
 

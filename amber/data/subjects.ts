@@ -93,8 +93,17 @@ export interface SubjectData {
   profilePic?: any; // Passport-style profile picture
   videoStartTime?: number; // Start time in seconds (default: 4)
   videoEndTime?: number; // End time in seconds for loop (default: 8)
-  bpm?: string;
+  bpm?: string | number;
   dialogue?: string;
+  
+  // Phase 3: BPM Behavioral Tells
+  bpmTells?: {
+    type: 'CONTRADICTION' | 'FALSE_POSITIVE' | 'FALSE_NEGATIVE' | 'NORMAL';
+    description: string; // e.g., "Claims calm but BPM elevated", "Elevated BPM due to genuine stress"
+    baseElevation?: number; // Additional BPM elevation for this subject (0-30)
+    isGoodLiar?: boolean; // If true, BPM stays calm even when lying
+    isGenuinelyStressed?: boolean; // If true, elevated BPM is from stress, not deception
+  };
   
   // Character brief for interrogation
   characterBrief?: {
@@ -175,10 +184,6 @@ export interface SubjectData {
     DENY: Outcome;
   };
   
-  // Directive compliance
-  shouldApprove: boolean; // Based on directive rules
-  shouldDeny: boolean;
-  
   // Dossier data (revealed by bio scan)
   dossier?: {
     name: string;
@@ -243,8 +248,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 0
       }
     },
-    shouldApprove: false,
-    shouldDeny: true,
     dossier: {
       name: 'EVA PROM',
       dateOfBirth: '3172-08-22',
@@ -262,6 +265,12 @@ export const SUBJECTS: SubjectData[] = [
       background: 'Replicant with implanted false memories. Believes she knows Jacob Price and is coming to meet him.',
       motivation: 'Desperately wants to believe her memories are real. Becomes defensive when questioned.',
       tells: ['Hesitation when asked about details', 'Contradicts herself about Jacob', 'Can\'t explain how they met', 'Gets flustered when pressed'],
+    },
+    // Phase 3: BPM tells - Contradiction (claims calm but BPM elevated)
+    bpmTells: {
+      type: 'CONTRADICTION',
+      description: 'Subject claims to be calm, but BPM shows significant elevation during questioning',
+      baseElevation: 25,
     },
     interrogationResponses: {
       responses: {
@@ -326,8 +335,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 0
       }
     },
-    shouldApprove: false,
-    shouldDeny: true,
     dossier: {
       name: 'MARA VOLKOV',
       dateOfBirth: '3158-07-22',
@@ -365,6 +372,13 @@ export const SUBJECTS: SubjectData[] = [
       bioStructure: 'STANDARD',
       geneticPurity: 94,
       augmentationLevel: 'NONE',
+    },
+    // Phase 3: BPM tells - False positive (elevated BPM but truthful - genuine stress about family)
+    bpmTells: {
+      type: 'FALSE_POSITIVE',
+      description: 'Elevated BPM likely due to genuine stress about family situation, not deception',
+      baseElevation: 15,
+      isGenuinelyStressed: true,
     },
   },
   
@@ -412,8 +426,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 1
       }
     },
-    shouldApprove: true,
-    shouldDeny: false,
     dossier: {
       name: 'JAMES CHEN',
       dateOfBirth: '3150-03-15',
@@ -493,8 +505,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 1
       }
     },
-    shouldApprove: true,
-    shouldDeny: false,
     dossier: {
       name: 'SILAS REX',
       dateOfBirth: '3145-11-08',
@@ -574,8 +584,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 0
       }
     },
-    shouldApprove: false,
-    shouldDeny: true,
     dossier: {
       name: 'VERA OKONKWO',
       dateOfBirth: '3160-05-20',
@@ -613,6 +621,13 @@ export const SUBJECTS: SubjectData[] = [
       bioStructure: 'MODIFIED',
       geneticPurity: 88,
       augmentationLevel: 'NONE',
+    },
+    // Phase 3: BPM tells - False negative (good liar, calm BPM despite lying)
+    bpmTells: {
+      type: 'FALSE_NEGATIVE',
+      description: 'Subject maintains calm BPM despite suspicious statements - possible trained liar',
+      baseElevation: -10,
+      isGoodLiar: true,
     },
   },
   
@@ -659,8 +674,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 1
       }
     },
-    shouldApprove: true,
-    shouldDeny: false,
     dossier: {
       name: 'DMITRI VOLKOV',
       dateOfBirth: '3156-09-14',
@@ -740,8 +753,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 0
       }
     },
-    shouldApprove: true,
-    shouldDeny: false,
     dossier: {
       name: 'CLARA VANCE',
       dateOfBirth: '3155-12-03',
@@ -826,8 +837,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 0
       }
     },
-    shouldApprove: false,
-    shouldDeny: true,
     dossier: {
       name: 'ELENA ROSS',
       dateOfBirth: '3170-01-18',
@@ -907,8 +916,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 0
       }
     },
-    shouldApprove: true,
-    shouldDeny: false,
     dossier: {
       name: 'YUKI TANAKA',
       dateOfBirth: '3162-08-30',
@@ -987,8 +994,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 1
       }
     },
-    shouldApprove: true,
-    shouldDeny: false,
     dossier: {
       name: 'KENJI TANAKA',
       dateOfBirth: '3164-02-14',
@@ -1067,8 +1072,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 1
       }
     },
-    shouldApprove: true,
-    shouldDeny: false,
     dossier: {
       name: 'MARCUS STONE',
       dateOfBirth: '3152-06-25',
@@ -1148,8 +1151,6 @@ export const SUBJECTS: SubjectData[] = [
         flagWeight: 0
       }
     },
-    shouldApprove: false,
-    shouldDeny: true,
     dossier: {
       name: 'NEXUS PRIME',
       dateOfBirth: '3175-01-01',

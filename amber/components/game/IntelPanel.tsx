@@ -1,9 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, PanResponder } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Animated, PanResponder, Image } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { SubjectData } from '../../data/subjects';
 import { HUDBox } from '../ui/HUDBox';
-import { Theme } from '../../constants/theme';
 import { BUILD_SEQUENCE } from '../../constants/animations';
 import { GatheredInformation } from '../../types/information';
 import { generateDynamicQuestions } from '../../utils/questionGeneration';
@@ -11,6 +10,8 @@ import { createPressureHold, createSwipeReveal } from '../../utils/gestures';
 // Phase 4: Subject interaction imports
 import { getSubjectGreeting, CommunicationStyle, COMMUNICATION_STYLE_DESCRIPTIONS } from '../../data/subjectGreetings';
 import { getSubjectCredentials, getCredentialTypeName, getExpirationStatus } from '../../data/credentialTypes';
+import { styles } from './intel/IntelPanel.styles';
+import { calculateQuestionBPM, generateDefaultResponse } from './intel/helpers/interrogation';
 
 // Phase 4: Interaction phase type
 type InteractionPhase = 'greeting' | 'credentials' | 'investigation';
@@ -18,143 +19,6 @@ type InteractionPhase = 'greeting' | 'credentials' | 'investigation';
 // Phase 3: Carousel mode type
 type PanelMode = 'verification' | 'dossier' | 'interrogation';
 
-// Pre-defined questions that adapt to subject context
-const QUESTION_TEMPLATES = [
-  {
-    id: 'origin',
-    text: (subject: SubjectData) => `Why are you coming to Earth from ${subject.originPlanet}?`,
-    requiresBioScan: false,
-  },
-  {
-    id: 'purpose',
-    text: (subject: SubjectData) => `What is your specific purpose for this visit?`,
-    requiresBioScan: false,
-  },
-  {
-    id: 'duration',
-    text: (subject: SubjectData) => `How long do you plan to stay on Earth?`,
-    requiresBioScan: false,
-  },
-  {
-    id: 'background',
-    text: (subject: SubjectData) => `Tell me about your background.`,
-    requiresBioScan: false,
-  },
-  {
-    id: 'previous',
-    text: (subject: SubjectData) => `Have you been to Earth before?`,
-    requiresBioScan: false,
-  },
-  // Bio scan-based questions (only available after bio scan)
-  {
-    id: 'surgery',
-    text: (subject: SubjectData) => {
-      const bioData = subject.bioScanData;
-      if (bioData?.biologicalType === 'REPLICANT') {
-        return `The scan shows synthetic markers. Can you explain this?`;
-      }
-      if (bioData?.augmentationLevel && bioData.augmentationLevel !== 'NONE') {
-        return `The scan detected recent surgical modifications. What was the procedure for?`;
-      }
-      return `The scan shows surgical scars. Can you explain these?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['surgery', 'augmentation', 'synthetic'],
-  },
-  {
-    id: 'hairDye',
-    text: (subject: SubjectData) => {
-      const bioData = subject.bioScanData;
-      // This would need to be in bio scan data - for now use generic
-      return `The scan detected artificial hair dye. Why did you dye your hair recently?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['hairDye', 'dye'],
-  },
-  {
-    id: 'fingerprint',
-    text: (subject: SubjectData) => {
-      const bioData = subject.bioScanData;
-      if (bioData?.fingerprintType === 'REPLICANT') {
-        return `Your fingerprints don't match standard human patterns. Can you explain?`;
-      }
-      if (!subject.biometricData.fingerprintMatch) {
-        return `The scan shows your fingerprints have been modified. When and why?`;
-      }
-      return `The scan shows fingerprint anomalies. Can you explain this?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['fingerprint', 'replicant'],
-  },
-  {
-    id: 'cybernetic',
-    text: (subject: SubjectData) => {
-      const bioData = subject.bioScanData;
-      if (bioData?.biologicalType === 'HUMAN_CYBORG') {
-        return `The scan detected cybernetic augmentations. What modifications have you undergone?`;
-      }
-      return `The scan shows augmentation markers. Can you explain these?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['cybernetic', 'augmentation', 'cyborg'],
-  },
-  {
-    id: 'recent',
-    text: (subject: SubjectData) => {
-      return `The scan shows very recent surgical modifications. Why did you have surgery so recently?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['recent', 'surgery'],
-  },
-  {
-    id: 'synthetic',
-    text: (subject: SubjectData) => {
-      return `The scan indicates synthetic biological markers. Can you explain your biological status?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['synthetic', 'replicant'],
-  },
-  {
-    id: 'family',
-    text: (subject: SubjectData) => {
-      return `The scan shows genetic markers matching another processed subject. Are you related?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['family', 'genetic'],
-  },
-  {
-    id: 'facial',
-    text: (subject: SubjectData) => {
-      return `The scan detected extensive facial reconstruction surgery. What happened?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['facial', 'reconstruction'],
-  },
-  {
-    id: 'retinal',
-    text: (subject: SubjectData) => {
-      return `The scan shows retinal enhancement markers. Why do you have enhanced vision?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['retinal', 'enhancement'],
-  },
-  {
-    id: 'amputee',
-    text: (subject: SubjectData) => {
-      return `The scan detected a prosthetic limb. How did you lose your limb?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['amputee', 'prosthetic'],
-  },
-  {
-    id: 'gold',
-    text: (subject: SubjectData) => {
-      return `The scan shows unusual gold-colored irises. Can you explain this anomaly?`;
-    },
-    requiresBioScan: true,
-    bioScanTrigger: ['gold', 'iris'],
-  },
-];
 
 // Phase 5: Ambiguous biometric condition type
 interface AmbiguousConditionDisplay {
@@ -266,91 +130,6 @@ export const IntelPanel = ({
   const availableQuestions = dynamicQuestions.filter(q => !questionsAsked.includes(q.id));
   const currentQuestion = availableQuestions[currentQuestionIndex] || availableQuestions[0];
 
-  const generateDefaultResponse = (subject: SubjectData, questionId: string): string => {
-    // Check if subject has a specific response for this question
-    if (subject.interrogationResponses?.responses[questionId]) {
-      return subject.interrogationResponses.responses[questionId];
-    }
-    
-    // Fallback to default responses
-    if (questionId === 'origin') {
-      return `I need to get to Earth. ${subject.reasonForVisit}`;
-    }
-    if (questionId === 'purpose') {
-      return subject.reasonForVisit;
-    }
-    if (questionId === 'duration') {
-      return "As long as necessary. I have valid documentation.";
-    }
-    if (questionId === 'background') {
-      return subject.dossier?.occupation ? 
-        `I'm a ${subject.dossier.occupation.toLowerCase()}. That's all you need to know.` :
-        "That's personal information.";
-    }
-    if (questionId === 'previous') {
-      return "Maybe. I don't remember. Why does it matter?";
-    }
-    // Bio scan questions should always have responses defined in subject data
-    return "I don't have to answer that.";
-  };
-
-  // Phase 3: Calculate BPM change for a question with behavioral tells
-  const calculateQuestionBPM = (baseBPM: number, questionId: string, questionNumber: number, subject: SubjectData): number => {
-    // Base BPM from subject
-    let calculatedBPM = baseBPM;
-    
-    // Phase 3: Apply BPM tell modifiers
-    const bpmTells = subject.bpmTells;
-    let tellModifier = 0;
-    
-    if (bpmTells) {
-      // Base elevation from tell type
-      if (bpmTells.baseElevation) {
-        tellModifier += bpmTells.baseElevation;
-      }
-      
-      // False negative: Good liar - BPM stays calm even when lying
-      if (bpmTells.isGoodLiar && bpmTells.type === 'FALSE_NEGATIVE') {
-        // Reduce elevation significantly for good liars
-        tellModifier -= 15;
-      }
-      
-      // False positive: Genuinely stressed - elevated BPM is from stress, not deception
-      if (bpmTells.isGenuinelyStressed && bpmTells.type === 'FALSE_POSITIVE') {
-        // Add elevation for genuine stress
-        tellModifier += 10;
-      }
-      
-      // Contradiction: Claims calm but BPM elevated
-      if (bpmTells.type === 'CONTRADICTION') {
-        // Significant elevation to show contradiction
-        tellModifier += 20;
-      }
-    }
-    
-    // Questions cause BPM elevation
-    // First question: +5-15 BPM
-    // Second question: +10-25 BPM  
-    // Third question: +15-35 BPM
-    const baseElevation = 5 + (questionNumber * 5);
-    const randomVariation = Math.floor(Math.random() * 10);
-    const elevation = baseElevation + randomVariation;
-    
-    // Some questions are more stressful (bio scan related questions)
-    const isStressfulQuestion = questionId.includes('synthetic') || 
-                                 questionId.includes('replicant') || 
-                                 questionId.includes('surgery') ||
-                                 questionId.includes('fingerprint');
-    if (isStressfulQuestion) {
-      calculatedBPM += 10; // Additional elevation for stressful questions
-    }
-    
-    // Apply tell modifier
-    calculatedBPM += tellModifier;
-    
-    return Math.min(Math.max(calculatedBPM + elevation, 40), 150); // Cap between 40-150 BPM
-  };
-
   const handleAskQuestion = () => {
     if (questionsAsked.length >= 3 || !currentQuestion) return;
     
@@ -404,6 +183,73 @@ export const IntelPanel = ({
   // Verification button only active when HUD is full
   // Note: Clean subject check removed - verification available for all subjects
   const verificationDisabled = hudStage !== 'full';
+
+  // Phase 4: Investigation carousel (single module at a time)
+  // Order: DOSSIER -> VERIFICATION -> INTERROGATE
+  const INVESTIGATION_ORDER: PanelMode[] = ['dossier', 'verification', 'interrogation'];
+  const [investigationMode, setInvestigationMode] = useState<PanelMode>('dossier');
+  const investigationSwipeOffset = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (interactionPhase === 'investigation') {
+      setInvestigationMode('dossier');
+      investigationSwipeOffset.setValue(0);
+    }
+  }, [interactionPhase]);
+
+  const investigationPanResponder = useMemo(() => {
+    const switchTo = (next: PanelMode) => {
+      setInvestigationMode(next);
+      Animated.spring(investigationSwipeOffset, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 80,
+        friction: 12,
+      }).start();
+    };
+
+    const reset = () => {
+      Animated.spring(investigationSwipeOffset, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 80,
+        friction: 12,
+      }).start();
+    };
+
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => interactionPhase === 'investigation',
+      onMoveShouldSetPanResponder: (_evt, gestureState) => {
+        if (interactionPhase !== 'investigation') return false;
+        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        if (interactionPhase !== 'investigation') return;
+        const clamped = Math.max(-90, Math.min(90, gestureState.dx));
+        investigationSwipeOffset.setValue(clamped);
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        if (interactionPhase !== 'investigation') return reset();
+
+        const currentIndex = INVESTIGATION_ORDER.indexOf(investigationMode);
+        const dx = gestureState.dx;
+
+        // Swipe left -> next module, swipe right -> previous module
+        if (dx < -60 && currentIndex < INVESTIGATION_ORDER.length - 1) {
+          switchTo(INVESTIGATION_ORDER[currentIndex + 1]);
+          return;
+        }
+        if (dx > 60 && currentIndex > 0) {
+          switchTo(INVESTIGATION_ORDER[currentIndex - 1]);
+          return;
+        }
+
+        reset();
+      },
+      onPanResponderTerminate: () => reset(),
+      onPanResponderTerminationRequest: () => true,
+    });
+  }, [interactionPhase, investigationMode]);
 
   // Phase 3: Verification drawer swipe state
   const [verificationDrawerProgress, setVerificationDrawerProgress] = useState(0);
@@ -655,10 +501,10 @@ export const IntelPanel = ({
               credentials.map((cred, index) => {
                 const expirationStatus = getExpirationStatus(cred.expirationDate);
                 const statusColor = expirationStatus === 'VALID' 
-                  ? Theme.colors.accentApprove 
+                  ? '#4a8a5a' 
                   : expirationStatus === 'EXPIRED' 
-                  ? Theme.colors.accentDeny 
-                  : Theme.colors.accentWarn;
+                  ? '#d4534a' 
+                  : '#c9a227';
                 
                 return (
                   <View key={index} style={styles.credentialItem}>
@@ -697,129 +543,206 @@ export const IntelPanel = ({
     );
   };
 
-  // Phase 4: Render investigation phase with three distinct sections
-  const renderInvestigationPhase = () => {
-    return (
-      <View style={styles.investigationContainer}>
-        <View style={styles.sectionsRow}>
-          {/* Section 1: Verification - Swipe down to open drawer */}
-          <View style={styles.investigationSection}>
-            <Text style={styles.sectionLabel}>VERIFICATION</Text>
-            {verificationSwipeGesture ? (
-              <GestureDetector gesture={verificationSwipeGesture}>
-                <View collapsable={false} style={styles.gestureTarget}>
-                  <Animated.View
-                    style={[
-                      styles.actionButton,
-                      styles.verifyButton,
-                      verificationDisabled && styles.actionButtonDisabled,
-                      {
-                        transform: [{ translateY: verificationDrawerOffset }],
-                      },
-                    ]}
-                  >
-                    <Text style={[
-                      styles.actionButtonText,
-                      styles.verifyButtonText,
-                      verificationDisabled && styles.actionButtonTextDisabled
-                    ]}>
-                      {verificationDrawerProgress > 0 ? '↓ SWIPE' : 'DRAWER'}
-                    </Text>
-                    {verificationDrawerProgress > 0 && (
-                      <View style={[styles.drawerProgressBar, { width: `${verificationDrawerProgress * 100}%` }]} />
-                    )}
-                  </Animated.View>
-                </View>
-              </GestureDetector>
-            ) : (
-              <TouchableOpacity
-                style={[
-                  styles.actionButton,
-                  styles.verifyButton,
-                  verificationDisabled && styles.actionButtonDisabled
-                ]}
-                onPress={onRevealVerify}
-                disabled={verificationDisabled}
-              >
-                <Text style={[
-                  styles.actionButtonText,
-                  styles.verifyButtonText,
-                  verificationDisabled && styles.actionButtonTextDisabled
-                ]}>VERIFY</Text>
-              </TouchableOpacity>
-            )}
-            <Text style={styles.sectionHint}>↓ Swipe Down</Text>
-          </View>
+  const renderInvestigationCard = (mode: PanelMode) => {
+    const currentIndex = INVESTIGATION_ORDER.indexOf(investigationMode);
+    const navText = `${String(currentIndex + 1).padStart(2, '0')}/${String(INVESTIGATION_ORDER.length).padStart(2, '0')}`;
 
-          {/* Section 2: Dossier - Tap to view */}
-          <View style={styles.investigationSection}>
+    if (mode === 'dossier') {
+      const dossierUnlocked = hudStage === 'full' && dossierRevealed;
+      const dossierHasContent = dossierUnlocked && !!data.dossier;
+      const dossierZoomEnabled = dossierUnlocked && !!onOpenDossier;
+
+      return (
+        <View style={styles.investigationCard}>
+          <View style={styles.investigationCardHeader}>
             <Text style={styles.sectionLabel}>DOSSIER</Text>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.dossierButton,
-                (hudStage !== 'full' || !dossierRevealed) && styles.actionButtonDisabled
-              ]}
-              onPress={onOpenDossier}
-              disabled={hudStage !== 'full' || !dossierRevealed}
-            >
-              <Text style={[
-                styles.actionButtonText,
-                styles.dossierButtonText,
-                (hudStage !== 'full' || !dossierRevealed) && styles.actionButtonTextDisabled
-              ]}>FILE</Text>
-            </TouchableOpacity>
-            <Text style={styles.sectionHint}>Tap to Open</Text>
+            <Text style={styles.investigationNavHint}>SWIPE → {navText}</Text>
           </View>
-
-          {/* Section 3: Interrogation - Pressure hold */}
-          <View style={styles.investigationSection}>
-            <Text style={styles.sectionLabel}>INTERROGATE</Text>
-            {interrogationHoldGesture ? (
-              <GestureDetector gesture={interrogationHoldGesture}>
-                <View collapsable={false} style={styles.gestureTarget}>
-                  <View
-                    style={[
-                      styles.actionButton,
-                      styles.interrogateButton,
-                      !canInterrogate && styles.actionButtonDisabled
-                    ]}
-                  >
-                    <Text style={[
-                      styles.actionButtonText,
-                      styles.interrogateButtonText,
-                      !canInterrogate && styles.actionButtonTextDisabled
-                    ]}>
-                      {interrogationProgress > 0 ? `${Math.round(interrogationProgress * 100)}%` : 'HOLD'}
+          <TouchableOpacity
+            style={[
+              styles.dossierPreview,
+              !dossierZoomEnabled && styles.dossierPreviewDisabled,
+            ]}
+            onPress={onOpenDossier}
+            disabled={!dossierZoomEnabled}
+            activeOpacity={0.85}
+          >
+            {dossierHasContent ? (
+              <View style={{ flex: 1 }}>
+                <View style={styles.dossierPreviewHeader}>
+                  {data.profilePic ? (
+                    <Image source={data.profilePic} style={styles.dossierPreviewPhoto} />
+                  ) : (
+                    <View style={styles.dossierPreviewPhoto} />
+                  )}
+                  <View style={styles.dossierPreviewIdentity}>
+                    <Text style={styles.dossierPreviewName} numberOfLines={1}>
+                      {data.dossier?.name || data.name}
                     </Text>
-                    {interrogationProgress > 0 && (
-                      <View style={[styles.drawerProgressBar, { width: `${interrogationProgress * 100}%` }]} />
-                    )}
+                    <Text style={styles.dossierPreviewId} numberOfLines={1}>
+                      {data.id}
+                    </Text>
                   </View>
                 </View>
-              </GestureDetector>
+
+                <View style={styles.dossierPreviewBody}>
+                  <View style={styles.dossierPreviewRow}>
+                    <Text style={styles.dossierPreviewLabel}>DOB</Text>
+                    <Text style={styles.dossierPreviewValue} numberOfLines={1}>
+                      {data.dossier?.dateOfBirth || '—'}
+                    </Text>
+                  </View>
+                  <View style={styles.dossierPreviewRow}>
+                    <Text style={styles.dossierPreviewLabel}>OCCUPATION</Text>
+                    <Text style={styles.dossierPreviewValue} numberOfLines={1}>
+                      {data.dossier?.occupation || '—'}
+                    </Text>
+                  </View>
+                  <View style={styles.dossierPreviewRow}>
+                    <Text style={styles.dossierPreviewLabel}>ADDRESS</Text>
+                    <Text style={styles.dossierPreviewValue} numberOfLines={2}>
+                      {data.dossier?.address || '—'}
+                    </Text>
+                  </View>
+                  {data.dossierAnomaly && data.dossierAnomaly.type !== 'NONE' && (
+                    <View style={styles.dossierPreviewRow}>
+                      <Text style={styles.dossierPreviewLabel}>FLAG</Text>
+                      <Text style={styles.dossierPreviewValue} numberOfLines={1}>
+                        {data.dossierAnomaly.type}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.dossierPreviewFooter}>
+                  <Text style={styles.dossierPreviewHint}>TAP TO ZOOM</Text>
+                </View>
+              </View>
             ) : (
-              <TouchableOpacity
+              <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                <View>
+                  <Text style={styles.dossierPreviewName}>BIO SCAN REQUIRED</Text>
+                  <Text style={[styles.dossierPreviewId, { marginTop: 6 }]}>
+                    Dossier preview available after scan unlock.
+                  </Text>
+                </View>
+                <View style={styles.dossierPreviewFooter}>
+                  <Text style={styles.dossierPreviewHint}>
+                    {dossierUnlocked ? 'UNLOCKED — NO DATA' : 'LOCKED'}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (mode === 'verification') {
+      return (
+        <View style={styles.investigationCard}>
+          <View style={styles.investigationCardHeader}>
+            <Text style={styles.sectionLabel}>VERIFICATION</Text>
+            <Text style={styles.investigationNavHint}>← SWIPE {navText} SWIPE →</Text>
+          </View>
+
+          {verificationSwipeGesture ? (
+            <GestureDetector gesture={verificationSwipeGesture}>
+              <View collapsable={false} style={styles.verificationSwipeZone}>
+                <Animated.View style={{ transform: [{ translateY: verificationDrawerOffset }] }}>
+                  <View style={styles.verificationSwipeGrip} />
+                </Animated.View>
+                {verificationDrawerProgress > 0 && (
+                  <View
+                    style={[
+                      styles.verificationSwipeProgressFill,
+                      { width: `${verificationDrawerProgress * 100}%` },
+                    ]}
+                  />
+                )}
+              </View>
+            </GestureDetector>
+          ) : (
+            <View style={[styles.verificationSwipeZone, styles.verificationSwipeZoneDisabled]}>
+              <View style={styles.verificationSwipeGrip} />
+            </View>
+          )}
+          <Text style={styles.sectionHint}>↓ Swipe Down</Text>
+        </View>
+      );
+    }
+
+    // interrogation
+    return (
+      <View style={styles.investigationCard}>
+        <View style={styles.investigationCardHeader}>
+          <Text style={styles.sectionLabel}>INTERROGATE</Text>
+          <Text style={styles.investigationNavHint}>← SWIPE {navText}</Text>
+        </View>
+
+        {interrogationHoldGesture ? (
+          <GestureDetector gesture={interrogationHoldGesture}>
+            <View collapsable={false} style={styles.gestureTarget}>
+              <View
                 style={[
                   styles.actionButton,
                   styles.interrogateButton,
-                  !canInterrogate && styles.actionButtonDisabled
+                  !canInterrogate && styles.actionButtonDisabled,
                 ]}
-                onPress={handleAskQuestion}
-                disabled={!canInterrogate}
               >
-                <Text style={[
-                  styles.actionButtonText,
-                  styles.interrogateButtonText,
-                  !canInterrogate && styles.actionButtonTextDisabled
-                ]}>
-                  INTERROGATE
+                <Text
+                  style={[
+                    styles.actionButtonText,
+                    styles.interrogateButtonText,
+                    !canInterrogate && styles.actionButtonTextDisabled,
+                  ]}
+                >
+                  {interrogationProgress > 0 ? `${Math.round(interrogationProgress * 100)}%` : 'HOLD'}
                 </Text>
-              </TouchableOpacity>
-            )}
-            <Text style={styles.sectionHint}>Tap & Hold</Text>
-          </View>
-        </View>
+                {interrogationProgress > 0 && (
+                  <View style={[styles.drawerProgressBar, { width: `${interrogationProgress * 100}%` }]} />
+                )}
+              </View>
+            </View>
+          </GestureDetector>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              styles.interrogateButton,
+              !canInterrogate && styles.actionButtonDisabled,
+            ]}
+            onPress={handleAskQuestion}
+            disabled={!canInterrogate}
+          >
+            <Text
+              style={[
+                styles.actionButtonText,
+                styles.interrogateButtonText,
+                !canInterrogate && styles.actionButtonTextDisabled,
+              ]}
+            >
+              INTERROGATE
+            </Text>
+          </TouchableOpacity>
+        )}
+        <Text style={styles.sectionHint}>Tap & Hold</Text>
+      </View>
+    );
+  };
+
+  // Phase 4: Render investigation phase as a single swipeable carousel
+  const renderInvestigationPhase = () => {
+    return (
+      <View style={styles.investigationContainer} {...investigationPanResponder.panHandlers}>
+        <Animated.View
+          style={[
+            styles.investigationCarousel,
+            { transform: [{ translateX: investigationSwipeOffset }] },
+          ]}
+        >
+          {renderInvestigationCard(investigationMode)}
+        </Animated.View>
       </View>
     );
   };
@@ -833,340 +756,4 @@ export const IntelPanel = ({
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: Theme.colors.border,
-    minHeight: 220, // Increased height to accommodate question and response
-    flex: 1, // Utilize available space
-  },
-  mainRow: {
-    flexDirection: 'row',
-    gap: 8,
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  actionButton: {
-    flex: 1,
-    height: 50,
-    borderWidth: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  verifyButton: {
-    borderColor: Theme.colors.accentWarn,
-    backgroundColor: 'rgba(201, 162, 39, 0.1)',
-  },
-  dossierButton: {
-    borderColor: Theme.colors.textSecondary,
-    backgroundColor: 'rgba(127, 184, 216, 0.1)',
-  },
-  interrogateButton: {
-    borderColor: Theme.colors.accentApprove,
-    backgroundColor: 'rgba(74, 138, 90, 0.1)',
-  },
-  // Phase 4: Credential request button
-  credentialButton: {
-    borderColor: Theme.colors.textPrimary,
-    backgroundColor: 'rgba(127, 184, 216, 0.15)',
-  },
-  credentialButtonText: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  actionButtonDisabled: {
-    opacity: 0.3,
-    borderColor: Theme.colors.textDim,
-  },
-  actionButtonText: {
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  verifyButtonText: {
-    color: Theme.colors.accentWarn,
-  },
-  dossierButtonText: {
-    color: Theme.colors.textSecondary,
-  },
-  interrogateButtonText: {
-    color: Theme.colors.accentApprove,
-  },
-  actionButtonTextDisabled: {
-    color: Theme.colors.textDim,
-  },
-  // Phase 4: Greeting styles
-  greetingLabel: {
-    color: Theme.colors.textSecondary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
-  greetingText: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 12,
-    lineHeight: 18,
-    fontStyle: 'italic',
-  },
-  agitatedText: {
-    letterSpacing: 0,
-  },
-  brokenText: {
-    letterSpacing: 1,
-    opacity: 0.9,
-  },
-  silentText: {
-    color: Theme.colors.textDim,
-    fontStyle: 'normal',
-  },
-  // Phase 4: Credential styles
-  credentialItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(26, 42, 58, 0.5)',
-    paddingBottom: 8,
-    marginBottom: 8,
-  },
-  credentialHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  credentialType: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  credentialNumber: {
-    color: Theme.colors.textSecondary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    letterSpacing: 0.6,
-    marginTop: 2,
-    marginBottom: 4,
-    opacity: 0.9,
-  },
-  credentialDetail: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 8,
-    letterSpacing: 0.2,
-    marginTop: 2,
-    lineHeight: 12,
-  },
-  credentialExpirationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  credentialWarning: {
-    color: Theme.colors.accentDeny,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 1,
-  },
-  anomalyBadge: {
-    color: Theme.colors.accentWarn,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  anomalyText: {
-    color: Theme.colors.accentWarn,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    marginTop: 4,
-  },
-  suspiciousSection: {
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(201, 162, 39, 0.3)',
-  },
-  suspiciousLabel: {
-    color: Theme.colors.accentWarn,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  suspiciousItem: {
-    color: Theme.colors.accentWarn,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    letterSpacing: 0.5,
-    opacity: 0.8,
-  },
-  // Phase 4: Investigation layout styles
-  investigationContainer: {
-    flex: 1,
-  },
-  sectionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 12,
-  },
-  investigationSection: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-  },
-  sectionHeader: {
-    marginBottom: 8,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(26, 42, 58, 0.3)',
-  },
-  sectionLabel: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  sectionHint: {
-    color: Theme.colors.textDim,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 7,
-    letterSpacing: 0.3,
-    opacity: 0.6,
-  },
-  responseBox: {
-    flex: 1,
-    backgroundColor: 'rgba(10, 12, 15, 0.4)',
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
-    padding: 8,
-    marginTop: 8,
-  },
-  gestureTarget: {
-    width: '100%',
-    height: 50,
-  },
-  // Phase 3: Credentials swipe styles
-  swipeIndicator: {
-    alignItems: 'center',
-    marginBottom: 8,
-    paddingVertical: 4,
-  },
-  swipeIndicatorText: {
-    color: Theme.colors.textDim,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 8,
-    letterSpacing: 1,
-    opacity: 0.6,
-  },
-  credentialSwipeArea: {
-    flex: 1,
-    height: 60,
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  sliderTrack: {
-    backgroundColor: 'rgba(10, 12, 15, 0.8)',
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
-    borderRadius: 0, // Hard edges
-    overflow: 'hidden',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 0,
-  },
-  sliderHandle: {
-    width: 60,
-    height: 58,
-    borderRadius: 0, // Hard edges
-    backgroundColor: 'rgba(27, 126, 184, 0.1)',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderColor: Theme.colors.textPrimary,
-    zIndex: 3,
-    justifyContent: 'center',
-    alignItems: 'flex-start', // Align the handle content to the left
-    flexDirection: 'row',
-    position: 'absolute',
-    left: 0, // Ensure handle hugs the left—start of gate row
-    top: 0,
-    paddingTop: 4,
-  },
-  gateContainer: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingLeft: 5, // Start gates after the handle's initial width
-    paddingRight: 12,
-    zIndex: 1,
-  },
-  gateMark: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: 0.3,
-  },
-  gateMarkActive: {
-    opacity: 1,
-  },
-  gateIcon: {
-    color: Theme.colors.textDim,
-    fontSize: 14,
-  },
-  gateIconActive: {
-    color: Theme.colors.accentApprove,
-    textShadowColor: Theme.colors.accentApprove,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
-  },
-  sliderHandleText: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  sliderLabel: {
-    position: 'absolute',
-    right: 12,
-    color: Theme.colors.textDim,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 1,
-    zIndex: 2,
-    pointerEvents: 'none',
-  },
-  credentialDrawerHandle: {
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: Theme.colors.textPrimary,
-    backgroundColor: 'rgba(127, 184, 216, 0.05)',
-    position: 'relative',
-    borderRadius: 2,
-  },
-  drawerProgressBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    height: 2,
-    backgroundColor: Theme.colors.accentApprove,
-  },
-});
+// styles moved to `amber/components/game/intel/IntelPanel.styles.ts`

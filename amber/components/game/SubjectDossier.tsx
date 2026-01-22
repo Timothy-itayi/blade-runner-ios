@@ -185,13 +185,12 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(10, 12, 15, 0.95)',
     zIndex: 2000,
-    padding: 20,
-    justifyContent: 'center',
+    padding: 16,
   },
   container: {
     padding: 16,
     backgroundColor: Theme.colors.bgPanel,
-    maxHeight: '80%',
+    flex: 1,
   },
   header: {
     marginBottom: 16,
@@ -207,7 +206,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   scroll: {
-    flexGrow: 0,
+    flex: 1,
   },
   directiveSection: {
     backgroundColor: 'rgba(212, 83, 74, 0.12)',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Theme } from '../../constants/theme';
 import { Consequence } from '../../types/consequence';
 import { HUDBox } from '../ui/HUDBox';
@@ -41,102 +41,102 @@ export const CitationModal = ({ visible, consequence, onClose }: CitationModalPr
     }
   };
 
+  if (!visible) {
+    return null;
+  }
+
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View style={styles.overlay}>
-        <HUDBox hudStage="full" style={styles.container}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: getConsequenceColor() }]}>
-              {getConsequenceTitle()}
-            </Text>
-            <View style={[styles.headerLine, { backgroundColor: getConsequenceColor() }]} />
+    <View style={styles.overlay}>
+      <HUDBox hudStage="full" style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={[styles.headerTitle, { color: getConsequenceColor() }]}>
+            {getConsequenceTitle()}
+          </Text>
+        </View>
+
+        <ScrollView 
+          style={styles.scroll} 
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Main Message */}
+          <View style={styles.messageSection}>
+            <Text style={styles.messageText}>{consequence.message}</Text>
           </View>
 
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Main Message */}
-            <View style={styles.messageSection}>
-              <Text style={styles.messageText}>{consequence.message}</Text>
-            </View>
-
-            {/* Missed Information */}
-            {consequence.missedInformation.length > 0 && (
-              <View style={styles.missedSection}>
-                <Text style={styles.sectionTitle}>MISSED INFORMATION</Text>
-                {consequence.missedInformation.map((missed, index) => (
-                  <View key={index} style={styles.missedItem}>
-                    <Text style={styles.missedType}>{missed.type.replace('_', ' ')}</Text>
-                    <Text style={styles.missedDescription}>{missed.description}</Text>
-                    <View style={styles.revealBox}>
-                      <Text style={styles.revealLabel}>Would have revealed:</Text>
-                      <Text style={styles.revealText}>{missed.reveal}</Text>
-                    </View>
-                    <View style={styles.impactBox}>
-                      <Text style={styles.impactLabel}>Impact:</Text>
-                      <Text style={styles.impactText}>{missed.impact}</Text>
-                    </View>
+          {/* Missed Information */}
+          {consequence.missedInformation.length > 0 && (
+            <View style={styles.missedSection}>
+              <Text style={styles.sectionTitle}>MISSED INFORMATION</Text>
+              {consequence.missedInformation.map((missed, index) => (
+                <View key={index} style={styles.missedItem}>
+                  <Text style={styles.missedType}>{missed.type.replace('_', ' ')}</Text>
+                  <Text style={styles.missedDescription}>{missed.description}</Text>
+                  <View style={styles.revealBox}>
+                    <Text style={styles.revealLabel}>Would have revealed:</Text>
+                    <Text style={styles.revealText}>{missed.reveal}</Text>
                   </View>
-                ))}
-              </View>
-            )}
-
-            {/* Penalty Information */}
-            <View style={styles.penaltySection}>
-              <Text style={styles.sectionTitle}>PENALTY</Text>
-              <View style={styles.penaltyBox}>
-                <Text style={styles.penaltyText}>
-                  Credits deducted: {consequence.creditsPenalty}
-                </Text>
-                <Text style={styles.penaltyText}>
-                  Cumulative infractions: {consequence.infractionCount}
-                </Text>
-                <Text style={styles.penaltyText}>
-                  Severity: {consequence.severity}/100
-                </Text>
-              </View>
+                  <View style={styles.impactBox}>
+                    <Text style={styles.impactLabel}>Impact:</Text>
+                    <Text style={styles.impactText}>{missed.impact}</Text>
+                  </View>
+                </View>
+              ))}
             </View>
-          </ScrollView>
+          )}
 
-          {/* Footer */}
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.closeButton, { borderColor: getConsequenceColor() }]}
-              onPress={onClose}
-            >
-              <Text style={[styles.closeButtonText, { color: getConsequenceColor() }]}>
-                ACKNOWLEDGE
+          {/* Penalty Information */}
+          <View style={styles.penaltySection}>
+            <Text style={styles.sectionTitle}>PENALTY</Text>
+            <View style={styles.penaltyBox}>
+              <Text style={styles.penaltyText}>
+                Credits deducted: {consequence.creditsPenalty}
               </Text>
-            </TouchableOpacity>
+              <Text style={styles.penaltyText}>
+                Cumulative infractions: {consequence.infractionCount}
+              </Text>
+              <Text style={styles.penaltyText}>
+                Severity: {consequence.severity}/100
+              </Text>
+            </View>
           </View>
-        </HUDBox>
-      </View>
-    </Modal>
+        </ScrollView>
+
+        {/* Footer */}
+        <Pressable
+          onPress={onClose}
+          style={({ pressed }) => [
+            styles.footer,
+            pressed && styles.footerPressed
+          ]}
+        >
+          {({ pressed }) => (
+            <Text style={[styles.closeButton, pressed && styles.closeButtonPressed, { color: getConsequenceColor() }]}>
+              [ ACKNOWLEDGE ]
+            </Text>
+          )}
+        </Pressable>
+      </HUDBox>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10, 12, 15, 0.95)',
+    zIndex: 2000,
     padding: 20,
+    justifyContent: 'center',
   },
   container: {
-    width: '100%',
-    maxWidth: 600,
+    padding: 16,
+    backgroundColor: Theme.colors.bgPanel,
     maxHeight: '80%',
-    backgroundColor: Theme.colors.bgDark,
-    borderWidth: 2,
-    borderColor: Theme.colors.border,
   },
   header: {
-    padding: 16,
+    marginBottom: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: Theme.colors.border,
   },
@@ -145,20 +145,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 2,
-    textAlign: 'center',
-    marginBottom: 8,
+    textTransform: 'uppercase',
   },
-  headerLine: {
-    height: 2,
-    width: '100%',
-  },
-  content: {
-    flex: 1,
-    padding: 16,
+  scroll: {
+    flexGrow: 0,
   },
   messageSection: {
-    marginBottom: 20,
-    padding: 12,
+    marginBottom: 16,
+    padding: 14,
     backgroundColor: 'rgba(26, 42, 58, 0.5)',
     borderWidth: 1,
     borderColor: Theme.colors.border,
@@ -168,18 +162,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: Theme.colors.textPrimary,
+    fontWeight: '600',
   },
   sectionTitle: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
-    color: Theme.colors.textSecondary,
+    color: Theme.colors.textDim,
     marginBottom: 12,
     textTransform: 'uppercase',
   },
   missedSection: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   missedItem: {
     marginBottom: 16,
@@ -242,7 +237,7 @@ const styles = StyleSheet.create({
     color: Theme.colors.textSecondary,
   },
   penaltySection: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   penaltyBox: {
     padding: 12,
@@ -252,26 +247,29 @@ const styles = StyleSheet.create({
   },
   penaltyText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
+    fontSize: 11,
     color: Theme.colors.textPrimary,
     marginBottom: 4,
+    lineHeight: 16,
   },
   footer: {
-    padding: 16,
+    marginTop: 8,
+    paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: Theme.colors.border,
+    alignItems: 'center',
+  },
+  footerPressed: {
+    backgroundColor: 'rgba(127, 184, 216, 0.15)',
+    borderColor: Theme.colors.textSecondary,
   },
   closeButton: {
-    width: '100%',
-    padding: 14,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeButtonText: {
     fontFamily: Theme.fonts.mono,
     fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 2,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  closeButtonPressed: {
+    opacity: 0.7,
   },
 });

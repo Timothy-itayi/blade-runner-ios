@@ -1,14 +1,16 @@
-# Trello Board Structure: Information-Based Deduction System
+# Trello Board Structure: Enhanced AMBER System
 
-## Board: AMBER - Information-Based Deduction System
+## Board: AMBER - Enhanced Border Control Simulation
 
 ### Labels
 - 🔴 **Phase 1: Foundation**
-- 🟠 **Phase 2: Core Systems**
+- 🟠 **Phase 2: Core Investigation**
 - 🟡 **Phase 3: Advanced Features**
-- 🟢 **Phase 4: Polish & Testing**
-- 🔵 **Bug Fix**
-- ⚫ **Blocked**
+- 🟢 **Phase 4: Subject Interaction**
+- 🔵 **Phase 5: Factory & Generation**
+- 🟣 **Phase 6: Narrative Integration**
+- ⚫ **Bug Fix**
+- ⚪ **Blocked**
 
 ---
 
@@ -58,77 +60,82 @@ Build the core system that tracks what information the player has gathered for e
 
 #### Card: Update Resource System (Memory Model) ✅ COMPLETE
 **Description:**
-Ensure resources work like computer memory—once used, cannot be reused. No replaying bio scan audio, no re-running queries.
+Ensure resources work like computer memory—once used, cannot be reused. No replaying scan audio, no re-running queries. Updated for per-subject resource allocation.
 
 **Tasks:**
 - [x] Verify resource consumption is one-time only
-- [x] Disable bio scan button after use (cannot replay audio)
+- [x] Disable identity/health scan buttons after use (cannot replay audio)
 - [x] Disable verification queries after use (cannot re-query)
 - [x] Add visual feedback when resources are exhausted
-- [x] Test resource reset at shift start
+- [x] Test resource reset per subject (mistakes carry forward within shift)
 
 **Acceptance Criteria:**
 - ✅ Resources cannot be reused once consumed
 - ✅ Buttons properly disable after use (shows "[USED]")
-- ✅ Resources reset correctly at shift start
+- ✅ Resources reset correctly per subject
 - ✅ Visual feedback is clear
+- ✅ Mistakes carry forward within shift but reset between subjects
 
 **Files Modified:**
 - ✅ `amber/store/gameStore.ts`
-- ✅ `amber/components/ui/ScanData.tsx` (bio scan button)
+- ✅ `amber/components/ui/ScanData.tsx` (scan buttons)
 - ✅ `amber/components/game/VerificationDrawer.tsx`
 - ✅ `amber/app/index.tsx` (information tracking integration)
 
 ---
 
-## PHASE 2: Core Systems
+## PHASE 2: Core Investigation
 
-### List: 🟠 Phase 2 - Core Systems
+### List: 🟠 Phase 2 - Core Investigation
 
-#### Card: Implement Dossier Gap System ✅ COMPLETE
+#### Card: Implement Identity & Health Scan System ✅ COMPLETE
 **Description:**
-Dossiers revealed by bio scan should have random missing fields per subject.
+Split bio scan into two focused scans: Identity (eyes → dossier) and Health (body → medical data). Each reveals different mystery aspects.
 
 **Tasks:**
-- [x] Create dossier gap generation function
-- [x] Randomly remove 1-4 fields from each subject's dossier
-- [x] Update dossier display to show missing fields as "[REDACTED]" or blank
-- [x] Ensure gaps are consistent (same subject always has same gaps)
-- [x] Test with all 12 subjects
+- [x] Create identity scan system (eyes, retinal analysis, genetic markers)
+- [x] Create health scan system (body, biological anomalies, medical conditions)
+- [x] Implement one-time audio playback for each scan (RAM constraints)
+- [x] Update information tracking for identityScan/healthScan
+- [x] Test audio cannot be replayed for each scan type
 
 **Acceptance Criteria:**
-- ✅ Each subject has random missing fields in dossier
-- ✅ Missing fields are clearly indicated in UI (shown as [REDACTED])
-- ✅ Gaps are consistent per subject (deterministic based on subject ID)
-- ✅ Dossier still displays correctly with gaps
+- ✅ Identity scan reveals dossier with gaps
+- ✅ Health scan reveals medical findings
+- ✅ Audio plays once per scan (shows "[MEMORY FULL]")
+- ✅ Information tracking updated for split scans
+- ✅ Both scans require separate resources
 
 **Files Modified:**
-- ✅ `amber/utils/dossierGaps.ts` (NEW)
-- ✅ `amber/components/game/SubjectDossier.tsx` (display gaps)
+- ✅ `amber/components/ui/ScanData.tsx` (identity/health buttons)
+- ✅ `amber/types/information.ts` (identityScan/healthScan fields)
+- ✅ `amber/components/game/IdentityScanModal.tsx` (NEW)
+- ✅ `amber/components/game/HealthScanModal.tsx` (NEW)
+- ✅ `amber/app/index.tsx` (scan handlers)
 
 ---
 
-#### Card: Dynamic Interrogation Question Generation ✅ COMPLETE
+#### Card: Enhanced Question Generation ✅ COMPLETE
 **Description:**
-Interrogation questions must adapt based on what information has been gathered.
+Interrogation questions adapt based on identity/health scans and gathered information. Questions reflect the split mystery aspects.
 
 **Tasks:**
-- [x] Create question generation function that checks gathered information
-- [x] **No info**: Basic "state your business" questions
-- [x] **Some info** (bio scan OR one verification): Questions about specific findings
-- [x] **All info** (bio scan + all 3 verifications): Cross-reference questions
-- [x] Update `IntelPanel.tsx` to use dynamic questions
-- [x] Test all three question states
+- [x] Create question generation function for identity vs health findings
+- [x] **Identity questions**: Genetic markers, replicant detection, origin verification
+- [x] **Health questions**: Medical conditions, augmentations, anomalies
+- [x] **Cross-reference**: Combine identity + health + verification data
+- [x] Update question logic for subject interaction styles
+- [x] Test questions for all scan combinations
 
 **Acceptance Criteria:**
-- ✅ Questions change based on information gathered
-- ✅ No info → basic questions
-- ✅ Some info → specific questions about findings
-- ✅ All info → cross-reference questions (combines multiple findings)
-- ✅ Questions are contextually relevant
+- ✅ Identity scan generates relevant questions (who are they?)
+- ✅ Health scan generates relevant questions (what's wrong with them?)
+- ✅ Cross-reference questions combine multiple data sources
+- ✅ Questions adapt to communication styles and credential behavior
+- ✅ Contextually relevant based on subject personality
 
 **Files Modified:**
-- ✅ `amber/utils/questionGeneration.ts` (NEW)
+- ✅ `amber/utils/questionGeneration.ts`
 - ✅ `amber/components/game/IntelPanel.tsx`
 
 ---
@@ -187,27 +194,28 @@ Equipment can randomly malfunction, showing error states and preventing data col
 
 ### List: 🟡 Phase 3 - Advanced Features
 
-#### Card: BPM Behavioral Tells ✅ COMPLETE
+#### Card: Enhanced BPM System ✅ COMPLETE
 **Description:**
-Implement BPM contradictions and false positives. Some subjects have BPM that contradicts their statements.
+BPM tells with baseline established during subject entry. Enhanced behavioral analysis during interrogation.
 
 **Tasks:**
-- [x] Define BPM tell patterns for subjects
-- [x] **Contradiction**: Subject says calm but BPM elevated
-- [x] **False positive**: Elevated BPM but subject is truthful (genuine stress)
-- [x] **False negative**: Calm BPM but subject is lying (good liar)
-- [x] Add BPM tell data to subjects
-- [x] Display BPM tells in interrogation UI
+- [x] Define BPM baseline from greeting + credential interaction
+- [x] **Entry BPM**: Silent subjects = suspicious baseline, agitated = elevated
+- [x] **Interrogation tells**: Contradictions, false positives, false negatives
+- [x] Display BPM tells with personality context
+- [x] Update BPM calculation for subject interaction styles
 
 **Acceptance Criteria:**
-- ✅ BPM contradictions are visible
-- ✅ False positives exist (elevated BPM but truthful)
-- ✅ False negatives exist (calm BPM but lying)
-- ✅ Player must interpret, not just react to numbers
+- ✅ BPM baseline established from subject entry
+- ✅ Entry interaction affects initial BPM readings
+- ✅ Interrogation tells work with personality context
+- ✅ False positives/negatives exist and are interpretable
+- ✅ BPM reflects communication style and credential behavior
 
 **Files Modified:**
-- ✅ `amber/data/subjects.ts` (add BPM tell data to subjects)
-- ✅ `amber/components/game/IntelPanel.tsx` (BPM calculation with tells, display contradictions)
+- ✅ `amber/data/subjects.ts` (enhanced BPM tell data)
+- ✅ `amber/components/game/IntelPanel.tsx` (BPM with personality)
+- ✅ `amber/components/game/SubjectEntryModal.tsx` (baseline establishment)
 
 ---
 
@@ -316,118 +324,290 @@ Multiple infractions lead to worse consequences. Track cumulative infractions.
 
 ---
 
-## PHASE 4: Polish & Testing
+## PHASE 4: Subject Interaction
 
-### List: 🟢 Phase 4 - Polish & Testing
+### List: 🟢 Phase 4 - Subject Interaction
 
-#### Card: Equipment Repair System
+#### Card: Subject Greeting System ✅ COMPLETE
 **Description:**
-Players can repair broken equipment using credits over time.
+Implement mandatory subject entry with greetings and communication styles.
 
 **Tasks:**
-- [ ] Add repair option to UI (settings or main screen)
-- [ ] Repair costs credits
-- [ ] Repair takes time (or instant?)
-- [ ] Visual feedback when equipment is repaired
-- [ ] Test repair flow
+- [x] Create SubjectGreetingModal component
+- [x] Implement 6 communication styles (fluent, broken, gibberish, silent, agitated, formal)
+- [x] Add greeting audio/text for each subject
+- [x] Establish BPM baseline from greeting interaction
+- [x] Test greeting sequence with all subject types
 
 **Acceptance Criteria:**
-- Players can repair equipment
-- Repair costs are balanced
-- Repair works correctly
-- UI is clear and intuitive
+- ✅ Subjects greet players with personality-based dialogue
+- ✅ Communication styles create immediate character impressions
+- ✅ BPM baseline reflects greeting interaction
+- ✅ Greeting is mandatory before investigation
+- ✅ All 6 communication styles implemented and tested
+
+**Files Created:**
+- ✅ `amber/components/game/SubjectGreetingModal.tsx`
+- ✅ `amber/data/subjectGreetings.ts`
+
+---
+
+#### Card: Credential Presentation System ✅ COMPLETE
+**Description:**
+Implement credential examination system with different presentation behaviors.
+
+**Tasks:**
+- [x] Create CredentialViewer component
+- [x] Implement 6 credential types (passport, permit, clearance, etc.)
+- [x] Add 6 presentation behaviors (cooperative, reluctant, missing, forged, multiple, none)
+- [x] Allow player examination of credential details
+- [x] Test credential examination with all subject types
+
+**Acceptance Criteria:**
+- ✅ Subjects present credentials with varied behaviors
+- ✅ Players can examine credential details (name, origin, purpose, validity)
+- ✅ Credential presentation affects subject interaction flow
+- ✅ All credential types and behaviors implemented
+- ✅ Credential examination is optional but informative
+
+**Files Created:**
+- ✅ `amber/components/game/CredentialViewer.tsx`
+- ✅ `amber/data/credentialTypes.ts`
+
+---
+
+#### Card: Enhanced Subject Personality System ✅ COMPLETE
+**Description:**
+Implement personality-driven subject interactions that affect investigation.
+
+**Tasks:**
+- [x] Add personality traits to subjects (nervous, confident, deceptive, etc.)
+- [x] Link personality to communication styles and credential behaviors
+- [x] Create personality-specific interrogation responses
+- [x] Test personality consistency across interactions
+- [x] Balance personality variety with investigation clarity
+
+**Acceptance Criteria:**
+- ✅ Subjects have distinct personalities that affect interactions
+- ✅ Personality traits are reflected in greetings and responses
+- ✅ Investigation adapts to subject personality
+- ✅ Creates engaging character variety without confusion
+- ✅ Personality enhances but doesn't obscure investigation
+
+**Files Modified:**
+- ✅ `amber/data/subjects.ts` (added PersonalityTraits interface and data for all 12 subjects)
+- ✅ `amber/utils/questionGeneration.ts` (added personality-aware question generation)
+
+---
+
+#### Card: Subject Interaction Testing ✅ COMPLETE
+**Description:**
+Test the complete subject entry and interaction flow.
+
+**Tasks:**
+- [x] Test subject greeting system with all communication styles
+- [x] Test credential presentation with all behavior types
+- [x] Test BPM baseline establishment from entry interactions
+- [x] Test identity/health scan integration with subject personality
+- [x] Test complete flow: Entry → Investigation → Decision
+- [x] Test edge cases (silent subjects, missing credentials, etc.)
+
+**Acceptance Criteria:**
+- ✅ Subject entry creates engaging first impressions
+- ✅ Credential examination provides useful information
+- ✅ Entry interactions affect BPM and investigation
+- ✅ Complete subject processing flow works smoothly
+- ✅ All interaction types enhance gameplay without frustration
+
+---
+
+#### Card: Enhanced Game Balance ✅ COMPLETE
+**Description:**
+Balance per-subject resources, subject interaction variety, and consequence severity.
+
+**Tasks:**
+- [x] Tune per-subject resource allocation (3 resources enough?)
+- [x] Balance identity vs health scan strategic choices
+- [x] Tune subject personality distribution and interaction variety
+- [x] Balance citation severity with family message pacing
+- [x] Playtest subject entry engagement and investigation flow
+
+**Acceptance Criteria:**
+- ✅ Per-subject resources create meaningful scarcity
+- ✅ Identity/health scan split requires strategic thinking
+- ✅ Subject interactions enhance engagement without frustration
+- ✅ Citations provide tension without unfair punishment
+- ✅ Complete subject processing feels rewarding
+
+**Implementation Notes:**
+- Greeting modal establishes BPM baseline with personality modifiers
+- Credential viewer shows suspicious details and anomalies
+- Question generation adapts to personality type (pressure levels)
+- BPM calculation considers emotional stability and personality targeting
+
+---
+
+## PHASE 5: Factory & Generation
+
+### List: 🔵 Phase 5 - Factory & Generation
+
+#### Card: Subject Trait System ✅ COMPLETE
+**Description:**
+Implement the 3-trait subject factory system for procedural generation.
+
+**Tasks:**
+- [x] Define subject traits: SubjectType, HierarchyTier, OriginPlanet
+- [x] Create trait combination validation (avoid impossible combinations)
+- [x] Implement trait-based subject generation
+- [x] Add manual override system for narrative-critical subjects
+- [x] Test trait combinations create coherent subjects
+
+**Acceptance Criteria:**
+- ✅ 3-trait system generates 72+ subject combinations
+- ✅ Trait combinations create believable subjects
+- ✅ Manual overrides preserve key narrative subjects
+- ✅ Factory system is extensible for future content
+- ✅ Generated subjects maintain game balance
+
+**Files Created:**
+- ✅ `amber/data/subjectTraits.ts`
+- ✅ `amber/utils/subjectFactory.ts`
+
+#### Card: Asset Assignment System ✅ COMPLETE
+**Description:**
+Create system for assigning assets (videos, audio, images) to generated subjects.
+
+**Tasks:**
+- [x] Create asset pools per trait combination
+- [x] Implement fallback asset assignment
+- [x] Add manual asset override capability
+- [x] Test asset loading for generated subjects
+- [x] Ensure asset variety without repetition
+
+**Acceptance Criteria:**
+- ✅ Generated subjects have appropriate assets
+- ✅ Asset pools provide sufficient variety
+- ✅ Manual overrides work for special subjects
+- ✅ No asset loading errors
+- ✅ Visual consistency maintained
+
+**Files Created:**
+- ✅ `amber/data/assetPools.ts`
+- ✅ `amber/utils/subjectFactory.ts` (asset assignment integrated)
+
+#### Card: Procedural Balance Testing
+**Description:**
+Test generated subjects maintain game balance and challenge.
+
+**Tasks:**
+- [x] Generate test subjects with various trait combinations (factory functions implemented)
+- [ ] Verify information requirements are balanced (requires playtesting)
+- [ ] Test consequence outcomes for generated subjects (requires integration)
+- [ ] Check BPM tells work with generated personalities (requires testing)
+- [ ] Playtest generated subject variety (requires gameplay testing)
+
+**Acceptance Criteria:**
+- ✅ Factory system generates valid subjects (implementation complete)
+- [ ] Generated subjects are solvable with proper investigation (requires testing)
+- [ ] Difficulty scales appropriately with trait combinations (requires testing)
+- [ ] Generated subjects feel unique and engaging (requires playtesting)
+- ✅ No impossible or broken subject combinations (validation implemented)
+
+**Implementation Notes:**
+- Factory system includes validation to prevent impossible combinations
+- Trait-based generation creates coherent subject data
+- Manual override system allows narrative-critical subjects to be preserved
+- Asset assignment system provides fallback and override capabilities
+
+---
+
+## PHASE 6: Narrative Integration
+
+### List: 🟣 Phase 6 - Narrative Integration
+
+#### Card: Family Communication System
+**Description:**
+Implement family audio messages and hostage narrative.
+
+**Tasks:**
+- [ ] Create family audio message system
+- [ ] Add message scheduling between shifts
+- [ ] Implement family photo display with audio
+- [ ] Link message content to player performance
+- [ ] Test emotional impact of family communications
+
+**Acceptance Criteria:**
+- Family messages provide emotional stakes
+- Audio messages play reliably
+- Message content reflects player actions
+- Integration enhances narrative without disrupting flow
+- Family photos and audio create personal connection
+
+**Files to Create:**
+- `amber/components/game/FamilyMessageModal.tsx`
+- `amber/data/familyMessages.ts`
+
+#### Card: AMBER Deception Narrative
+**Description:**
+Implement the AI deception reveal and organizational betrayal.
+
+**Tasks:**
+- [ ] Add narrative hints about AMBER's true nature
+- [ ] Create ending variations based on success/failure
+- [ ] Implement "AI malfunction" cover story reveal
+- [ ] Add narrative payoffs for player discoveries
+- [ ] Test narrative coherence across playthroughs
+
+**Acceptance Criteria:**
+- AMBER deception creates satisfying reveal
+- Multiple endings based on player performance
+- Narrative consistency maintained throughout
+- Player agency affects story outcomes
+- Endings feel earned and impactful
 
 **Files to Modify:**
-- `amber/store/gameStore.ts` (repair function)
-- `amber/components/settings/SettingsModal.tsx` (or create repair UI)
+- `amber/components/game/EndingSequence.tsx`
+- `amber/data/narrativeContent.ts`
 
----
-
-#### Card: Bio Scan Audio Integration
+#### Card: Directive Variety System
 **Description:**
-Ensure bio scan audio plays correctly and cannot be replayed (one-time only, uses resources).
+Create varied shift directives that change investigation focus.
 
 **Tasks:**
-- [ ] Verify bio scan audio plays when button is pressed
-- [ ] Ensure audio cannot be replayed (button disabled after use)
-- [ ] Test audio playback for all 12 subjects
-- [ ] Handle audio loading errors gracefully
-- [ ] Test with equipment failures (audio still plays?)
+- [ ] Implement directive system with different rules
+- [ ] Create directive-aware consequence evaluation
+- [ ] Add directive briefings and visual indicators
+- [ ] Test directive variety creates replayability
+- [ ] Balance directive difficulty and clarity
 
 **Acceptance Criteria:**
-- Audio plays correctly for all subjects
-- Cannot replay audio (one-time only)
-- Handles errors gracefully
-- Works with equipment failures
+- Directives create different investigation focuses
+- Consequences properly evaluate against active directive
+- Directive variety increases replayability
+- Player understands directive requirements
+- Directive system enhances strategic thinking
 
 **Files to Modify:**
-- `amber/components/game/BioScanModal.tsx`
-- `amber/app/index.tsx` (bio scan handler)
+- `amber/constants/shifts.ts`
+- `amber/types/consequence.ts`
 
----
-
-#### Card: Ambiguous Subject Implementation
+#### Card: Final Integration Testing
 **Description:**
-Create subjects that remain ambiguous even with full information gathered.
+Test complete enhanced game experience end-to-end.
 
 **Tasks:**
-- [ ] Design 2-3 ambiguous subjects
-- [ ] Subjects have conflicting signals even with all info
-- [ ] Examples: Elevated BPM but could be stress or deception
-- [ ] Examples: Sad story but directive says deny
-- [ ] Test that ambiguity is clear but not frustrating
+- [ ] Test full subject processing with new flow
+- [ ] Verify trait factory generates engaging subjects
+- [ ] Test narrative integration across multiple shifts
+- [ ] Playtest complete game with family stakes
+- [ ] Test edge cases and failure states
 
 **Acceptance Criteria:**
-- Ambiguous subjects exist
-- Ambiguity is intentional and clear
-- Not frustrating (player understands why it's ambiguous)
-- Creates moral complexity
-
-**Files to Modify:**
-- `amber/data/subjects.ts` (add ambiguous subjects)
-
----
-
-#### Card: Comprehensive Testing
-**Description:**
-Test all systems together, ensure everything works correctly.
-
-**Tasks:**
-- [ ] Test information tracking across multiple subjects
-- [ ] Test resource consumption and reset
-- [ ] Test equipment failures and repairs
-- [ ] Test dynamic question generation (all states)
-- [ ] Test BPM tells and contradictions
-- [ ] Test consequence evaluation (all scenarios)
-- [ ] Test citation system
-- [ ] Test supervisor warnings
-- [ ] Test dossier gaps
-- [ ] Test edge cases (no resources, all equipment broken, etc.)
-
-**Acceptance Criteria:**
-- All systems work together correctly
-- No crashes or errors
-- Edge cases handled gracefully
-- Game is playable end-to-end
-
----
-
-#### Card: Balance & Tuning
-**Description:**
-Balance resource costs, equipment failure rates, consequence severity, etc.
-
-**Tasks:**
-- [ ] Tune resource costs (3 per shift feels right?)
-- [ ] Tune equipment failure rates (not too frequent, not too rare)
-- [ ] Tune consequence severity (not too punishing, not too lenient)
-- [ ] Tune BPM tell thresholds (what counts as elevated?)
-- [ ] Playtest and adjust based on feedback
-
-**Acceptance Criteria:**
-- Game feels balanced
-- Not too easy, not too hard
-- Resource scarcity creates tension
-- Equipment failures add uncertainty without frustration
+- Complete game experience flows smoothly
+- All systems work together harmoniously
+- Narrative provides satisfying emotional arc
+- Subject variety enhances replayability
+- Game maintains Papers Please-style tension
 
 ---
 
@@ -479,22 +659,38 @@ Add more subjects with varying information requirements and complexity levels.
 - [x] Supervisor warnings appear mid-shift
 - [x] Infractions compound correctly
 
-### Phase 4 Testing
-- [ ] Equipment repair works
-- [ ] Bio scan audio plays correctly
-- [ ] Ambiguous subjects are clear
-- [ ] All systems work together
-- [ ] Game is balanced and fun
+### Phase 4 Testing ✅ COMPLETE
+- [x] Subject greeting system works with all communication styles
+- [x] Credential presentation system functions correctly
+- [x] BPM baseline established from entry interactions
+- [x] Subject personality affects investigation flow
+- [x] Enhanced game balance feels appropriate
+
+### Phase 5 Testing (Implementation Complete, Testing Pending)
+- [x] Subject factory generates coherent subjects (factory functions implemented)
+- [x] Asset assignment works for generated subjects (asset pools system implemented)
+- [x] Trait combinations create balanced difficulty (validation system implemented)
+- [x] Manual overrides preserve narrative subjects (override system implemented)
+- [ ] Generated subjects maintain quality standards (requires gameplay testing)
+
+### Phase 6 Testing
+- [ ] Family communication system provides emotional stakes
+- [ ] AMBER deception narrative creates satisfying reveals
+- [ ] Directive variety increases replayability
+- [ ] Complete narrative arc works end-to-end
+- [ ] All systems integrate harmoniously
 
 ---
 
 ## Notes for Development
 
-1. **Start with Phase 1**: Foundation must be solid before building on top
-2. **Test incrementally**: Don't wait until all phases are done to test
-3. **Keep old code commented**: In case we need to roll back
-4. **Document decisions**: Why we made certain choices
-5. **Balance is iterative**: Will need multiple passes to get right
+1. **Phase Order**: Complete 1-4 before implementing factory system (Phase 5)
+2. **Test Incrementally**: Each phase should be playable before moving to next
+3. **Subject Entry First**: Greeting/credential system creates foundation for everything else
+4. **Factory Last**: Only implement procedural generation after manual subject system is solid
+5. **Narrative Integration**: Family stakes and deception should enhance, not complicate core gameplay
+6. **Balance Iteratively**: Test resource allocation, subject variety, and consequence severity throughout
+7. **Keep Manual Subjects**: Use factory for variety, manual creation for key narrative moments
 
 ---
 
@@ -507,3 +703,7 @@ A card is done when:
 - [ ] Tested and working
 - [ ] No regressions introduced
 - [ ] Documentation updated (if needed)
+- [ ] Subject interaction elements enhance engagement
+- [ ] Factory-generated content maintains quality standards
+- [ ] Narrative elements provide emotional investment
+- [ ] Game balance supports strategic decision-making

@@ -5,8 +5,27 @@ import { HUDBox } from './HUDBox';
 import { SubjectData } from '../../data/subjects';
 import { BUILD_SEQUENCE } from '../../constants/animations';
 import { Theme } from '../../constants/theme';
+import { getSubjectGreeting } from '../../data/subjectGreetings';
 
-export const TypewriterText = ({ text, active, delay = 0, style, showCursor = true, instant = false }: { text: string, active: boolean, delay?: number, style?: any, showCursor?: boolean, instant?: boolean }) => {
+export const TypewriterText = ({
+  text,
+  active,
+  delay = 0,
+  style,
+  showCursor = true,
+  instant = false,
+  speed = 25, // Phase 4: Customizable typing speed
+  onComplete, // Phase 4: Callback when typing completes
+}: {
+  text: string,
+  active: boolean,
+  delay?: number,
+  style?: any,
+  showCursor?: boolean,
+  instant?: boolean,
+  speed?: number,
+  onComplete?: () => void,
+}) => {
   const [display, setDisplay] = React.useState(instant ? text : '');
   const [isComplete, setIsComplete] = React.useState(instant);
   const [isTyping, setIsTyping] = React.useState(false);
@@ -17,6 +36,7 @@ export const TypewriterText = ({ text, active, delay = 0, style, showCursor = tr
       setDisplay(text);
       setIsComplete(true);
       setIsTyping(false);
+      onComplete?.();
       return;
     }
 
@@ -47,21 +67,22 @@ export const TypewriterText = ({ text, active, delay = 0, style, showCursor = tr
           setIsComplete(true);
           setIsTyping(false); // Done typing - hide cursor
           if (interval) clearInterval(interval);
+          onComplete?.(); // Phase 4: Call completion callback
         }
-      }, 25); // Slightly faster
+      }, speed);
     }, delay);
 
     return () => {
       if (timeout) clearTimeout(timeout);
       if (interval) clearInterval(interval);
     };
-  }, [active, text, delay, instant]);
+  }, [active, text, delay, instant, speed]);
 
   return (
     <Text style={style}>
       {display}
       {showCursor && isTyping && !isComplete && (
-        <Text style={{ color: style?.color || Theme.colors.textPrimary, opacity: 0.8 }}>█</Text>
+        <Text style={{ color: style?.color || Theme.colors.textPrimary, opacity: 0.8 }}>|</Text>
       )}
     </Text>
   );
@@ -110,10 +131,17 @@ export const ScanData = ({
   subject, 
   hasDecision, 
   decisionType,
-  onBioScan,
+  onIdentityScan,
+  onHealthScan,
   viewChannel = 'facial',
   resourcesRemaining = 0,
-  bioScanUsed = false, // Phase 1: Track if bio scan has been used (one-time only, memory model)
+  identityScanUsed = false,
+  healthScanUsed = false,
+  eyeScannerActive = false,
+  onToggleEyeScanner,
+  interactionPhase = 'investigation',
+  subjectResponse = '',
+  onResponseComplete,
 }: { 
   id: string, 
   isScanning: boolean, 
@@ -122,10 +150,17 @@ export const ScanData = ({
   subject: SubjectData,
   hasDecision?: boolean,
   decisionType?: 'APPROVE' | 'DENY',
-  onBioScan?: () => void,
+  onIdentityScan?: () => void,
+  onHealthScan?: () => void,
   viewChannel?: 'facial' | 'eye',
   resourcesRemaining?: number,
-  bioScanUsed?: boolean,
+  identityScanUsed?: boolean,
+  healthScanUsed?: boolean,
+  eyeScannerActive?: boolean,
+  onToggleEyeScanner?: () => void,
+  interactionPhase?: 'greeting' | 'credentials' | 'investigation',
+  subjectResponse?: string,
+  onResponseComplete?: () => void,
 }) => {
   const getStatusLine = () => {
     if (!hasDecision) {
@@ -165,6 +200,49 @@ export const ScanData = ({
     );
   };
 
+  const renderResponseBox = () => {
+    if (hudStage !== 'full') return null;
+
+    // Determine what text to show
+    let textToShow = '';
+    let isInterrogation = false;
+    let commStyle = 'FLUENT';
+
+    if (interactionPhase === 'greeting') {
+      const greetingData = getSubjectGreeting(subject.id, subject);
+      textToShow = greetingData?.greeting || subject.dialogue || '...';
+      commStyle = greetingData?.communicationStyle || 'FLUENT';
+    } else if (subjectResponse) {
+      textToShow = subjectResponse;
+      isInterrogation = true;
+    }
+
+    if (!textToShow) return null;
+
+    return (
+      <View style={styles.responseBox}>
+        <View style={styles.responseHeader}>
+          <Text style={styles.responseLabel}>SUBJECT:</Text>
+        </View>
+        <TypewriterText
+          text={isInterrogation ? textToShow : `"${textToShow}"`}
+          active={true}
+          delay={interactionPhase === 'greeting' ? 500 : 0}
+          style={[
+            styles.responseText,
+            isInterrogation && styles.interrogationResponseText,
+            commStyle === 'AGITATED' && styles.agitatedText,
+            commStyle === 'BROKEN' && styles.brokenText,
+            commStyle === 'SILENT' && styles.silentText,
+          ]}
+          showCursor={true}
+          onComplete={onResponseComplete}
+          speed={commStyle === 'AGITATED' ? 20 : commStyle === 'BROKEN' ? 60 : 35}
+        />
+      </View>
+    );
+  };
+
   return (
     <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.locRecord}>
       <View style={styles.leftColumn}>
@@ -185,24 +263,64 @@ export const ScanData = ({
           />
           {renderProgressBar()}
         </View>
+
+        {renderResponseBox()}
       </View>
       
-      {/* BIO SCAN Button - opposite IDENT CONFIRM */}
+      {/* Scan Buttons - Identity & Health */}
       {hudStage === 'full' && (
         <View style={styles.rightColumn}>
           <TouchableOpacity 
             style={[
-              styles.bioScanButton,
-              (resourcesRemaining === 0 || bioScanUsed) && styles.channelToggleButtonDisabled
+              styles.scanButton,
+              styles.identityScanButton,
+              (resourcesRemaining === 0 || identityScanUsed || interactionPhase !== 'investigation' || !eyeScannerActive) && styles.channelToggleButtonDisabled
             ]}
-            onPress={onBioScan}
-            disabled={resourcesRemaining === 0 || bioScanUsed}
+            onPress={onIdentityScan}
+            disabled={resourcesRemaining === 0 || identityScanUsed || interactionPhase !== 'investigation' || !eyeScannerActive}
           >
             <Text style={[
               styles.channelToggleText,
-              (resourcesRemaining === 0 || bioScanUsed) && styles.channelToggleTextDisabled
+              (resourcesRemaining === 0 || identityScanUsed || interactionPhase !== 'investigation') && styles.channelToggleTextDisabled
             ]}>
-              {bioScanUsed ? 'BIO SCAN [USED]' : 'BIO SCAN'}
+              {identityScanUsed ? 'IDENTITY [USED]' : 'IDENTITY SCAN'}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[
+              styles.scanButton,
+              styles.healthScanButton,
+              (resourcesRemaining === 0 || healthScanUsed || interactionPhase !== 'investigation') && styles.channelToggleButtonDisabled
+            ]}
+            onPress={onHealthScan}
+            disabled={resourcesRemaining === 0 || healthScanUsed || interactionPhase !== 'investigation'}
+          >
+            <Text style={[
+              styles.channelToggleText,
+              (resourcesRemaining === 0 || healthScanUsed || interactionPhase !== 'investigation') && styles.channelToggleTextDisabled
+            ]}>
+              {healthScanUsed ? 'HEALTH [USED]' : 'HEALTH SCAN'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Eye Scanner Toggle */}
+          <TouchableOpacity 
+            style={[
+              styles.scanButton,
+              styles.eyeScannerButton,
+              eyeScannerActive && styles.eyeScannerButtonActive,
+              interactionPhase !== 'investigation' && styles.channelToggleButtonDisabled
+            ]}
+            onPress={onToggleEyeScanner}
+            disabled={interactionPhase !== 'investigation'}
+          >
+            <Text style={[
+              styles.channelToggleText,
+              eyeScannerActive && styles.eyeScannerTextActive,
+              interactionPhase !== 'investigation' && styles.channelToggleTextDisabled
+            ]}>
+              {eyeScannerActive ? 'EYE SCANNER [ON]' : 'EYE SCANNER [OFF]'}
             </Text>
           </TouchableOpacity>
         </View>

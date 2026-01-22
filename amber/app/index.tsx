@@ -5,9 +5,11 @@ import { GameScreen } from '../components/game/screen/GameScreen';
 import { VerificationDrawer } from '../components/game/VerificationDrawer';
 import { ShiftTransition } from '../components/game/ShiftTransition';
 import { SubjectDossier } from '../components/game/SubjectDossier';
-import { BioScanModal } from '../components/game/BioScanModal';
+import { HealthScanModal } from '../components/game/HealthScanModal';
 import { SettingsModal } from '../components/settings/SettingsModal';
 import { CitationModal } from '../components/game/CitationModal';
+// Phase 4: Subject interaction phase type
+type InteractionPhase = 'greeting' | 'credentials' | 'investigation';
 // Boot components
 import { OnboardingModal } from '../components/boot/OnboardingModal';
 import { BootSequence } from '../components/boot/BootSequence';
@@ -24,8 +26,10 @@ import { saveGame, loadGame, clearSave, hasSaveData as checkHasSaveData, getSave
 // Constants
 import { styles } from '../styles/game/MainScreen.styles';
 import { SUBJECTS } from '../data/subjects';
+// Phase 5: Subject Manager
+import { createDefaultSubjectPool, getSubjectByIndex, SubjectManagerConfig } from '../utils/subjectManager';
+import { SubjectData } from '../data/subjects';
 import { getShiftForSubject, isEndOfShift } from '../constants/shifts';
-import { useGameAudioContext } from '../contexts/AudioContext';
 import { useGameStore } from '../store/gameStore';
 import { createEmptyInformation } from '../types/information';
 import { determineEquipmentFailures } from '../utils/equipmentFailures';
@@ -33,10 +37,9 @@ import { Consequence } from '../types/consequence';
 import { SupervisorWarning, WarningPattern } from '../components/game/SupervisorWarning';
 import { createPatternTracker, checkWarningPatterns, PatternTracker } from '../utils/warningPatterns';
 
-const DEV_MODE = false; // Set to true to bypass onboarding and boot
+const DEV_MODE = true; // Set to true to bypass onboarding and boot
 
 export default function MainScreen() {
-  const { playLoadingSound, playGameSoundtrack } = useGameAudioContext();
   const { credits: storeCredits, resourcesRemaining, resourcesPerShift } = useGameStore();
   
   const [gamePhase, setGamePhase] = useState<GamePhase>(DEV_MODE ? 'active' : 'intro');
@@ -46,6 +49,9 @@ export default function MainScreen() {
   const [hudStage, setHudStage] = useState<'none' | 'wireframe' | 'outline' | 'full'>(DEV_MODE ? 'full' : 'none');
   const [decisionHistory, setDecisionHistory] = useState<Record<string, 'APPROVE' | 'DENY'>>({});
   const [isNewGame, setIsNewGame] = useState(true);
+  
+  // Phase 5: Subject pool (mix of manual and generated)
+  const [subjectPool, setSubjectPool] = useState<SubjectData[]>(() => createDefaultSubjectPool());
   
   // Phase 2: BPM monitoring state
   const [interrogationBPM, setInterrogationBPM] = useState<number | null>(null); // Current BPM during interrogation
@@ -57,6 +63,15 @@ export default function MainScreen() {
   // Phase 3: Supervisor warning state
   const [warningTracker, setWarningTracker] = useState<PatternTracker>(createPatternTracker());
   const [currentWarning, setCurrentWarning] = useState<WarningPattern | null>(null);
+
+  // Phase 4: Subject interaction state
+  const [interactionPhase, setInteractionPhase] = useState<InteractionPhase>('greeting');
+  const [establishedBPM, setEstablishedBPM] = useState<number>(72); // Baseline BPM from greeting
+  
+  // Phase 5: Split scan modals
+  const [showHealthScan, setShowHealthScan] = useState(false);
+  const [eyeScannerActive, setEyeScannerActive] = useState(false);
+  const [isIdentityScanning, setIsIdentityScanning] = useState(false);
   
   // Use game state hook
   const gameState = useGameState(100);
@@ -84,8 +99,6 @@ export default function MainScreen() {
     setShowDossier,
     showInterrogate,
     setShowInterrogate,
-    showBioScan,
-    setShowBioScan,
     showSettings,
     setShowSettings,
     subjectsProcessed,
@@ -119,7 +132,8 @@ export default function MainScreen() {
   } = gameState;
 
   const currentShift = getShiftForSubject(currentSubjectIndex);
-  const currentSubject = getSubjectData(currentSubjectIndex, SUBJECTS, decisionHistory);
+  // Phase 5: Use subject pool instead of hardcoded SUBJECTS
+  const currentSubject = getSubjectByIndex(currentSubjectIndex, subjectPool);
   const activeDirective = currentShift.directive;
 
   const gameOpacity = useRef(new Animated.Value(DEV_MODE ? 1 : 0)).current;
@@ -130,6 +144,11 @@ export default function MainScreen() {
     setBiometricsRevealed(false);
     // Reset resources for new subject
     useGameStore.getState().resetSubjectResources();
+    // Phase 4: Reset to greeting phase
+    setInteractionPhase('greeting');
+    setEstablishedBPM(72);
+    // Phase 5: Reset eye scanner
+    setEyeScannerActive(false);
 
     Animated.timing(scanProgress, {
       toValue: 1,
@@ -138,6 +157,7 @@ export default function MainScreen() {
     }).start(() => {
       setIsScanning(false);
       setBiometricsRevealed(true);
+      // Phase 4: Greeting appears automatically in IntelPanel
     });
   };
 
@@ -154,6 +174,7 @@ export default function MainScreen() {
     setHasDecision,
     setMessageHistory,
     setShowShiftTransition,
+    subjectPoolSize: subjectPool.length, // Phase 5: Pass pool size
     setCurrentSubjectIndex,
     setBiometricsRevealed,
     setSubjectsProcessed,
@@ -187,7 +208,7 @@ export default function MainScreen() {
     // Reset resources for new shift (3 per shift)
     useGameStore.getState().resetResourcesForShift(3);
 
-    const nextIndex = (currentSubjectIndex + 1) % SUBJECTS.length;
+    const nextIndex = (currentSubjectIndex + 1) % subjectPool.length;
     setCurrentSubjectIndex(nextIndex);
     setScanningHands(false);
     setScanningIris(false);
@@ -196,7 +217,7 @@ export default function MainScreen() {
     setShowInterrogate(false); // Reset interrogation modal state
     
     // Phase 2: Reset information tracking for new subject with equipment failures
-    const nextSubject = getSubjectData((currentSubjectIndex + 1) % SUBJECTS.length, SUBJECTS, decisionHistory);
+    const nextSubject = getSubjectByIndex((currentSubjectIndex + 1) % subjectPool.length, subjectPool);
     const equipmentFailures = determineEquipmentFailures(nextSubject.id);
     setGatheredInformation(createEmptyInformation(equipmentFailures));
     setInterrogationBPM(null); // Reset BPM
@@ -205,6 +226,11 @@ export default function MainScreen() {
     setCurrentWarning(null); // Phase 3: Reset warning
     // Phase 3: Reset warning pattern tracker for new shift
     setWarningTracker(createPatternTracker());
+    // Phase 4: Reset to greeting phase
+    setInteractionPhase('greeting');
+    setEstablishedBPM(72);
+    // Phase 5: Reset eye scanner
+    setEyeScannerActive(false);
     // Reset resources for new subject
     useGameStore.getState().resetSubjectResources();
     setTimeout(triggerScan, 500);
@@ -271,7 +297,6 @@ export default function MainScreen() {
       if (savedData.gamePhase === 'active') {
         setHudStage('full');
         setGamePhase('active');
-        playGameSoundtrack();
         Animated.timing(gameOpacity, {
           toValue: 1,
           duration: 500,
@@ -315,17 +340,12 @@ export default function MainScreen() {
   };
 
   const handleBriefingComplete = () => {
-    playLoadingSound();
     setGamePhase('active');
     
     // Initialize resources to 3 for first shift
     useGameStore.getState().resetResourcesForShift(3);
     // Initialize credits to 0
     useGameStore.getState().spendCredits(useGameStore.getState().credits); // Reset to 0
-    
-    setTimeout(() => {
-      playGameSoundtrack();
-    }, 300);
     
     Animated.sequence([
       Animated.timing(gameOpacity, { toValue: 0.4, duration: 150, useNativeDriver: true }),
@@ -351,11 +371,11 @@ export default function MainScreen() {
       // Reset interrogation state when subject changes
       setInterrogationBPM(null);
       setIsInterrogationActive(false);
-      
+
       // Only initialize if equipment failures haven't been set yet (first time for this subject)
       // Check if this is a new subject by comparing IDs
       const equipmentFailures = determineEquipmentFailures(currentSubject.id);
-      if (gatheredInformation.equipmentFailures.length === 0 || 
+      if (gatheredInformation.equipmentFailures.length === 0 ||
           !gatheredInformation.equipmentFailures.some(f => equipmentFailures.includes(f as any))) {
         setGatheredInformation(createEmptyInformation(equipmentFailures));
       }
@@ -428,41 +448,100 @@ export default function MainScreen() {
               onDecision={handleDecision}
               onNext={() => {
                 // Phase 2: Reset information tracking for next subject with equipment failures
-                const nextSubjectData = getSubjectData((currentSubjectIndex + 1) % SUBJECTS.length, SUBJECTS, decisionHistory);
+                const nextSubjectData = getSubjectByIndex((currentSubjectIndex + 1) % subjectPool.length, subjectPool);
                 const equipmentFailures = determineEquipmentFailures(nextSubjectData.id);
                 setGatheredInformation(createEmptyInformation(equipmentFailures));
                 setInterrogationBPM(null); // Reset BPM
                 setIsInterrogationActive(false); // Reset interrogation state
                 setConsequence(null); // Phase 3: Reset consequence
+                // Phase 4: Reset to greeting phase
+                setInteractionPhase('greeting');
+                setEstablishedBPM(72);
                 nextSubject(); // Call the handler function
               }}
               onScanHands={() => {
                 // Legacy - kept for compatibility
               }}
-              onBioScan={() => {
+              onIdentityScan={() => {
                 const store = useGameStore.getState();
-                // BIO scan uses 1 resource (scans eyes and hands, reveals bio data and dossier)
-                // Memory model: Once used, cannot be reused (one-time only)
-                if (store.useSubjectResource() && !gatheredInformation.bioScan) {
-                  // Track information gathered
+                // Identity scan uses 1 resource (eye scan - reveals dossier/identity)
+                // Only works if eye scanner is active
+                if (eyeScannerActive && store.useSubjectResource() && !gatheredInformation.identityScan) {
+                  setIsIdentityScanning(true);
                   setGatheredInformation(prev => ({
                     ...prev,
-                    bioScan: true,
+                    identityScan: true,
                     timestamps: {
                       ...prev.timestamps,
-                      bioScan: Date.now(),
+                      identityScan: Date.now(),
+                    },
+                  }));
+                }
+              }}
+              onIdentityScanComplete={() => {
+                // Called after ID scan animation completes
+                setDossierRevealed(true);
+                setIsIdentityScanning(false);
+              }}
+              isIdentityScanning={isIdentityScanning}
+              onHealthScan={() => {
+                const store = useGameStore.getState();
+                // Health scan uses 1 resource (body scan - reveals biometrics/diseases)
+                if (store.useSubjectResource() && !gatheredInformation.healthScan) {
+                  setGatheredInformation(prev => ({
+                    ...prev,
+                    healthScan: true,
+                    timestamps: {
+                      ...prev.timestamps,
+                      healthScan: Date.now(),
                     },
                   }));
                   setScanningHands(true);
-                  // Auto-disable after scan completes and reveal dossier + bio scan modal
                   setTimeout(() => {
                     setScanningHands(false);
-                    setDossierRevealed(true);
-                    setShowBioScan(true);
+                    setShowHealthScan(true);
                   }, 1500);
                 }
               }}
-              bioScanUsed={gatheredInformation.bioScan}
+              identityScanUsed={gatheredInformation.identityScan}
+              healthScanUsed={gatheredInformation.healthScan}
+              eyeScannerActive={eyeScannerActive}
+              onToggleEyeScanner={() => {
+                if (!eyeScannerActive) {
+                  // Turning on eye scanner uses 1 resource
+                  const store = useGameStore.getState();
+                  if (store.useSubjectResource()) {
+                    setEyeScannerActive(true);
+                    setGatheredInformation(prev => ({
+                      ...prev,
+                      eyeScannerActive: true,
+                    }));
+                  }
+                } else {
+                  // Turning off is free
+                  setEyeScannerActive(false);
+                  setGatheredInformation(prev => ({
+                    ...prev,
+                    eyeScannerActive: false,
+                  }));
+                }
+              }}
+              onEyeScannerTap={() => {
+                // Eye scanner tap unlocks dossier without modal
+                const store = useGameStore.getState();
+                if (store.useSubjectResource() && !gatheredInformation.identityScan) {
+                  setGatheredInformation(prev => ({
+                    ...prev,
+                    identityScan: true,
+                    timestamps: {
+                      ...prev.timestamps,
+                      identityScan: Date.now(),
+                    },
+                  }));
+                  // Unlock dossier directly - no modal
+                  setDossierRevealed(true);
+                }
+              }}
               onOpenDossier={() => setShowDossier(true)}
               onInterrogate={() => {
                 // Handled directly in IntelPanel
@@ -498,6 +577,22 @@ export default function MainScreen() {
               bpmDataAvailable={gatheredInformation.bpmDataAvailable}
               interrogationBPM={interrogationBPM}
               isInterrogationActive={isInterrogationActive}
+              establishedBPM={establishedBPM}
+              interactionPhase={interactionPhase}
+              onGreetingComplete={() => setInteractionPhase('credentials')}
+              onCredentialsComplete={(hasAnomalies) => {
+                setInteractionPhase('investigation');
+                // Track credential examination in gathered information
+                setGatheredInformation(prev => ({
+                  ...prev,
+                  basicScan: true,
+                  timestamps: {
+                    ...prev.timestamps,
+                    basicScan: Date.now(),
+                  },
+                }));
+              }}
+              onEstablishBPM={(bpm) => setEstablishedBPM(bpm)}
             />
 
             {showVerify && (
@@ -534,15 +629,16 @@ export default function MainScreen() {
                 index={currentSubjectIndex}
                 activeDirective={activeDirective}
                 dossierRevealed={dossierRevealed}
+                scanQuality={gatheredInformation.identityScanQuality}
                 onClose={() => setShowDossier(false)}
               />
             )}
 
 
-            {showBioScan && (
-              <BioScanModal
+            {showHealthScan && (
+              <HealthScanModal
                 subject={currentSubject}
-                onClose={() => setShowBioScan(false)}
+                onClose={() => setShowHealthScan(false)}
               />
             )}
 

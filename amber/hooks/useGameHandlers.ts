@@ -47,6 +47,9 @@ interface GameHandlersProps {
   onWarningPattern?: (warning: import('../components/game/SupervisorWarning').WarningPattern | null) => void; // Phase 3: Trigger supervisor warning
   warningTracker?: import('../utils/warningPatterns').PatternTracker; // Phase 3: Pattern tracking state
   setWarningTracker?: (tracker: import('../utils/warningPatterns').PatternTracker) => void; // Phase 3: Update pattern tracker
+  
+  // Phase 5: Subject pool size
+  subjectPoolSize?: number; // If not provided, uses SUBJECTS.length
 }
 
 export const useGameHandlers = (props: GameHandlersProps) => {
@@ -81,19 +84,22 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     onWarningPattern,
     warningTracker,
     setWarningTracker,
+    subjectPoolSize,
   } = props;
 
   const handleDecision = (type: 'APPROVE' | 'DENY') => {
     // Phase 3: Use consequence evaluation instead of binary correct/wrong
     const defaultInfo: GatheredInformation = {
       basicScan: true,
-      bioScan: false,
+      identityScan: false,
+      healthScan: false,
       warrantCheck: false,
       transitLog: false,
       incidentHistory: false,
       interrogation: { questionsAsked: 0, responses: [], bpmChanges: [] },
       equipmentFailures: [],
       bpmDataAvailable: true,
+      eyeScannerActive: false,
       timestamps: {},
     };
     
@@ -212,7 +218,8 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     // This will be handled by the component that uses this hook
     // by calling setGatheredInformation(createEmptyInformation())
 
-    const nextIndex = (currentSubjectIndex + 1) % SUBJECTS.length;
+    const poolSize = props.subjectPoolSize || SUBJECTS.length;
+    const nextIndex = (currentSubjectIndex + 1) % poolSize;
 
     // Queue narrative messages silently
     if (triggerConsequence || isEndOfShift(currentSubjectIndex)) {

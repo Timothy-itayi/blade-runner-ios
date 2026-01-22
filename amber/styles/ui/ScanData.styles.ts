@@ -221,6 +221,32 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  scanButton: {
+    width: '100%',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  identityScanButton: {
+    backgroundColor: 'rgba(127, 184, 216, 0.1)',
+    borderColor: Theme.colors.textSecondary,
+  },
+  healthScanButton: {
+    backgroundColor: 'rgba(201, 162, 39, 0.1)',
+    borderColor: Theme.colors.accentWarn,
+  },
+  eyeScannerButton: {
+    backgroundColor: 'rgba(26, 42, 58, 0.3)',
+    borderColor: Theme.colors.border,
+    marginTop: 4,
+  },
+  eyeScannerButtonActive: {
+    backgroundColor: 'rgba(74, 138, 90, 0.2)',
+    borderColor: Theme.colors.accentApprove,
+  },
   channelToggleText: {
     fontFamily: Theme.fonts.mono,
     fontSize: 10,
@@ -228,11 +254,55 @@ export const styles = StyleSheet.create({
     letterSpacing: 1,
     fontWeight: '600',
   },
+  eyeScannerTextActive: {
+    color: Theme.colors.accentApprove,
+  },
   channelToggleButtonDisabled: {
     opacity: 0.3,
     borderColor: Theme.colors.textDim,
   },
   channelToggleTextDisabled: {
     color: Theme.colors.textDim,
+  },
+  // Subject Response Styles
+  responseBox: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(26, 42, 58, 0.4)',
+    width: '100%',
+  },
+  responseHeader: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  responseLabel: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  responseText: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    lineHeight: 18,
+    fontStyle: 'italic',
+  },
+  interrogationResponseText: {
+    color: Theme.colors.accentApprove,
+  },
+  agitatedText: {
+    letterSpacing: 0,
+  },
+  brokenText: {
+    letterSpacing: 1,
+    opacity: 0.9,
+  },
+  silentText: {
+    color: Theme.colors.textDim,
+    fontStyle: 'normal',
   },
 });

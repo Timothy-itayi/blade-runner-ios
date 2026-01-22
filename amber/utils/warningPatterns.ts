@@ -41,7 +41,7 @@ export const checkWarningPatterns = (
   }
 
   // Pattern: Approved without any verification checks
-  if (!gatheredInfo.warrantCheck && !gatheredInfo.bioScan && !gatheredInfo.transitLog && !gatheredInfo.incidentHistory) {
+  if (!gatheredInfo.warrantCheck && !gatheredInfo.identityScan && !gatheredInfo.healthScan && !gatheredInfo.transitLog && !gatheredInfo.incidentHistory) {
     tracker.approvalsWithoutVerification++;
     if (tracker.approvalsWithoutVerification >= 2) {
       return {
@@ -64,14 +64,14 @@ export const checkWarningPatterns = (
     }
   }
 
-  // Pattern: Approved without bio scan (important for Shift 3 - deny synthetic entities)
-  if (!gatheredInfo.bioScan) {
+  // Pattern: Approved without health scan (important for Shift 3 - deny synthetic entities)
+  if (!gatheredInfo.healthScan) {
     tracker.approvalsWithoutBioScan++;
     if (tracker.approvalsWithoutBioScan >= 2) {
       return {
         type: 'NO_VERIFICATION',
         count: tracker.approvalsWithoutBioScan,
-        message: `Operator, you've approved ${tracker.approvalsWithoutBioScan} subjects without biometric verification. Synthetic entity detection requires bio scan.`,
+        message: `Operator, you've approved ${tracker.approvalsWithoutBioScan} subjects without health verification. Synthetic entity detection requires health scan.`,
       };
     }
   }

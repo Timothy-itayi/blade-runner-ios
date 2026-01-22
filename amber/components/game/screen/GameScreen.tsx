@@ -47,6 +47,20 @@ interface GameScreenProps {
   bpmDataAvailable?: boolean; // Phase 2: Is BPM monitor working?
   interrogationBPM?: number | null; // Phase 2: Current BPM during interrogation
   isInterrogationActive?: boolean; // Phase 2: Is interrogation active?
+  establishedBPM?: number; // Phase 4: Baseline BPM established from greeting
+  interactionPhase?: 'greeting' | 'credentials' | 'investigation'; // Phase 4: Current interaction phase
+  onGreetingComplete?: () => void; // Phase 4: Callback when greeting is complete
+  onCredentialsComplete?: (hasAnomalies: boolean) => void; // Phase 4: Callback when credentials are examined
+  onEstablishBPM?: (bpm: number) => void; // Phase 4: Callback to establish BPM baseline
+  eyeScannerActive?: boolean; // Phase 5: Is eye scanner turned on?
+  onIdentityScan?: () => void; // Phase 5: Identity scan handler
+  onHealthScan?: () => void; // Phase 5: Health scan handler
+  identityScanUsed?: boolean; // Phase 5: Has identity scan been used?
+  healthScanUsed?: boolean; // Phase 5: Has health scan been used?
+  onToggleEyeScanner?: () => void; // Phase 5: Toggle eye scanner
+  onEyeScannerTap?: () => void; // Phase 5: Eye scanner tap handler (unlocks dossier)
+  isIdentityScanning?: boolean; // Phase 5: Is identity scan animation active?
+  onIdentityScanComplete?: () => void; // Phase 5: Callback when identity scan animation completes
 }
 
 export const GameScreen = ({
@@ -71,8 +85,6 @@ export const GameScreen = ({
   onScanHands,
   onOpenDossier,
   onInterrogate,
-  onBioScan,
-  bioScanUsed = false,
   dossierRevealed = false,
   subjectResponse = '',
   onResponseUpdate,
@@ -84,9 +96,31 @@ export const GameScreen = ({
   bpmDataAvailable = true,
   interrogationBPM = null,
   isInterrogationActive = false,
+  establishedBPM = 72,
+  interactionPhase = 'investigation',
+  onGreetingComplete,
+  onCredentialsComplete,
+  onEstablishBPM,
+  eyeScannerActive = false,
+  onIdentityScan,
+  onHealthScan,
+  identityScanUsed = false,
+  healthScanUsed = false,
+  onToggleEyeScanner,
+  onEyeScannerTap,
+  isIdentityScanning = false,
+  onIdentityScanComplete,
 }: GameScreenProps) => {
-  // Channel toggle removed - always show facial view
-  const viewChannel: 'facial' | 'eye' = 'facial';
+  // Eye scanner toggle controls view channel
+  const viewChannel: 'facial' | 'eye' = eyeScannerActive ? 'eye' : 'facial';
+
+  // Phase 4: Lifted greeting state
+  const [greetingDisplayed, setGreetingDisplayed] = useState(false);
+
+  // Reset greeting state when subject changes
+  React.useEffect(() => {
+    setGreetingDisplayed(false);
+  }, [currentSubject.id]);
 
   return (
     <>
@@ -116,12 +150,14 @@ export const GameScreen = ({
             bpmDataAvailable={bpmDataAvailable}
             interrogationBPM={interrogationBPM}
             isInterrogationActive={isInterrogationActive}
+            establishedBPM={establishedBPM}
           />
           <EyeDisplay 
             isScanning={isScanning} 
             scanProgress={scanProgress} 
             videoSource={currentSubject.videoSource}
             eyeVideo={currentSubject.eyeVideo}
+            eyeImage={currentSubject.eyeImage}
             videoStartTime={currentSubject.videoStartTime}
             videoEndTime={currentSubject.videoEndTime}
             hudStage={hudStage}
@@ -130,6 +166,11 @@ export const GameScreen = ({
             scanningIris={scanningIris}
             subjectLooking={true}
             viewChannel={viewChannel}
+            eyeScannerActive={eyeScannerActive}
+            onEyeScannerTap={onEyeScannerTap}
+            interactionPhase={interactionPhase}
+            isIdentityScanning={isIdentityScanning}
+            onIdentityScanComplete={onIdentityScanComplete}
           />
         </View>
         
@@ -141,15 +182,26 @@ export const GameScreen = ({
             subject={currentSubject}
             hasDecision={hasDecision}
             decisionType={decisionOutcome?.type}
-            onBioScan={onBioScan}
+            onIdentityScan={onIdentityScan}
+            onHealthScan={onHealthScan}
             viewChannel={viewChannel}
             resourcesRemaining={resourcesRemaining}
-            bioScanUsed={bioScanUsed}
+            identityScanUsed={identityScanUsed}
+            healthScanUsed={healthScanUsed}
+            eyeScannerActive={eyeScannerActive}
+            onToggleEyeScanner={onToggleEyeScanner}
+            interactionPhase={interactionPhase}
+            subjectResponse={subjectResponse}
+            onResponseComplete={() => {
+              if (interactionPhase === 'greeting') {
+                setGreetingDisplayed(true);
+              }
+            }}
           />
 
-        <IntelPanel 
-          data={currentSubject} 
-          hudStage={hudStage} 
+        <IntelPanel
+          data={currentSubject}
+          hudStage={hudStage}
           hasDecision={hasDecision}
           decisionType={decisionOutcome?.type}
           onRevealVerify={onRevealVerify}
@@ -163,6 +215,11 @@ export const GameScreen = ({
           gatheredInformation={gatheredInformation}
           onBPMChange={onBPMChange}
           onInformationUpdate={onInformationUpdate}
+          interactionPhase={interactionPhase}
+          onGreetingComplete={onGreetingComplete}
+          onCredentialsComplete={onCredentialsComplete}
+          onEstablishBPM={onEstablishBPM}
+          greetingDisplayed={greetingDisplayed}
         />
         
         {/* Decision buttons - always visible */}

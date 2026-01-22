@@ -6,22 +6,29 @@ import { Theme } from '../../constants/theme';
 import { TypewriterText } from '../ui/ScanData';
 import { BUILD_SEQUENCE } from '../../constants/animations';
 import { generateDossierGaps, isFieldMissing, getRedactedValue, DossierGaps } from '../../utils/dossierGaps';
+import { ScanQuality } from '../../types/information';
+import { getIncompleteScanWarning, isIncompleteScan } from '../../utils/scanQuality';
 
 export const SubjectDossier = ({
   data,
   index,
   activeDirective,
   onClose,
-  dossierRevealed = false
+  dossierRevealed = false,
+  scanQuality
 }: {
   data: SubjectData,
   index: number,
   activeDirective?: string | null,
   onClose: () => void,
-  dossierRevealed?: boolean
+  dossierRevealed?: boolean,
+  scanQuality?: ScanQuality
 }) => {
-  // Phase 2: Generate dossier gaps (deterministic per subject)
-  const dossierGaps = useMemo(() => generateDossierGaps(data.id), [data.id]);
+  // Phase 2: Generate dossier gaps based on scan quality (deterministic per subject)
+  const dossierGaps = useMemo(() => generateDossierGaps(data.id, scanQuality), [data.id, scanQuality]);
+  
+  // Get incomplete scan warning if applicable
+  const incompleteWarning = scanQuality ? getIncompleteScanWarning(scanQuality) : null;
 
   return (
     <View style={styles.overlay}>
@@ -37,6 +44,14 @@ export const SubjectDossier = ({
             <View style={styles.directiveSection}>
               <Text style={styles.directiveLabel}>⚠ STANDING DIRECTIVE</Text>
               <Text style={styles.directiveValue}>{activeDirective}</Text>
+            </View>
+          )}
+
+          {/* Incomplete Scan Warning */}
+          {incompleteWarning && (
+            <View style={styles.incompleteScanWarning}>
+              <Text style={styles.incompleteScanLabel}>⚠ SCAN WARNING</Text>
+              <Text style={styles.incompleteScanText}>{incompleteWarning}</Text>
             </View>
           )}
 
@@ -217,6 +232,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     lineHeight: 20,
+  },
+  incompleteScanWarning: {
+    marginTop: 12,
+    marginBottom: 8,
+    padding: 12,
+    backgroundColor: 'rgba(201, 162, 39, 0.15)',
+    borderWidth: 1,
+    borderColor: Theme.colors.accentWarn,
+    borderRadius: 4,
+  },
+  incompleteScanLabel: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  incompleteScanText: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    lineHeight: 14,
+    opacity: 0.9,
   },
   identityCard: {
     backgroundColor: 'rgba(26, 42, 58, 0.5)',

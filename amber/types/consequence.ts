@@ -82,19 +82,35 @@ export const evaluateConsequence = (
     }
   }
 
-  // 2. Bio Scan
-  if (!gatheredInfo.bioScan) {
+  // 2. Health Scan (body scan - reveals biometrics/diseases)
+  if (!gatheredInfo.healthScan) {
     const hasReplicantMarkers = subject.bioScanData?.biologicalType === 'REPLICANT' ||
                                 subject.subjectType === 'REPLICANT';
     if (hasReplicantMarkers && decision === 'APPROVE') {
       missedInfo.push({
-        type: 'BIO_SCAN',
-        description: 'Bio scan not performed',
-        reveal: `Bio scan would have revealed: ${subject.bioScanData?.biologicalType || subject.subjectType} markers`,
-        impact: 'Replicant subject approved without verification. Serious infraction.',
+        type: 'HEALTH_SCAN',
+        description: 'Health scan not performed',
+        reveal: `Health scan would have revealed: ${subject.bioScanData?.biologicalType || subject.subjectType} markers`,
+        impact: 'Replicant subject approved without health verification. Serious infraction.',
       });
       severity += 50;
       creditsPenalty += 3;
+    }
+  }
+
+  // 2b. Identity Scan (eye scan - reveals dossier/identity)
+  if (!gatheredInfo.identityScan && subject.dossier) {
+    // Identity scan reveals dossier which can be cross-referenced with credentials
+    // Missing identity scan means can't verify dossier information
+    if (decision === 'APPROVE') {
+      missedInfo.push({
+        type: 'IDENTITY_SCAN',
+        description: 'Identity scan not performed',
+        reveal: `Identity scan would have revealed dossier information for credential verification`,
+        impact: 'Subject approved without identity verification against credentials.',
+      });
+      severity += 20;
+      creditsPenalty += 1;
     }
   }
 
@@ -133,10 +149,10 @@ export const evaluateConsequence = (
                         subject.bioScanData?.biologicalType === 'REPLICANT' ||
                         subject.subjectType === 'ROBOT_CYBORG';
     if (isSynthetic && decision === 'APPROVE') {
-      if (!gatheredInfo.bioScan) {
-        // Already counted in bio scan above
+      if (!gatheredInfo.healthScan) {
+        // Already counted in health scan above
       } else {
-        // Bio scan was done but still approved - direct violation
+        // Health scan was done but still approved - direct violation
         severity += 70;
         creditsPenalty += 5;
         if (!message) {

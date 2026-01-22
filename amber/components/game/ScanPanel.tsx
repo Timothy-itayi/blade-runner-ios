@@ -48,7 +48,7 @@ const getHandprintImage = (subject: SubjectData, subjectIndex: number): any => {
   }
 };
 
-const FingerprintSlot = ({ active, flipped = false, delay = 0, statusText, subjectIndex = 0, scanningHands = false, subject }: { active: boolean, flipped?: boolean, delay?: number, statusText: string, subjectIndex?: number, scanningHands?: boolean, subject?: SubjectData }) => {
+const FingerprintSlot = ({ active, flipped = false, delay = 0, statusText, subjectIndex = 0, scanningHands = false, subject, biometricsRevealed = true }: { active: boolean, flipped?: boolean, delay?: number, statusText: string, subjectIndex?: number, scanningHands?: boolean, subject?: SubjectData, biometricsRevealed?: boolean }) => {
   // Get the appropriate handprint image based on subject type (always subject-specific)
   const imageSource = getHandprintImage(subject || {} as SubjectData, subjectIndex);
   const contentFade = useRef(new Animated.Value(0)).current;
@@ -131,7 +131,7 @@ const FingerprintSlot = ({ active, flipped = false, delay = 0, statusText, subje
             <View style={styles.scanLine} />
           </Animated.View>
         )}
-        <MinutiaeMarkers active={statusText === 'PROCESSING' || statusText === 'COMPLETE'} flipped={flipped} />
+        <MinutiaeMarkers active={statusText === 'PROCESSING' || statusText === 'COMPLETE' || biometricsRevealed} flipped={flipped} />
         <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
           <VerificationCircles active={statusText === 'COMPLETE'} />
         </View>
@@ -481,7 +481,7 @@ interface AmbiguousConditionDisplay {
   suspiciousExplanation: string;
 }
 
-export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subjectIndex, scanningHands = false, businessProbeCount = 0, dimmed = false, biometricsRevealed = true, ambiguousCondition = null, equipmentFailures = [], bpmDataAvailable = true, interrogationBPM = null, isInterrogationActive = false }: {
+export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subjectIndex, scanningHands = false, businessProbeCount = 0, dimmed = false, biometricsRevealed = true, ambiguousCondition = null, equipmentFailures = [], bpmDataAvailable = true, interrogationBPM = null, isInterrogationActive = false, establishedBPM = 72 }: {
   isScanning: boolean,
   scanProgress: Animated.Value,
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
@@ -496,6 +496,7 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
   bpmDataAvailable?: boolean, // Phase 2: Is BPM monitor working?
   interrogationBPM?: number | null, // Phase 2: Current BPM during interrogation (null = baseline)
   isInterrogationActive?: boolean, // Phase 2: Is interrogation currently active?
+  establishedBPM?: number, // Phase 4: Baseline BPM established from greeting
 }) => {
   const [statusText, setStatusText] = useState('READY');
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -543,15 +544,16 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
     }
   }, [hudStage]);
 
-  // Phase 2: Calculate baseline BPM (stays constant until interrogation)
+  // Phase 4: Use established BPM from greeting as baseline (falls back to subject.bpm)
   useEffect(() => {
     if (typeof subject.bpm === 'string') {
       setBaselineBPM(subject.bpm);
     } else {
-      const baseBpm = subject.bpm || 78;
+      // Use established BPM from greeting if available, otherwise use subject default
+      const baseBpm = establishedBPM || subject.bpm || 72;
       setBaselineBPM(baseBpm);
     }
-  }, [subject.id, subject.bpm]);
+  }, [subject.id, subject.bpm, establishedBPM]);
 
   // Phase 2: BPM monitoring - baseline until interrogation, then use interrogation BPM
   useEffect(() => {
@@ -618,6 +620,7 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
             subjectIndex={subjectIndex}
             scanningHands={scanningHands}
             subject={subject}
+            biometricsRevealed={biometricsRevealed}
           />
           <FingerprintSlot 
             active={true} 
@@ -627,6 +630,7 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
             subjectIndex={subjectIndex}
             scanningHands={scanningHands}
             subject={subject}
+            biometricsRevealed={biometricsRevealed}
           />
         </View>
         <View style={styles.fingerprintHeader}>

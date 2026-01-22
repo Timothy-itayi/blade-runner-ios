@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Animated, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, Animated, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { Theme } from '../../constants/theme';
 import { HUDBox } from '../ui/HUDBox';
 
@@ -69,6 +69,14 @@ export const SupervisorWarning = ({ visible, warning, onDismiss }: SupervisorWar
 
   return (
     <View style={styles.container} pointerEvents="box-none">
+      {/* Dark overlay to block background elements */}
+      <Animated.View 
+        style={[
+          styles.overlay,
+          { opacity: opacityAnim }
+        ]}
+        pointerEvents="none"
+      />
       <Animated.View
         style={[
           styles.warningBox,
@@ -80,13 +88,30 @@ export const SupervisorWarning = ({ visible, warning, onDismiss }: SupervisorWar
       >
         <HUDBox hudStage="full" style={styles.hudBox}>
           <View style={styles.header}>
-            <Text style={styles.headerText}>SUPERVISOR NOTICE</Text>
+            <Text style={styles.headerText}>WARNING ISSUED</Text>
             <TouchableOpacity onPress={handleDismiss} style={styles.dismissButton}>
               <Text style={styles.dismissText}>×</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.content}>
-            <Text style={styles.warningText}>{warning.message}</Text>
+          <View style={styles.separator} />
+          <View style={styles.contentWrapper}>
+            <ScrollView 
+              style={styles.scrollContainer}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.content}>
+                <Text style={styles.warningText}>{warning.message}</Text>
+              </View>
+            </ScrollView>
+          </View>
+          <View style={styles.footer}>
+            <TouchableOpacity 
+              style={styles.acknowledgeButton}
+              onPress={handleDismiss}
+            >
+              <Text style={styles.acknowledgeText}>ACKNOWLEDGE</Text>
+            </TouchableOpacity>
           </View>
         </HUDBox>
       </Animated.View>
@@ -100,34 +125,53 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+    bottom: 0,
     zIndex: 1000,
     alignItems: 'center',
-    paddingTop: 20,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  overlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    zIndex: 999,
   },
   warningBox: {
     width: '90%',
-    maxWidth: 500,
+    maxWidth: 560,
+    zIndex: 1001,
   },
   hudBox: {
-    backgroundColor: 'rgba(201, 162, 39, 0.15)',
+    backgroundColor: Theme.colors.bgDark,
     borderWidth: 2,
     borderColor: Theme.colors.accentWarn,
+    borderRadius: 2,
+    overflow: 'hidden',
+    width: '100%',
+    minHeight: 280,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.accentWarn,
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    flexShrink: 0,
+    height: 64,
   },
   headerText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 14,
+    fontSize: 20,
     fontWeight: '700',
-    letterSpacing: 2,
+    letterSpacing: 3,
     color: Theme.colors.accentWarn,
     textTransform: 'uppercase',
+    flex: 1,
+    textAlign: 'center',
   },
   dismissButton: {
     width: 24,
@@ -141,13 +185,60 @@ const styles = StyleSheet.create({
     color: Theme.colors.accentWarn,
     fontWeight: '700',
   },
+  separator: {
+    height: 2,
+    backgroundColor: Theme.colors.accentWarn,
+    marginHorizontal: 24,
+    flexShrink: 0,
+  },
+  contentWrapper: {
+    flex: 1,
+    minHeight: 120,
+    maxHeight: 400,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 8,
+  },
   content: {
-    padding: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 28,
   },
   warningText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 16,
+    lineHeight: 26,
     color: Theme.colors.textPrimary,
+    letterSpacing: 0.8,
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    paddingTop: 20,
+    alignItems: 'center',
+    flexShrink: 0,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(201, 162, 39, 0.2)',
+    height: 80,
+  },
+  acknowledgeButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderWidth: 2,
+    borderColor: Theme.colors.accentWarn,
+    backgroundColor: 'rgba(201, 162, 39, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  acknowledgeText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 2.5,
+    color: Theme.colors.accentWarn,
+    textTransform: 'uppercase',
   },
 });

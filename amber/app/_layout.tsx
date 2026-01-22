@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Theme } from '../constants/theme';
 import { useFonts, ShareTechMono_400Regular } from '@expo-google-fonts/share-tech-mono';
 import * as SplashScreen from 'expo-splash-screen';
@@ -25,16 +26,18 @@ export default function Layout() {
   }
 
   return (
-    <GameAudioProvider>
-      <View style={{ flex: 1, backgroundColor: Theme.colors.bgDark }}>
-        <StatusBar style="light" />
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: Theme.colors.bgDark },
-          }}
-        />
-      </View>
-    </GameAudioProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <GameAudioProvider>
+        <View style={{ flex: 1, backgroundColor: Theme.colors.bgDark }}>
+          <StatusBar style="light" />
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: Theme.colors.bgDark },
+            }}
+          />
+        </View>
+      </GameAudioProvider>
+    </GestureHandlerRootView>
   );
 }

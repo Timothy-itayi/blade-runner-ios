@@ -62,6 +62,25 @@ export type SubjectType = 'HUMAN' | 'HUMAN_CYBORG' | 'ROBOT_CYBORG' | 'REPLICANT
 // Hierarchy tiers
 export type HierarchyTier = 'LOWER' | 'MIDDLE' | 'UPPER' | 'VIP';
 
+// Phase 4: Personality Traits
+export type PersonalityType =
+  | 'NERVOUS'     // Anxious, fidgety, unsure
+  | 'CONFIDENT'   // Self-assured, calm under pressure
+  | 'DECEPTIVE'   // Hiding something, evasive
+  | 'DESPERATE'   // Pleading, emotional, urgent
+  | 'ARROGANT'    // Dismissive, entitled, impatient
+  | 'VULNERABLE'  // Open, genuine distress, honest
+  | 'CONFUSED'    // Uncertain, contradictory, disoriented
+  | 'PROFESSIONAL'; // Formal, business-like, efficient
+
+export interface PersonalityTraits {
+  primaryType: PersonalityType;
+  secondaryType?: PersonalityType;
+  trustworthiness: number; // 0-100, affects BPM interpretation
+  cooperativeness: number; // 0-100, affects investigation ease
+  emotionalStability: number; // 0-100, affects response consistency
+}
+
 export interface SubjectData {
   // Core Identity
   name: string;
@@ -105,6 +124,17 @@ export interface SubjectData {
     isGenuinelyStressed?: boolean; // If true, elevated BPM is from stress, not deception
   };
   
+  // Phase 4: Personality Traits (structured)
+  personalityTraits?: PersonalityTraits;
+  personality?: PersonalityTraits; // Alias for personalityTraits (factory uses this)
+
+  // Phase 4: Subject Interaction (communication and credentials)
+  communicationStyle?: import('./subjectGreetings').CommunicationStyle;
+  credentialBehavior?: import('./subjectGreetings').CredentialBehavior;
+  greetingText?: string;
+  credentialType?: import('./credentialTypes').CredentialType;
+  credentialDetails?: import('./credentialTypes').CredentialDetails | import('./credentialTypes').CredentialDetails[];
+
   // Character brief for interrogation
   characterBrief?: {
     personality: string;
@@ -266,6 +296,14 @@ export const SUBJECTS: SubjectData[] = [
       motivation: 'Desperately wants to believe her memories are real. Becomes defensive when questioned.',
       tells: ['Hesitation when asked about details', 'Contradicts herself about Jacob', 'Can\'t explain how they met', 'Gets flustered when pressed'],
     },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'CONFUSED',
+      secondaryType: 'NERVOUS',
+      trustworthiness: 30, // She believes she's telling truth but isn't
+      cooperativeness: 75, // Tries to help but can't
+      emotionalStability: 35, // Unstable, gets flustered
+    },
     // Phase 3: BPM tells - Contradiction (claims calm but BPM elevated)
     bpmTells: {
       type: 'CONTRADICTION',
@@ -353,6 +391,14 @@ export const SUBJECTS: SubjectData[] = [
       motivation: 'Wants to see family on Earth despite warrant. Willing to lie.',
       tells: ['Nervous pauses', 'Emotional appeals', 'Vague about warrant details'],
     },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'DESPERATE',
+      secondaryType: 'DECEPTIVE',
+      trustworthiness: 40, // Lying about warrant
+      cooperativeness: 60, // Will cooperate to get through
+      emotionalStability: 25, // Highly emotional
+    },
     interrogationResponses: {
       responses: {
         origin: "Please. My family is on Earth. The warrant... it's a misunderstanding.",
@@ -439,6 +485,14 @@ export const SUBJECTS: SubjectData[] = [
       motivation: 'Needs medical consultation but doesn\'t want to discuss augmentation details.',
       tells: ['Deflects questions about surgery', 'Overly technical explanations', 'Nervous when pressed about modifications'],
     },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'PROFESSIONAL',
+      secondaryType: 'DECEPTIVE',
+      trustworthiness: 65, // Mostly honest, hiding minor details
+      cooperativeness: 80, // Will cooperate
+      emotionalStability: 70, // Fairly stable
+    },
     interrogationResponses: {
       responses: {
         origin: "Mars Colony. I'm here for a medical consultation. Standard procedure.",
@@ -517,6 +571,14 @@ export const SUBJECTS: SubjectData[] = [
       background: 'Corporate executive with expensive augmentations. Used to privilege.',
       motivation: 'Wants quick processing, doesn\'t like being questioned.',
       tells: ['Dismissive of questions', 'References corporate connections', 'Impatient with delays'],
+    },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'ARROGANT',
+      secondaryType: 'CONFIDENT',
+      trustworthiness: 55, // Probably telling truth, just annoying
+      cooperativeness: 30, // Uncooperative, entitled
+      emotionalStability: 85, // Very stable, in control
     },
     interrogationResponses: {
       responses: {
@@ -601,6 +663,14 @@ export const SUBJECTS: SubjectData[] = [
       background: 'Professor with suspiciously recent fingerprint modification. Possibly involved in illegal activities.',
       motivation: 'Needs to get to Earth but is hiding the reason for fingerprint modification.',
       tells: ['Vague about surgery details', 'Changes story when pressed', 'Nervous about fingerprint questions'],
+    },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'DECEPTIVE',
+      secondaryType: 'CONFIDENT',
+      trustworthiness: 25, // Actively hiding things
+      cooperativeness: 70, // Appears cooperative
+      emotionalStability: 80, // Good at maintaining composure (good liar)
     },
     interrogationResponses: {
       responses: {
@@ -687,6 +757,14 @@ export const SUBJECTS: SubjectData[] = [
       motivation: 'Wants to see family, worried about sister who may have been denied entry.',
       tells: ['Asks about sister', 'Genuine concern', 'Slightly nervous but honest'],
     },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'NERVOUS',
+      secondaryType: 'VULNERABLE',
+      trustworthiness: 85, // Genuinely honest
+      cooperativeness: 90, // Very cooperative
+      emotionalStability: 55, // Worried about sister
+    },
     interrogationResponses: {
       responses: {
         origin: "Europa. I'm here to see my family. My sister was supposed to come too, but...",
@@ -771,6 +849,14 @@ export const SUBJECTS: SubjectData[] = [
       motivation: 'Needs continued medical treatment. Honest about her situation.',
       tells: ['Open about medical history', 'Genuine distress', 'No evasiveness'],
     },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'VULNERABLE',
+      secondaryType: 'DESPERATE',
+      trustworthiness: 95, // Completely honest
+      cooperativeness: 95, // Will do anything to help
+      emotionalStability: 45, // Fragile emotional state
+    },
     interrogationResponses: {
       responses: {
         origin: "Mars. I'm here for medical treatment. The doctors on Mars... they've done all they can.",
@@ -849,6 +935,14 @@ export const SUBJECTS: SubjectData[] = [
       background: 'Replicant with full body replacement. Unaware of her true nature or in denial.',
       motivation: 'Wants to escape Titan and start new life. Doesn\'t realize she\'s a replicant.',
       tells: ['Vague about past', 'Can\'t explain certain memories', 'Uncertain about details'],
+    },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'CONFUSED',
+      secondaryType: 'DESPERATE',
+      trustworthiness: 50, // Believes she's honest but isn't human
+      cooperativeness: 80, // Wants to cooperate
+      emotionalStability: 40, // Uncertain, disoriented
     },
     interrogationResponses: {
       responses: {
@@ -929,6 +1023,14 @@ export const SUBJECTS: SubjectData[] = [
       motivation: 'Wants to get to Earth quickly. May be hiding reason for recent surgery.',
       tells: ['Urgent about family', 'Deflects surgery questions', 'Nervous about timing'],
     },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'DESPERATE',
+      secondaryType: 'NERVOUS',
+      trustworthiness: 70, // Mostly honest about family, evasive about surgery
+      cooperativeness: 85, // Will cooperate to get through
+      emotionalStability: 35, // Very emotional about emergency
+    },
     interrogationResponses: {
       responses: {
         origin: "Mars. Please, I need to get through. My family... there's an emergency.",
@@ -1006,6 +1108,14 @@ export const SUBJECTS: SubjectData[] = [
       background: 'Brother of YUKI TANAKA. Legitimate family visit, concerned about sister.',
       motivation: 'Wants to see family, worried about sister who may have had issues.',
       tells: ['Asks about sister', 'Genuine concern', 'No evasiveness'],
+    },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'VULNERABLE',
+      secondaryType: 'CONFIDENT',
+      trustworthiness: 95, // Completely honest
+      cooperativeness: 95, // Very cooperative
+      emotionalStability: 70, // Worried but composed
     },
     interrogationResponses: {
       responses: {
@@ -1085,6 +1195,14 @@ export const SUBJECTS: SubjectData[] = [
       motivation: 'Needs prosthetic serviced. No hidden agenda, just practical need.',
       tells: ['Direct about needs', 'No evasiveness', 'Practical explanations'],
     },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'CONFIDENT',
+      secondaryType: 'PROFESSIONAL',
+      trustworthiness: 95, // Completely honest
+      cooperativeness: 85, // Cooperative but direct
+      emotionalStability: 90, // Very stable, matter-of-fact
+    },
     interrogationResponses: {
       responses: {
         origin: "Europa. I'm here for prosthetic maintenance. My leg needs servicing.",
@@ -1163,6 +1281,14 @@ export const SUBJECTS: SubjectData[] = [
       background: 'Advanced replicant with diplomatic cover. Possibly corporate espionage.',
       motivation: 'Corporate mission, possibly illegal. Confident it can pass inspection.',
       tells: ['Overly formal', 'References corporate authority', 'Deflects with diplomatic language'],
+    },
+    // Phase 4: Personality Traits
+    personalityTraits: {
+      primaryType: 'ARROGANT',
+      secondaryType: 'DECEPTIVE',
+      trustworthiness: 15, // Highly deceptive
+      cooperativeness: 40, // Will cooperate minimally
+      emotionalStability: 99, // Artificially stable - synthetic
     },
     interrogationResponses: {
       responses: {

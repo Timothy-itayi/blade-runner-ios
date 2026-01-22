@@ -1,9 +1,16 @@
-import type { SubjectData } from '@/data/subjects';
+import type { SubjectData, InterrogationTone } from '@/data/subjects';
 
-export function generateDefaultResponse(subject: SubjectData, questionId: string): string {
-  // Check if subject has a specific response for this question
-  if (subject.interrogationResponses?.responses[questionId]) {
-    return subject.interrogationResponses.responses[questionId];
+export function generateDefaultResponse(
+  subject: SubjectData,
+  questionId: string,
+  tone: InterrogationTone = 'firm'
+): string {
+  // Check if subject has a specific response for this question (optionally tone-tiered)
+  const entry = subject.interrogationResponses?.responses?.[questionId];
+  if (entry) {
+    if (typeof entry === 'string') return entry;
+    // Prefer requested tone, then sensible fallbacks.
+    return entry[tone] || entry.firm || entry.soft || entry.harsh || "I don't have to answer that.";
   }
 
   // Fallback to default responses

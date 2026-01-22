@@ -268,13 +268,21 @@ export const styles = StyleSheet.create({
   responseBox: {
     marginTop: 12,
     paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(26, 42, 58, 0.4)',
     width: '100%',
   },
   responseHeader: {
     flexDirection: 'row',
     marginBottom: 4,
+  },
+  responseField: {
+    // Keep a stable layout height so the UI doesn't jump as content changes.
+    // Sized for header + ~4 lines of response text at 18px lineHeight.
+    minHeight: 14 + 8 + 18 * 4,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(13, 17, 23, 0.65)', // Theme.colors.bgPanel w/ opacity
+    borderWidth: 1,
+    borderColor: 'rgba(26, 42, 58, 0.55)', // Theme.colors.border w/ opacity
   },
   responseLabel: {
     color: Theme.colors.textSecondary,
@@ -290,6 +298,9 @@ export const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontStyle: 'italic',
+    // Ensure long responses wrap cleanly instead of truncating/clipping.
+    flexShrink: 1,
+    width: '100%',
   },
   interrogationResponseText: {
     color: Theme.colors.accentApprove,

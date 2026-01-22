@@ -47,7 +47,6 @@ export interface GameState {
   daysPassed: number;
   
   // UI state
-  showVerify: boolean;
   showDossier: boolean;
   showInterrogate: boolean;
   showBioScan: boolean;
@@ -99,7 +98,6 @@ export const useGameState = (initialCredits: number = 100) => {
   });
   const [daysPassed, setDaysPassed] = useState(0);
   
-  const [showVerify, setShowVerify] = useState(false);
   const [showDossier, setShowDossier] = useState(false);
   const [showInterrogate, setShowInterrogate] = useState(false);
   const [showBioScan, setShowBioScan] = useState(false);
@@ -173,8 +171,6 @@ export const useGameState = (initialCredits: number = 100) => {
     setFamilyNeeds,
     daysPassed,
     setDaysPassed,
-    showVerify,
-    setShowVerify,
     showDossier,
     setShowDossier,
     showInterrogate,

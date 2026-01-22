@@ -1,23 +1,33 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Animated, PanResponder, Image } from 'react-native';
-import { GestureDetector } from 'react-native-gesture-handler';
 import { SubjectData } from '../../data/subjects';
 import { HUDBox } from '../ui/HUDBox';
 import { BUILD_SEQUENCE } from '../../constants/animations';
 import { GatheredInformation } from '../../types/information';
 import { generateDynamicQuestions } from '../../utils/questionGeneration';
-import { createPressureHold, createSwipeReveal } from '../../utils/gestures';
 // Phase 4: Subject interaction imports
 import { getSubjectGreeting, CommunicationStyle, COMMUNICATION_STYLE_DESCRIPTIONS } from '../../data/subjectGreetings';
 import { getSubjectCredentials, getCredentialTypeName, getExpirationStatus } from '../../data/credentialTypes';
 import { styles } from './intel/IntelPanel.styles';
 import { calculateQuestionBPM, generateDefaultResponse } from './intel/helpers/interrogation';
+import { VerificationDrawer } from './intel/VerificationDrawer';
 
 // Phase 4: Interaction phase type
 type InteractionPhase = 'greeting' | 'credentials' | 'investigation';
 
 // Phase 3: Carousel mode type
 type PanelMode = 'verification' | 'dossier' | 'interrogation';
+
+type QueryType = 'WARRANT' | 'TRANSIT' | 'INCIDENT';
+
+const QUERY_LABELS: Record<QueryType, string> = {
+  WARRANT: 'warrant_check',
+  TRANSIT: 'transit_log',
+  INCIDENT: 'incident_history',
+};
+
+// Operator ID
+const OPERATOR_ID = 'OP-7734';
 
 
 // Phase 5: Ambiguous biometric condition type
@@ -43,6 +53,7 @@ export const IntelPanel = ({
   gatheredInformation, // Phase 2: Information gathered for dynamic questions
   onBPMChange, // Phase 2: Callback when BPM changes during interrogation
   onInformationUpdate, // Phase 2: Update gathered information
+  onQueryPerformed, // Phase 1: Callback when a verification query is performed
   // Phase 4: Subject interaction props
   interactionPhase = 'greeting',
   onGreetingComplete,
@@ -66,6 +77,7 @@ export const IntelPanel = ({
   gatheredInformation?: GatheredInformation,
   onBPMChange?: (bpm: number) => void, // Phase 2: Callback when BPM changes during interrogation
   onInformationUpdate?: (info: Partial<GatheredInformation>) => void, // Phase 2: Update gathered information
+  onQueryPerformed?: (queryType: QueryType) => void, // Phase 1: Callback when a verification query is performed
   // Phase 4: Subject interaction props
   interactionPhase?: InteractionPhase,
   onGreetingComplete?: () => void,
@@ -130,7 +142,7 @@ export const IntelPanel = ({
   const availableQuestions = dynamicQuestions.filter(q => !questionsAsked.includes(q.id));
   const currentQuestion = availableQuestions[currentQuestionIndex] || availableQuestions[0];
 
-  const handleAskQuestion = () => {
+  const handleAskQuestion = (tone: 'soft' | 'firm' | 'harsh' = 'firm') => {
     if (questionsAsked.length >= 3 || !currentQuestion) return;
     
     const questionId = currentQuestion.id;
@@ -141,8 +153,7 @@ export const IntelPanel = ({
     setCurrentQuestionText(questionText);
 
     // Get subject's response
-    const response = data.interrogationResponses?.responses[questionId] || 
-                     generateDefaultResponse(data, questionId);
+    const response = generateDefaultResponse(data, questionId, tone);
     
     // Phase 3: Calculate and track BPM change with behavioral tells
     const baseBPM = typeof data.bpm === 'string' ? 
@@ -188,31 +199,40 @@ export const IntelPanel = ({
   // Order: DOSSIER -> VERIFICATION -> INTERROGATE
   const INVESTIGATION_ORDER: PanelMode[] = ['dossier', 'verification', 'interrogation'];
   const [investigationMode, setInvestigationMode] = useState<PanelMode>('dossier');
-  const investigationSwipeOffset = useRef(new Animated.Value(0)).current;
+  const [investigationWidth, setInvestigationWidth] = useState(0);
+  const investigationTranslateX = useRef(new Animated.Value(0)).current;
+  const investigationBaseXRef = useRef(0);
 
   useEffect(() => {
     if (interactionPhase === 'investigation') {
       setInvestigationMode('dossier');
-      investigationSwipeOffset.setValue(0);
+      investigationTranslateX.setValue(0);
     }
   }, [interactionPhase]);
 
-  const investigationPanResponder = useMemo(() => {
-    const switchTo = (next: PanelMode) => {
-      setInvestigationMode(next);
-      Animated.spring(investigationSwipeOffset, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 80,
-        friction: 12,
-      }).start();
-    };
+  // Keep translateX synced when mode changes (after a snap or programmatic set).
+  useEffect(() => {
+    if (interactionPhase !== 'investigation') return;
+    if (!investigationWidth) return;
+    const idx = INVESTIGATION_ORDER.indexOf(investigationMode);
+    Animated.spring(investigationTranslateX, {
+      toValue: -idx * investigationWidth,
+      useNativeDriver: true,
+      tension: 80,
+      friction: 12,
+    }).start();
+  }, [interactionPhase, investigationMode, investigationWidth]);
 
-    const reset = () => {
-      Animated.spring(investigationSwipeOffset, {
-        toValue: 0,
+  const investigationPanResponder = useMemo(() => {
+    const snapToIndex = (nextIndex: number) => {
+      const clamped = Math.max(0, Math.min(INVESTIGATION_ORDER.length - 1, nextIndex));
+      const nextMode = INVESTIGATION_ORDER[clamped];
+      setInvestigationMode(nextMode);
+      if (!investigationWidth) return;
+      Animated.spring(investigationTranslateX, {
+        toValue: -clamped * investigationWidth,
         useNativeDriver: true,
-        tension: 80,
+        tension: 85,
         friction: 12,
       }).start();
     };
@@ -223,110 +243,134 @@ export const IntelPanel = ({
         if (interactionPhase !== 'investigation') return false;
         return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       },
+      onPanResponderGrant: () => {
+        if (interactionPhase !== 'investigation') return;
+        // Stop any in-flight animation and set drag base.
+        (investigationTranslateX as any).stopAnimation?.((v: number) => {
+          investigationBaseXRef.current = v;
+        });
+        if (!investigationWidth) {
+          investigationBaseXRef.current = 0;
+          return;
+        }
+        const currentIndex = INVESTIGATION_ORDER.indexOf(investigationMode);
+        investigationBaseXRef.current = -currentIndex * investigationWidth;
+      },
       onPanResponderMove: (_evt, gestureState) => {
         if (interactionPhase !== 'investigation') return;
-        const clamped = Math.max(-90, Math.min(90, gestureState.dx));
-        investigationSwipeOffset.setValue(clamped);
+        if (!investigationWidth) return;
+        const minX = -investigationWidth * (INVESTIGATION_ORDER.length - 1);
+        const maxX = 0;
+        let nextX = investigationBaseXRef.current + gestureState.dx;
+        // Soft clamp (rubber band) at edges.
+        if (nextX < minX) nextX = minX + (nextX - minX) * 0.2;
+        if (nextX > maxX) nextX = maxX + (nextX - maxX) * 0.2;
+        investigationTranslateX.setValue(nextX);
       },
       onPanResponderRelease: (_evt, gestureState) => {
-        if (interactionPhase !== 'investigation') return reset();
+        if (interactionPhase !== 'investigation') return;
+        if (!investigationWidth) return;
 
         const currentIndex = INVESTIGATION_ORDER.indexOf(investigationMode);
         const dx = gestureState.dx;
+        const vx = gestureState.vx;
+        const threshold = investigationWidth * 0.22;
 
-        // Swipe left -> next module, swipe right -> previous module
-        if (dx < -60 && currentIndex < INVESTIGATION_ORDER.length - 1) {
-          switchTo(INVESTIGATION_ORDER[currentIndex + 1]);
+        // Flick wins; otherwise distance threshold.
+        if (vx < -0.55 || dx < -threshold) {
+          snapToIndex(currentIndex + 1);
           return;
         }
-        if (dx > 60 && currentIndex > 0) {
-          switchTo(INVESTIGATION_ORDER[currentIndex - 1]);
+        if (vx > 0.55 || dx > threshold) {
+          snapToIndex(currentIndex - 1);
           return;
         }
 
-        reset();
+        snapToIndex(currentIndex);
       },
-      onPanResponderTerminate: () => reset(),
+      onPanResponderTerminate: () => {
+        if (interactionPhase !== 'investigation') return;
+        if (!investigationWidth) return;
+        const currentIndex = INVESTIGATION_ORDER.indexOf(investigationMode);
+        snapToIndex(currentIndex);
+      },
       onPanResponderTerminationRequest: () => true,
     });
-  }, [interactionPhase, investigationMode]);
-
-  // Phase 3: Verification drawer swipe state
-  const [verificationDrawerProgress, setVerificationDrawerProgress] = useState(0);
-  const verificationDrawerOffset = useRef(new Animated.Value(0)).current;
-
-  // Phase 3: Verification swipe-down gesture
-  const verificationSwipeGesture = useMemo(() => {
-    if (interactionPhase !== 'investigation' || verificationDisabled) return null;
-    
-    return createSwipeReveal(
-      'down',
-      {
-        onStart: () => {
-          verificationDrawerOffset.setValue(0);
-        },
-        onUpdate: (progress: number) => {
-          setVerificationDrawerProgress(progress);
-          // Add resistance - progress slows down as it approaches threshold
-          const resistanceProgress = progress < 0.7 ? progress : 0.7 + (progress - 0.7) * 0.3;
-          verificationDrawerOffset.setValue(resistanceProgress * 50); // Max 50px visual feedback
-        },
-        onComplete: () => {
-          onRevealVerify();
-          Animated.spring(verificationDrawerOffset, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 50,
-            friction: 7,
-          }).start(() => {
-            setVerificationDrawerProgress(0);
-          });
-        },
-        onCancel: () => {
-          Animated.spring(verificationDrawerOffset, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 50,
-            friction: 7,
-          }).start(() => {
-            setVerificationDrawerProgress(0);
-          });
-        },
-      },
-      150, // Higher threshold for resistance feel
-      500, // Velocity threshold
-      false // haptic disabled
-    );
-  }, [interactionPhase, verificationDisabled, onRevealVerify]);
+  }, [interactionPhase, investigationMode, investigationWidth]);
 
   // Interrogate is always available (free, 3 questions max)
   const canInterrogate = hudStage === 'full' && questionsAsked.length < 3;
 
-  // Phase 4: Interrogation pressure hold state
+  // Phase 4: Interrogation press-and-hold (JS timers; avoid GestureDetector native crashes)
   const [interrogationProgress, setInterrogationProgress] = useState(0);
-  const interrogationHoldGesture = useMemo(() => {
-    if (interactionPhase !== 'investigation' || !canInterrogate) return null;
+  const interrogationHoldStartMsRef = useRef<number | null>(null);
+  const interrogationHoldTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const interrogationHoldCompletedRef = useRef(false);
 
-    return createPressureHold(
-      {
-        onStart: () => {
-          setInterrogationProgress(0);
-        },
-        onComplete: (finalPressure: number) => {
-          if (finalPressure >= 0.5) {
-            handleAskQuestion();
-          }
-          setInterrogationProgress(0);
-        },
-        onCancel: () => {
-          setInterrogationProgress(0);
-        },
-      },
-      1500, // 1.5s for full hold
-      200,  // 200ms min duration
-      false  // haptic disabled
-    );
-  }, [interactionPhase, canInterrogate, handleAskQuestion]);
+  const clearInterrogationHoldTimer = () => {
+    if (interrogationHoldTickRef.current) {
+      clearInterval(interrogationHoldTickRef.current);
+      interrogationHoldTickRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      clearInterrogationHoldTimer();
+    };
+  }, []);
+
+  const startInterrogationHold = () => {
+    if (interactionPhase !== 'investigation') return;
+    if (!canInterrogate) return;
+
+    interrogationHoldStartMsRef.current = Date.now();
+    interrogationHoldCompletedRef.current = false;
+    setInterrogationProgress(0);
+
+    clearInterrogationHoldTimer();
+    const MAX_MS = 1500;
+
+    interrogationHoldTickRef.current = setInterval(() => {
+      const startMs = interrogationHoldStartMsRef.current;
+      if (startMs == null) return;
+
+      const elapsed = Date.now() - startMs;
+      const progress = Math.max(0, Math.min(1, elapsed / MAX_MS));
+      setInterrogationProgress(progress);
+    }, 16);
+  };
+
+  const endInterrogationHold = () => {
+    const startMs = interrogationHoldStartMsRef.current;
+    interrogationHoldStartMsRef.current = null;
+    clearInterrogationHoldTimer();
+
+    // If we already completed, state is already reset.
+    if (interrogationHoldCompletedRef.current) return;
+
+    // Cancel/reset on early release.
+    if (startMs == null) {
+      setInterrogationProgress(0);
+      return;
+    }
+
+    const MIN_MS = 200;
+    const duration = Date.now() - startMs;
+    if (duration < MIN_MS) {
+      setInterrogationProgress(0);
+      return;
+    }
+
+    // Released after MIN => ask question; longer hold = harsher tone.
+    const SOFT_MAX_MS = 650;
+    const FIRM_MAX_MS = 1150;
+    const tone: 'soft' | 'firm' | 'harsh' =
+      duration < SOFT_MAX_MS ? 'soft' : duration < FIRM_MAX_MS ? 'firm' : 'harsh';
+
+    setInterrogationProgress(0);
+    handleAskQuestion(tone);
+  };
 
   // Phase 4: Handle Request Credentials button
   const handleRequestCredentials = () => {
@@ -338,6 +382,8 @@ export const IntelPanel = ({
     const hasAnomalies = credentialData?.credentials.some(c => c.anomalies.length > 0) || false;
     onCredentialsComplete?.(hasAnomalies);
   };
+
+  // Verification drawer now owns folder selection + unlock behavior.
 
   // Phase 3: Credentials swipe state
   const [credentialsDrawerProgress, setCredentialsDrawerProgress] = useState(0);
@@ -544,8 +590,9 @@ export const IntelPanel = ({
   };
 
   const renderInvestigationCard = (mode: PanelMode) => {
-    const currentIndex = INVESTIGATION_ORDER.indexOf(investigationMode);
-    const navText = `${String(currentIndex + 1).padStart(2, '0')}/${String(INVESTIGATION_ORDER.length).padStart(2, '0')}`;
+    // Use the card’s index so the hint stays coherent during swipes.
+    const cardIndex = INVESTIGATION_ORDER.indexOf(mode);
+    const navText = `${String(cardIndex + 1).padStart(2, '0')}/${String(INVESTIGATION_ORDER.length).padStart(2, '0')}`;
 
     if (mode === 'dossier') {
       const dossierUnlocked = hudStage === 'full' && dossierRevealed;
@@ -645,29 +692,15 @@ export const IntelPanel = ({
             <Text style={styles.sectionLabel}>VERIFICATION</Text>
             <Text style={styles.investigationNavHint}>← SWIPE {navText} SWIPE →</Text>
           </View>
-
-          {verificationSwipeGesture ? (
-            <GestureDetector gesture={verificationSwipeGesture}>
-              <View collapsable={false} style={styles.verificationSwipeZone}>
-                <Animated.View style={{ transform: [{ translateY: verificationDrawerOffset }] }}>
-                  <View style={styles.verificationSwipeGrip} />
-                </Animated.View>
-                {verificationDrawerProgress > 0 && (
-                  <View
-                    style={[
-                      styles.verificationSwipeProgressFill,
-                      { width: `${verificationDrawerProgress * 100}%` },
-                    ]}
-                  />
-                )}
-              </View>
-            </GestureDetector>
-          ) : (
-            <View style={[styles.verificationSwipeZone, styles.verificationSwipeZoneDisabled]}>
-              <View style={styles.verificationSwipeGrip} />
-            </View>
-          )}
-          <Text style={styles.sectionHint}>↓ Swipe Down</Text>
+          <View style={{ flex: 1, opacity: verificationDisabled ? 0.35 : 1 }}>
+            <VerificationDrawer
+              subject={data}
+              gatheredInformation={info}
+              resourcesRemaining={resourcesRemaining || 0}
+              onQueryPerformed={onQueryPerformed}
+              onInformationUpdate={onInformationUpdate}
+            />
+          </View>
         </View>
       );
     }
@@ -680,53 +713,31 @@ export const IntelPanel = ({
           <Text style={styles.investigationNavHint}>← SWIPE {navText}</Text>
         </View>
 
-        {interrogationHoldGesture ? (
-          <GestureDetector gesture={interrogationHoldGesture}>
-            <View collapsable={false} style={styles.gestureTarget}>
-              <View
-                style={[
-                  styles.actionButton,
-                  styles.interrogateButton,
-                  !canInterrogate && styles.actionButtonDisabled,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.actionButtonText,
-                    styles.interrogateButtonText,
-                    !canInterrogate && styles.actionButtonTextDisabled,
-                  ]}
-                >
-                  {interrogationProgress > 0 ? `${Math.round(interrogationProgress * 100)}%` : 'HOLD'}
-                </Text>
-                {interrogationProgress > 0 && (
-                  <View style={[styles.drawerProgressBar, { width: `${interrogationProgress * 100}%` }]} />
-                )}
-              </View>
-            </View>
-          </GestureDetector>
-        ) : (
-          <TouchableOpacity
+        <TouchableOpacity
+          style={[
+            styles.actionButton,
+            styles.interrogateButton,
+            !canInterrogate && styles.actionButtonDisabled,
+          ]}
+          onPressIn={startInterrogationHold}
+          onPressOut={endInterrogationHold}
+          disabled={!canInterrogate}
+          activeOpacity={0.85}
+        >
+          <Text
             style={[
-              styles.actionButton,
-              styles.interrogateButton,
-              !canInterrogate && styles.actionButtonDisabled,
+              styles.actionButtonText,
+              styles.interrogateButtonText,
+              !canInterrogate && styles.actionButtonTextDisabled,
             ]}
-            onPress={handleAskQuestion}
-            disabled={!canInterrogate}
           >
-            <Text
-              style={[
-                styles.actionButtonText,
-                styles.interrogateButtonText,
-                !canInterrogate && styles.actionButtonTextDisabled,
-              ]}
-            >
-              INTERROGATE
-            </Text>
-          </TouchableOpacity>
-        )}
-        <Text style={styles.sectionHint}>Tap & Hold</Text>
+            {interrogationProgress > 0 ? `${Math.round(interrogationProgress * 100)}%` : 'HOLD'}
+          </Text>
+          {interrogationProgress > 0 && (
+            <View style={[styles.drawerProgressBar, { width: `${interrogationProgress * 100}%` }]} />
+          )}
+        </TouchableOpacity>
+        <Text style={styles.sectionHint}>Tap &amp; Hold</Text>
       </View>
     );
   };
@@ -734,15 +745,43 @@ export const IntelPanel = ({
   // Phase 4: Render investigation phase as a single swipeable carousel
   const renderInvestigationPhase = () => {
     return (
-      <View style={styles.investigationContainer} {...investigationPanResponder.panHandlers}>
-        <Animated.View
-          style={[
-            styles.investigationCarousel,
-            { transform: [{ translateX: investigationSwipeOffset }] },
-          ]}
-        >
-          {renderInvestigationCard(investigationMode)}
-        </Animated.View>
+      <View
+        style={styles.investigationContainer}
+        onLayout={(e) => {
+          const w = e.nativeEvent.layout.width;
+          if (w > 0 && w !== investigationWidth) setInvestigationWidth(w);
+        }}
+        {...investigationPanResponder.panHandlers}
+      >
+        <View style={{ flex: 1, overflow: 'hidden' }}>
+          {investigationWidth > 0 ? (
+            <Animated.View
+              style={[
+                styles.investigationCarousel,
+                {
+                  flexDirection: 'row',
+                  width: investigationWidth * INVESTIGATION_ORDER.length,
+                  transform: [{ translateX: investigationTranslateX }],
+                },
+              ]}
+            >
+              {INVESTIGATION_ORDER.map((mode) => (
+                <View
+                  key={mode}
+                  style={{ width: investigationWidth, flex: 1 }}
+                  pointerEvents={mode === investigationMode ? 'auto' : 'none'}
+                >
+                  {renderInvestigationCard(mode)}
+                </View>
+              ))}
+            </Animated.View>
+          ) : (
+            // Until we know width, keep the previous single-panel render.
+            <Animated.View style={[styles.investigationCarousel]}>
+              {renderInvestigationCard(investigationMode)}
+            </Animated.View>
+          )}
+        </View>
       </View>
     );
   };

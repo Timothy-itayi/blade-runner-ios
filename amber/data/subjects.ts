@@ -73,6 +73,10 @@ export type PersonalityType =
   | 'CONFUSED'    // Uncertain, contradictory, disoriented
   | 'PROFESSIONAL'; // Formal, business-like, efficient
 
+// Phase 4: Interrogation tone tiers (selected by press-and-hold duration)
+export type InterrogationTone = 'soft' | 'firm' | 'harsh';
+export type InterrogationResponse = string | Partial<Record<InterrogationTone, string>>;
+
 export interface PersonalityTraits {
   primaryType: PersonalityType;
   secondaryType?: PersonalityType;
@@ -148,7 +152,7 @@ export interface SubjectData {
     question1?: string;
     question2?: string;
     question3?: string;
-    responses: Record<string, string>; // question -> response mapping
+    responses: Record<string, InterrogationResponse>; // question -> response mapping (optionally tone-tiered)
   };
   
   // Dossier anomalies
@@ -312,8 +316,16 @@ export const SUBJECTS: SubjectData[] = [
     },
     interrogationResponses: {
       responses: {
-        origin: "I'm coming from Titan. To meet Jacob. Jacob Price. We've been... we've been talking. For months.",
-        purpose: "Jacob. I'm here to see Jacob Price. He works in... communications? No, wait... he's a... he's an engineer. We met through... through work?",
+        origin: {
+          soft: "I'm coming from Titan... to meet Jacob. Jacob Price. We've been talking. For months.",
+          firm: "Titan. I'm here to meet Jacob Price. We've been talking for months.",
+          harsh: "Titan. To meet Jacob Price. I already said that. Why are you circling it?",
+        },
+        purpose: {
+          soft: "Jacob. I'm here to see Jacob Price. He works in... communications? No, wait... engineering. We met through... through work?",
+          firm: "To see Jacob Price. We met through work. He said he'd help me get settled.",
+          harsh: "To see Jacob Price. The details don't matter. I'm not here to entertain you.",
+        },
         duration: "I don't know. A few days? Maybe a week? Jacob said... he said he'd help me find a place. But I'm not sure where.",
         background: "I'm a data archivist. On Titan. But I... I don't really remember much about the work. I remember Jacob though. We've been planning this visit.",
         previous: "No. No, this is my first time. Jacob said... he said Earth is beautiful. But I'm not sure if he's been here either. We talked about it, but...",

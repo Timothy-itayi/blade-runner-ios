@@ -77,11 +77,13 @@ export const createPressureHold = (
       if (onStart) runOnJS(onStart)();
     })
     .onUpdate((event) => {
-      // Pan doesn't give us duration in the event like LongPress does in some versions
-      // We can estimate it or just use the event's translation if we wanted
-      // But for a "hold", we really want time.
-      // Since we are in a worklet, we can't easily use Date.now() unless we runOnJS
-      // However, we can just use the fact that it's active.
+      // Intentionally minimal: device-only native crashes have been observed when
+      // doing too much work inside gesture worklets. Keep progress in JS space
+      // when needed via non-native handlers.
+      void event;
+      void onUpdate;
+      void minDuration;
+      void hapticEnabled;
     })
     .onEnd((event) => {
       const duration = Date.now() - startTime;

@@ -12,6 +12,7 @@ export const TypewriterText = ({
   active,
   delay = 0,
   style,
+  numberOfLines,
   showCursor = true,
   instant = false,
   speed = 25, // Phase 4: Customizable typing speed
@@ -21,6 +22,7 @@ export const TypewriterText = ({
   active: boolean,
   delay?: number,
   style?: any,
+  numberOfLines?: number,
   showCursor?: boolean,
   instant?: boolean,
   speed?: number,
@@ -79,7 +81,11 @@ export const TypewriterText = ({
   }, [active, text, delay, instant, speed]);
 
   return (
-    <Text style={style}>
+    <Text
+      style={style}
+      numberOfLines={numberOfLines}
+      ellipsizeMode={numberOfLines ? 'tail' : undefined}
+    >
       {display}
       {showCursor && isTyping && !isComplete && (
         <Text style={{ color: style?.color || Theme.colors.textPrimary, opacity: 0.8 }}>|</Text>
@@ -217,28 +223,32 @@ export const ScanData = ({
       isInterrogation = true;
     }
 
-    if (!textToShow) return null;
-
     return (
       <View style={styles.responseBox}>
-        <View style={styles.responseHeader}>
-          <Text style={styles.responseLabel}>SUBJECT:</Text>
+        <View style={styles.responseField}>
+          <View style={styles.responseHeader}>
+            <Text style={styles.responseLabel}>SUBJECT:</Text>
+          </View>
+          <TypewriterText
+            text={
+              textToShow
+                ? (isInterrogation ? textToShow : `"${textToShow}"`)
+                : ' '
+            }
+            active={true}
+            delay={interactionPhase === 'greeting' ? 500 : 0}
+            style={[
+              styles.responseText,
+              isInterrogation && styles.interrogationResponseText,
+              commStyle === 'AGITATED' && styles.agitatedText,
+              commStyle === 'BROKEN' && styles.brokenText,
+              commStyle === 'SILENT' && styles.silentText,
+            ]}
+            showCursor={true}
+            onComplete={onResponseComplete}
+            speed={commStyle === 'AGITATED' ? 20 : commStyle === 'BROKEN' ? 60 : 35}
+          />
         </View>
-        <TypewriterText
-          text={isInterrogation ? textToShow : `"${textToShow}"`}
-          active={true}
-          delay={interactionPhase === 'greeting' ? 500 : 0}
-          style={[
-            styles.responseText,
-            isInterrogation && styles.interrogationResponseText,
-            commStyle === 'AGITATED' && styles.agitatedText,
-            commStyle === 'BROKEN' && styles.brokenText,
-            commStyle === 'SILENT' && styles.silentText,
-          ]}
-          showCursor={true}
-          onComplete={onResponseComplete}
-          speed={commStyle === 'AGITATED' ? 20 : commStyle === 'BROKEN' ? 60 : 35}
-        />
       </View>
     );
   };

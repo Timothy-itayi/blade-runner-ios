@@ -43,6 +43,7 @@ interface GameScreenProps {
   isNewGame?: boolean;
   onBPMChange?: (bpm: number) => void; // Phase 2: BPM change callback
   onInformationUpdate?: (info: Partial<any>) => void; // Phase 2: Information update callback
+  onQueryPerformed?: (queryType: 'WARRANT' | 'TRANSIT' | 'INCIDENT') => void; // Phase 1: Query performed callback
   equipmentFailures?: string[]; // Phase 2: Equipment failures
   bpmDataAvailable?: boolean; // Phase 2: Is BPM monitor working?
   interrogationBPM?: number | null; // Phase 2: Current BPM during interrogation
@@ -92,6 +93,7 @@ export const GameScreen = ({
   isNewGame = false,
   onBPMChange,
   onInformationUpdate,
+  onQueryPerformed,
   equipmentFailures = [],
   bpmDataAvailable = true,
   interrogationBPM = null,
@@ -215,6 +217,7 @@ export const GameScreen = ({
           gatheredInformation={gatheredInformation}
           onBPMChange={onBPMChange}
           onInformationUpdate={onInformationUpdate}
+          onQueryPerformed={onQueryPerformed}
           interactionPhase={interactionPhase}
           onGreetingComplete={onGreetingComplete}
           onCredentialsComplete={onCredentialsComplete}

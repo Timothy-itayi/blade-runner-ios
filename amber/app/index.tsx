@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, SafeAreaView, Animated } from 'react-native';
 // Game components
 import { GameScreen } from '../components/game/screen/GameScreen';
-import { VerificationDrawer } from '../components/game/VerificationDrawer';
 import { ShiftTransition } from '../components/game/ShiftTransition';
 import { SubjectDossier } from '../components/game/SubjectDossier';
 import { HealthScanModal } from '../components/game/HealthScanModal';
@@ -93,8 +92,6 @@ export default function MainScreen() {
     dossierRevealed,
     setDossierRevealed,
     scanProgress,
-    showVerify,
-    setShowVerify,
     showDossier,
     setShowDossier,
     showInterrogate,
@@ -442,8 +439,7 @@ export default function MainScreen() {
               resourcesPerShift={resourcesPerShift}
               onSettingsPress={() => setShowSettings(true)}
               onRevealVerify={() => {
-                // Verification drawer opens - resources used when queries are performed
-                setShowVerify(true);
+                // Legacy - logic moved into IntelPanel
               }}
               onDecision={handleDecision}
               onNext={() => {
@@ -572,6 +568,10 @@ export default function MainScreen() {
                   },
                 }));
               }}
+              onQueryPerformed={(queryType: 'WARRANT' | 'TRANSIT' | 'INCIDENT') => {
+                // Each verification query uses 1 resource
+                useGameStore.getState().useSubjectResource();
+              }}
               isNewGame={isNewGame}
               equipmentFailures={gatheredInformation.equipmentFailures}
               bpmDataAvailable={gatheredInformation.bpmDataAvailable}
@@ -594,34 +594,6 @@ export default function MainScreen() {
               }}
               onEstablishBPM={(bpm) => setEstablishedBPM(bpm)}
             />
-
-            {showVerify && (
-              <VerificationDrawer 
-                subject={currentSubject} 
-                onClose={() => setShowVerify(false)}
-                resourcesRemaining={resourcesRemaining}
-                onQueryPerformed={(queryType) => {
-                  // Each verification query uses 1 resource
-                  useGameStore.getState().useSubjectResource();
-                }}
-                onInformationGathered={(queryType) => {
-                  // Phase 1: Track information gathered
-                  setGatheredInformation(prev => ({
-                    ...prev,
-                    [queryType === 'WARRANT' ? 'warrantCheck' : queryType === 'TRANSIT' ? 'transitLog' : 'incidentHistory']: true,
-                    timestamps: {
-                      ...prev.timestamps,
-                      [queryType === 'WARRANT' ? 'warrantCheck' : queryType === 'TRANSIT' ? 'transitLog' : 'incidentHistory']: Date.now(),
-                    },
-                  }));
-                }}
-                gatheredInformation={{
-                  warrantCheck: gatheredInformation.warrantCheck,
-                  transitLog: gatheredInformation.transitLog,
-                  incidentHistory: gatheredInformation.incidentHistory,
-                }}
-              />
-            )}
 
             {showDossier && (
               <SubjectDossier 

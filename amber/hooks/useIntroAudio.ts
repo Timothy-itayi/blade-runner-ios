@@ -17,7 +17,42 @@ export const useIntroAudio = ({ musicVolume, sfxVolume }: UseIntroAudioOptions) 
     };
   }, []);
 
+  // Update music volume or stop when muted
+  useEffect(() => {
+    const updateVolume = async () => {
+      if (menuSoundtrackRef.current) {
+        try {
+          const status = await menuSoundtrackRef.current.getStatusAsync();
+          if (status.isLoaded) {
+            await menuSoundtrackRef.current.setVolumeAsync(musicVolume);
+          }
+        } catch (e) {
+          // Sound may have been unloaded, ignore
+        }
+      }
+    };
+    updateVolume();
+  }, [musicVolume]);
+
+  // Stop SFX when muted
+  useEffect(() => {
+    const stopSfx = async () => {
+      if (sfxVolume === 0 && alertSoundRef.current) {
+        try {
+          const status = await alertSoundRef.current.getStatusAsync();
+          if (status.isLoaded) {
+            await alertSoundRef.current.stopAsync();
+          }
+        } catch (e) {
+          // Sound may have been unloaded, ignore
+        }
+      }
+    };
+    stopSfx();
+  }, [sfxVolume]);
+
   const playMenuSoundtrack = useCallback(async () => {
+    if (musicVolume === 0) return;
     try {
       if (menuSoundtrackRef.current) {
         await menuSoundtrackRef.current.unloadAsync();

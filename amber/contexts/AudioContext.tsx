@@ -37,6 +37,14 @@ export const GameAudioProvider = ({ children }: { children: React.ReactNode }) =
     };
   }, []);
 
+  // Stop all sounds when muted
+  useEffect(() => {
+    if (!sfxEnabled) {
+      bootSoundRef.current?.stopAsync();
+      soundtrackRef.current?.stopAsync();
+    }
+  }, [sfxEnabled]);
+
   const playBootSequence = useCallback(async () => {
     if (!sfxEnabled) return;
     try {
@@ -118,6 +126,7 @@ export const GameAudioProvider = ({ children }: { children: React.ReactNode }) =
   }, [sfxEnabled]);
 
   const playGameSoundtrack = useCallback(async () => {
+    if (!sfxEnabled) return;
     try {
       if (soundtrackRef.current) {
         await soundtrackRef.current.unloadAsync();
@@ -131,7 +140,7 @@ export const GameAudioProvider = ({ children }: { children: React.ReactNode }) =
     } catch (e) {
       console.warn('Failed to play game soundtrack:', e);
     }
-  }, []);
+  }, [sfxEnabled]);
 
   const stopGameSoundtrack = useCallback(async () => {
     try {

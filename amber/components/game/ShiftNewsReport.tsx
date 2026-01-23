@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Pressable, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable, Image } from 'react-native';
+import { Audio } from 'expo-av';
 import { Theme } from '../../constants/theme';
 import { ShiftDecision } from './ShiftTransition';
 import { NewsReport } from '../../data/subjects';
@@ -9,73 +10,65 @@ interface ShiftNewsReportProps {
   onComplete: () => void;
 }
 
-// Get the news report for a decision
 const getNewsReport = (decision: ShiftDecision): NewsReport | undefined => {
   const outcome = decision.subject.outcomes[decision.decision];
   return outcome?.newsReport;
 };
 
-// Get tone color for news headline
-const getToneColor = (tone: NewsReport['tone']): string => {
-  switch (tone) {
-    case 'ALARMING':
-      return Theme.colors.accentDeny;
-    case 'POSITIVE':
-      return Theme.colors.accentApprove;
-    case 'OMINOUS':
-      return Theme.colors.accentWarn;
-    case 'TRAGIC':
-      return '#9b59b6'; // Purple for tragic
-    case 'NEUTRAL':
-    default:
-      return Theme.colors.textPrimary;
-  }
-};
-
 export const ShiftNewsReport = ({ shiftDecisions, onComplete }: ShiftNewsReportProps) => {
-  // Filter to only decisions that have news reports
   const newsItems = shiftDecisions
     .map(d => ({ decision: d, news: getNewsReport(d) }))
     .filter((item): item is { decision: ShiftDecision; news: NewsReport } => item.news !== undefined);
 
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-  const tickerAnim = useRef(new Animated.Value(0)).current;
 
-  // Animate in current news item
   useEffect(() => {
-    fadeAnim.setValue(0);
-    slideAnim.setValue(20);
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
 
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-    ]).start();
+  useEffect(() => {
+    const playAudio = async () => {
+      if (sound) {
+        await sound.unloadAsync();
+      }
+
+      const currentItem = newsItems[currentIndex];
+      if (currentItem?.news.audioFile) {
+        setIsPlaying(true);
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          currentItem.news.audioFile
+        );
+        setSound(newSound);
+        
+        newSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setIsPlaying(false);
+          }
+        });
+        
+        await newSound.playAsync();
+      }
+    };
+
+    playAudio();
   }, [currentIndex]);
 
-  // Animate ticker
   useEffect(() => {
-    const ticker = Animated.loop(
-      Animated.timing(tickerAnim, {
-        toValue: 1,
-        duration: 15000,
-        useNativeDriver: true,
-      })
-    );
-    ticker.start();
-    return () => ticker.stop();
-  }, []);
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+  }, [currentIndex]);
 
-  // If no news items, skip to complete
   useEffect(() => {
     if (newsItems.length === 0) {
       onComplete();
@@ -88,8 +81,16 @@ export const ShiftNewsReport = ({ shiftDecisions, onComplete }: ShiftNewsReportP
 
   const currentItem = newsItems[currentIndex];
   const isLast = currentIndex >= newsItems.length - 1;
+  const subject = currentItem.decision.subject;
+  const decision = currentItem.decision.decision;
+  const reportType = currentItem.news.type || 'NEWS';
 
-  const handleNext = () => {
+  const handleNext = async () => {
+    if (sound) {
+      await sound.stopAsync();
+    }
+    setIsPlaying(false);
+    
     if (isLast) {
       onComplete();
     } else {
@@ -97,100 +98,94 @@ export const ShiftNewsReport = ({ shiftDecisions, onComplete }: ShiftNewsReportP
     }
   };
 
-  const toneColor = getToneColor(currentItem.news.tone);
+  const getTypeLabel = () => {
+    switch (reportType) {
+      case 'MEMO': return 'AMBER INTERNAL';
+      case 'INTERCEPT': return 'CLASSIFIED';
+      default: return 'BROADCAST';
+    }
+  };
 
   return (
     <View style={styles.container}>
-      {/* Broadcast Header */}
-      <View style={styles.broadcastHeader}>
-        <View style={styles.liveIndicator}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>LIVE</Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.typeTag}>
+          {reportType === 'NEWS' && <View style={styles.liveDot} />}
+          <Text style={styles.typeText}>{getTypeLabel()}</Text>
         </View>
-        <Text style={styles.networkName}>{currentItem.news.source}</Text>
-        <Text style={styles.reportCounter}>
-          {currentIndex + 1} / {newsItems.length}
-        </Text>
+        <Text style={styles.counter}>{currentIndex + 1} / {newsItems.length}</Text>
       </View>
 
-      {/* News Content */}
-      <Animated.View
-        style={[
-          styles.newsContent,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
-        ]}
-      >
-        {/* Headline */}
-        <View style={[styles.headlineBar, { borderLeftColor: toneColor }]}>
-          <Text style={[styles.headline, { color: toneColor }]}>
-            {currentItem.news.headline}
-          </Text>
-          {currentItem.news.subheadline && (
-            <Text style={styles.subheadline}>
-              {currentItem.news.subheadline}
-            </Text>
-          )}
+      {/* Content */}
+      <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+        {/* Subject Passport Photo (fallback to news image) */}
+        {(subject.profilePic || currentItem.news.image) && (
+          <View style={styles.imageContainer}>
+            <Image 
+              source={subject.profilePic || currentItem.news.image} 
+              style={styles.image} 
+              resizeMode="cover" 
+            />
+          </View>
+        )}
+
+        {/* Subject Dossier */}
+        <View style={styles.dossier}>
+          <View style={styles.dossierHeader}>
+            <Text style={styles.dossierLabel}>SUBJECT FILE</Text>
+            <View style={[
+              styles.decisionBadge,
+              decision === 'APPROVE' ? styles.approvedBadge : styles.deniedBadge
+            ]}>
+              <Text style={[
+                styles.decisionText,
+                decision === 'APPROVE' ? styles.approvedText : styles.deniedText
+              ]}>
+                {decision === 'APPROVE' ? 'APPROVED' : 'DENIED'}
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.dossierRow}>
+            <Text style={styles.dossierKey}>NAME</Text>
+            <Text style={styles.dossierValue}>{subject.name}</Text>
+          </View>
+          <View style={styles.dossierRow}>
+            <Text style={styles.dossierKey}>ID</Text>
+            <Text style={styles.dossierValue}>{subject.id}</Text>
+          </View>
+          <View style={styles.dossierRow}>
+            <Text style={styles.dossierKey}>ORIGIN</Text>
+            <Text style={styles.dossierValue}>{subject.originPlanet}</Text>
+          </View>
+          <View style={styles.dossierRow}>
+            <Text style={styles.dossierKey}>STATUS</Text>
+            <Text style={styles.dossierValue}>{subject.warrants === 'NONE' ? 'CLEAR' : 'FLAGGED'}</Text>
+          </View>
         </View>
 
-        {/* Body */}
-        <ScrollView style={styles.bodyScroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.bodyText}>
-            {currentItem.news.body}
-          </Text>
-        </ScrollView>
-
-        {/* Subject Reference */}
-        <View style={styles.subjectRef}>
-          <Text style={styles.subjectRefLabel}>RELATED TO:</Text>
-          <Text style={styles.subjectRefName}>
-            {currentItem.decision.subject.name} ({currentItem.decision.subject.id})
-          </Text>
-          <Text style={[
-            styles.decisionBadge,
-            currentItem.decision.decision === 'APPROVE'
-              ? styles.approvedBadge
-              : styles.deniedBadge
-          ]}>
-            {currentItem.decision.decision === 'APPROVE' ? 'APPROVED' : 'DENIED'}
-          </Text>
-        </View>
+        {/* Audio indicator */}
+        {isPlaying && (
+          <View style={styles.audioIndicator}>
+            <View style={styles.audioBar} />
+            <View style={[styles.audioBar, styles.audioBar2]} />
+            <View style={[styles.audioBar, styles.audioBar3]} />
+            <Text style={styles.audioText}>PLAYING</Text>
+          </View>
+        )}
       </Animated.View>
 
-      {/* Bottom Ticker */}
-      <View style={styles.tickerContainer}>
-        <Animated.View
-          style={[
-            styles.tickerContent,
-            {
-              transform: [{
-                translateX: tickerAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [300, -600],
-                })
-              }]
-            }
-          ]}
-        >
-          <Text style={styles.tickerText}>
-            AMBER SECURITY NETWORK /// SECTOR UPDATES /// PROCESSING COMPLETE ///
-            SHIFT REPORT AVAILABLE /// AMBER SECURITY NETWORK ///
-          </Text>
-        </Animated.View>
-      </View>
-
-      {/* Continue Button */}
+      {/* Next Button */}
       <Pressable
         onPress={handleNext}
         style={({ pressed }) => [
-          styles.continueButton,
-          pressed && styles.continueButtonPressed,
+          styles.nextButton,
+          pressed && styles.nextButtonPressed,
         ]}
       >
-        <Text style={styles.continueText}>
-          {isLast ? '[ END BROADCAST ]' : '[ NEXT REPORT ]'}
+        <Text style={styles.nextText}>
+          {isLast ? '[ MAIN MENU ]' : '[ NEXT ]'}
         </Text>
       </Pressable>
     </View>
@@ -203,7 +198,7 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: 'rgba(10, 12, 15, 0.98)',
   },
-  broadcastHeader: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -212,7 +207,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Theme.colors.border,
   },
-  liveIndicator: {
+  typeTag: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -223,130 +218,142 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.colors.accentDeny,
     marginRight: 6,
   },
-  liveText: {
-    color: Theme.colors.accentDeny,
+  typeText: {
+    color: Theme.colors.textSecondary,
     fontFamily: Theme.fonts.mono,
     fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 2,
   },
-  networkName: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  reportCounter: {
+  counter: {
     color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
     fontSize: 10,
   },
-  newsContent: {
+  content: {
     flex: 1,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageContainer: {
+    width: '100%',
+    maxWidth: 280,
+    aspectRatio: 1,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    backgroundColor: '#000',
+    marginBottom: 24,
+  },
+  image: {
+    width: '100%',
+    height: '100%',
+  },
+  dossier: {
+    width: '100%',
+    maxWidth: 280,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    backgroundColor: 'rgba(20, 25, 30, 0.8)',
     padding: 16,
   },
-  headlineBar: {
-    borderLeftWidth: 4,
-    paddingLeft: 12,
-    marginBottom: 20,
-  },
-  headline: {
-    fontFamily: Theme.fonts.mono,
-    fontSize: 18,
-    fontWeight: '700',
-    lineHeight: 24,
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  subheadline: {
-    color: Theme.colors.textSecondary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  bodyScroll: {
-    flex: 1,
-    marginBottom: 16,
-  },
-  bodyText: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 13,
-    lineHeight: 22,
-    letterSpacing: 0.3,
-  },
-  subjectRef: {
+  dossierHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Theme.colors.border,
-    gap: 8,
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.border,
   },
-  subjectRefLabel: {
-    color: Theme.colors.textDim,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    letterSpacing: 1,
-  },
-  subjectRefName: {
+  dossierLabel: {
     color: Theme.colors.textSecondary,
     fontFamily: Theme.fonts.mono,
     fontSize: 10,
-    flex: 1,
+    letterSpacing: 2,
   },
   decisionBadge: {
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    letterSpacing: 1,
   },
   approvedBadge: {
-    color: Theme.colors.accentApprove,
     backgroundColor: 'rgba(74, 138, 90, 0.2)',
     borderWidth: 1,
     borderColor: 'rgba(74, 138, 90, 0.4)',
   },
   deniedBadge: {
-    color: Theme.colors.accentDeny,
     backgroundColor: 'rgba(212, 83, 74, 0.2)',
     borderWidth: 1,
     borderColor: 'rgba(212, 83, 74, 0.4)',
   },
-  tickerContainer: {
-    height: 28,
-    backgroundColor: 'rgba(26, 42, 58, 0.5)',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  tickerContent: {
-    flexDirection: 'row',
-    position: 'absolute',
-  },
-  tickerText: {
-    color: Theme.colors.accentWarn,
+  decisionText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 10,
+    fontSize: 9,
+    fontWeight: '700',
     letterSpacing: 1,
   },
-  continueButton: {
-    paddingVertical: 18,
+  approvedText: {
+    color: Theme.colors.accentApprove,
+  },
+  deniedText: {
+    color: Theme.colors.accentDeny,
+  },
+  dossierRow: {
+    flexDirection: 'row',
+    marginBottom: 6,
+  },
+  dossierKey: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    width: 60,
+  },
+  dossierValue: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    flex: 1,
+  },
+  audioIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    gap: 4,
+  },
+  audioBar: {
+    width: 3,
+    height: 12,
+    backgroundColor: Theme.colors.accentApprove,
+    opacity: 0.8,
+  },
+  audioBar2: {
+    height: 18,
+  },
+  audioBar3: {
+    height: 8,
+  },
+  audioText: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    letterSpacing: 2,
+    marginLeft: 8,
+  },
+  nextButton: {
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: Theme.colors.border,
     alignItems: 'center',
     backgroundColor: 'rgba(127, 184, 216, 0.08)',
   },
-  continueButtonPressed: {
+  nextButtonPressed: {
     backgroundColor: 'rgba(127, 184, 216, 0.2)',
   },
-  continueText: {
+  nextText: {
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 2,
   },
 });

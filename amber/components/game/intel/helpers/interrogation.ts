@@ -5,12 +5,18 @@ export function generateDefaultResponse(
   questionId: string,
   tone: InterrogationTone = 'firm'
 ): string {
+  const neutralFallbacks: Record<InterrogationTone, string> = {
+    soft: "I'm not sure that applies. Ask me something else.",
+    firm: "I don't have anything to add beyond what's on record.",
+    harsh: 'You have what you need in the file.',
+  };
+
   // Check if subject has a specific response for this question (optionally tone-tiered)
   const entry = subject.interrogationResponses?.responses?.[questionId];
   if (entry) {
     if (typeof entry === 'string') return entry;
     // Prefer requested tone, then sensible fallbacks.
-    return entry[tone] || entry.firm || entry.soft || entry.harsh || "I don't have to answer that.";
+    return entry[tone] || entry.firm || entry.soft || entry.harsh || neutralFallbacks[tone] || neutralFallbacks.firm;
   }
 
   // Scan-driven and evidence questions default to cooperative answers to keep play moving.
@@ -93,12 +99,6 @@ export function generateDefaultResponse(
     return "Maybe. I don't remember. Why does it matter?";
   }
 
-  // Bio scan questions should always have responses defined in subject data
-  const neutralFallbacks: Record<InterrogationTone, string> = {
-    soft: "I'm not sure that applies. Ask me something else.",
-    firm: "I don't have anything to add beyond what's on record.",
-    harsh: 'You have what you need in the file.',
-  };
   return neutralFallbacks[tone] || neutralFallbacks.firm;
 }
 

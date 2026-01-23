@@ -187,7 +187,7 @@ export const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -60 }, { translateY: -20 }],
+    transform: [{ translateX: -75 }, { translateY: -20 }],
     alignItems: 'center',
     zIndex: 20,
   },

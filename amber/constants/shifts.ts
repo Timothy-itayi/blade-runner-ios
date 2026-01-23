@@ -16,15 +16,15 @@ export interface ShiftData {
 
 export const SHIFTS: ShiftData[] = [
   // =============================================================================
-  // SHIFT 1: BREACH ALERT (Subjects 1-4)
+  // SHIFT 1: CLEARANCE CHECK (Subjects 1-4)
   // =============================================================================
   {
     id: 1,
     timeBlock: '06:00',
-    chapter: 'Breach Alert',
+    chapter: 'Clearance Check',
     stationName: 'AMBER DEPOT PERIMETER',
     authorityLabel: 'DEPOT SECURITY',
-    briefing: 'Perimeter compromise detected. Verify all personnel attempting core access.',
+    briefing: 'Standard transit verification in effect. Verify all personnel requesting depot access.',
     directive: 'DENY ALL SUBJECTS WITH ACTIVE WARRANTS',
     unlockedChecks: ['DATABASE'],
     activeRules: ['CHECK_WARRANTS'],

@@ -32,11 +32,13 @@ import { createEmptyInformation, MEMORY_SLOT_CAPACITY } from '../types/informati
 import { determineEquipmentFailures } from '../utils/equipmentFailures';
 import { SupervisorWarning, WarningPattern } from '../components/game/SupervisorWarning';
 import { createPatternTracker, checkWarningPatterns, PatternTracker } from '../utils/warningPatterns';
+import { useGameAudioContext } from '../contexts/AudioContext';
 
 const DEV_MODE = false; // Set to true to bypass onboarding and boot
 
 export default function MainScreen() {
   const { lives, setLives, resetLives } = useGameStore();
+  const { playGameSoundtrack, stopGameSoundtrack } = useGameAudioContext();
   
   const [gamePhase, setGamePhase] = useState<GamePhase>(DEV_MODE ? 'active' : 'intro');
   const [hasSave, setHasSave] = useState(false);
@@ -144,21 +146,12 @@ export default function MainScreen() {
     });
   };
 
-  const getNextFemaleSubjectIndex = React.useCallback(
+  // Simple sequential index for demo (Eva → Mara → Chen → end of shift)
+  const getNextSubjectIndexSequential = React.useCallback(
     (fromIndex: number, poolSize: number) => {
       const size = poolSize || subjectPool.length;
       if (size === 0) return fromIndex;
-
-      const startIndex = (fromIndex + 1) % size;
-      for (let offset = 0; offset < size; offset += 1) {
-        const candidateIndex = (startIndex + offset) % size;
-        const candidate = subjectPool[candidateIndex];
-        if (candidate?.sex === 'F') {
-          return candidateIndex;
-        }
-      }
-
-      return startIndex;
+      return (fromIndex + 1) % size;
     },
     [subjectPool]
   );
@@ -177,7 +170,7 @@ export default function MainScreen() {
     setMessageHistory,
     setShowShiftTransition,
     subjectPoolSize: subjectPool.length, // Phase 5: Pass pool size
-    getNextSubjectIndex: getNextFemaleSubjectIndex,
+    getNextSubjectIndex: getNextSubjectIndexSequential,
     setCurrentSubjectIndex,
     setBiometricsRevealed,
     setSubjectsProcessed,
@@ -200,13 +193,53 @@ export default function MainScreen() {
     setWarningTracker, // Phase 3: Update pattern tracker
   });
 
+  const handleMainMenu = async () => {
+    // Stop game soundtrack
+    stopGameSoundtrack();
+    
+    // Clear save data so Continue button doesn't appear
+    await clearSave();
+    setHasSave(false);
+    
+    // Reset all game state and return to main menu
+    setShowShiftTransition(false);
+    setHasDecision(false);
+    setShiftStats({ approved: 0, denied: 0, correct: 0 });
+    setShiftDecisions([]);
+    setCurrentSubjectIndex(0);
+    setScanningHands(false);
+    setScanningIris(false);
+    setDossierRevealed(false);
+    setSubjectResponse('');
+    setShowInterrogate(false);
+    setGatheredInformation(createEmptyInformation());
+    setInterrogationBPM(null);
+    setIsInterrogationActive(false);
+    setCurrentWarning(null);
+    setWarningTracker(createPatternTracker());
+    setInteractionPhase('greeting');
+    setEstablishedBPM(72);
+    setEyeScannerActive(false);
+    setIsIdentityScanning(false);
+    setBiometricsRevealed(false);
+    setDecisionHistory({});
+    setTotalCorrectDecisions(0);
+    setTotalAccuracy(0);
+    setInfractions(0);
+    setMessageHistory([]);
+    setSubjectsProcessed(0);
+    setHudStage('none');
+    // Return to home screen
+    setGamePhase('intro');
+  };
+
   const handleShiftContinue = () => {
     setShowShiftTransition(false);
     setHasDecision(false);
     setShiftStats({ approved: 0, denied: 0, correct: 0 });
     setShiftDecisions([]);
 
-    const nextIndex = getNextFemaleSubjectIndex(currentSubjectIndex, subjectPool.length);
+    const nextIndex = getNextSubjectIndexSequential(currentSubjectIndex, subjectPool.length);
     setCurrentSubjectIndex(nextIndex);
     setScanningHands(false);
     setScanningIris(false);
@@ -347,7 +380,7 @@ export default function MainScreen() {
 
   const handleBriefingComplete = () => {
     setGamePhase('active');
-    // Audio stripped.
+    playGameSoundtrack();
     
     resetLives();
     
@@ -433,17 +466,23 @@ export default function MainScreen() {
               biometricsRevealed={biometricsRevealed}
               hasDecision={hasDecision}
               decisionOutcome={decisionOutcome}
-              lives={lives}
               onSettingsPress={() => setShowSettings(true)}
               onDecision={handleDecision}
               onNext={() => {
                 // Phase 2: Reset information tracking for next subject with equipment failures
-                const nextIndex = getNextFemaleSubjectIndex(currentSubjectIndex, subjectPool.length);
+                const nextIndex = getNextSubjectIndexSequential(currentSubjectIndex, subjectPool.length);
                 const nextSubjectData = getSubjectByIndex(nextIndex, subjectPool);
                 const equipmentFailures = determineEquipmentFailures(nextSubjectData.id);
                 setGatheredInformation(createEmptyInformation(equipmentFailures));
                 setInterrogationBPM(null); // Reset BPM
                 setIsInterrogationActive(false); // Reset interrogation state
+                // Hard reset per-subject transient UI state immediately (prevents bleed/flicker)
+                setSubjectResponse('');
+                setDossierRevealed(false);
+                setEyeScannerActive(false);
+                setIsIdentityScanning(false);
+                setScanningHands(false);
+                setScanningIris(false);
                 // Phase 4: Reset to greeting phase
                 setInteractionPhase('greeting');
                 setEstablishedBPM(72);
@@ -633,13 +672,15 @@ export default function MainScreen() {
             {showShiftTransition && (
               <ShiftTransition
                 previousShift={currentShift}
-                nextShift={getShiftForSubject(getNextFemaleSubjectIndex(currentSubjectIndex, subjectPool.length))}
+                nextShift={getShiftForSubject(getNextSubjectIndexSequential(currentSubjectIndex, subjectPool.length))}
                 approvedCount={shiftStats.approved}
                 deniedCount={shiftStats.denied}
                 totalAccuracy={totalAccuracy}
                 messageHistory={messageHistory}
                 shiftDecisions={shiftDecisions}
                 onContinue={handleShiftContinue}
+                isEndOfDemo={currentShift.id === 1}
+                onMainMenu={handleMainMenu}
               />
             )}
 

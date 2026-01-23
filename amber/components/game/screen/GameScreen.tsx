@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Animated, TouchableOpacity, Text } from 'react-native';
 import { Header } from '../Header';
 import { ScanPanel } from '../ScanPanel';
@@ -24,7 +24,6 @@ interface GameScreenProps {
   biometricsRevealed: boolean;
   hasDecision: boolean;
   decisionOutcome: { type: 'APPROVE' | 'DENY', outcome: any } | null;
-  lives?: number;
   onSettingsPress: () => void;
   onDecision: (type: 'APPROVE' | 'DENY') => void;
   onNext: () => void;
@@ -70,7 +69,6 @@ export const GameScreen = ({
   biometricsRevealed,
   hasDecision,
   decisionOutcome,
-  lives,
   onSettingsPress,
   onDecision,
   onNext,
@@ -104,8 +102,7 @@ export const GameScreen = ({
   // Eye scanner toggle controls view channel
   const viewChannel: 'facial' | 'eye' = eyeScannerActive ? 'eye' : 'facial';
   const questionsAsked = gatheredInformation?.interrogation?.questionsAsked || 0;
-  const hasEvidence = gatheredInformation ? hasSomeInformation(gatheredInformation) : false;
-  const interrogationLocked = hasEvidence && questionsAsked < 3;
+  const decisionLocked = questionsAsked < 1;
 
   // Phase 4: Lifted greeting state
   const [greetingDisplayed, setGreetingDisplayed] = useState(false);
@@ -122,7 +119,10 @@ export const GameScreen = ({
   React.useEffect(() => {
     setGreetingDisplayed(false);
     setVerificationStep(0);
+    setIdentityScanHoldActive(false);
     clearVerificationTimers();
+    // Clear any prior interrogation text immediately (prevents bleed between subjects)
+    onResponseUpdate?.('');
   }, [currentSubject.id]);
 
   // Automated intake verification ratchet (system-driven, no gestures)
@@ -160,6 +160,14 @@ export const GameScreen = ({
     return clearVerificationTimers;
   }, [interactionPhase, greetingDisplayed, biometricsRevealed, onGreetingComplete]);
 
+  useEffect(() => {
+    if (!hasDecision) return;
+    const timer = setTimeout(() => {
+      onNext();
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [hasDecision, onNext]);
+
   return (
     <>
       <Header
@@ -167,12 +175,12 @@ export const GameScreen = ({
         shiftTime={currentShift.timeBlock}
         shiftData={currentShift}
         onSettingsPress={onSettingsPress}
-        lives={lives}
       />
       
       <View style={styles.content}>
         <View style={styles.topSection}>
           <ScanPanel
+            key={`scan-${currentSubject.id}`}
             isScanning={isScanning}
             scanProgress={scanProgress}
             hudStage={hudStage}
@@ -189,6 +197,7 @@ export const GameScreen = ({
             establishedBPM={establishedBPM}
           />
           <EyeDisplay 
+            key={`eye-${currentSubject.id}`}
             isScanning={isScanning} 
             scanProgress={scanProgress} 
             videoSource={currentSubject.videoSource}
@@ -217,6 +226,7 @@ export const GameScreen = ({
         </View>
         
           <ScanData 
+            key={`scan-data-${currentSubject.id}`}
             id={currentSubject.id}
             isScanning={isScanning}
             scanProgress={scanProgress}
@@ -239,6 +249,7 @@ export const GameScreen = ({
           />
 
         <IntelPanel
+          key={`intel-${currentSubject.id}`}
           data={currentSubject}
           hudStage={hudStage}
           hasDecision={hasDecision}
@@ -263,8 +274,7 @@ export const GameScreen = ({
           <DecisionButtons 
             hudStage={hudStage} 
             onDecision={onDecision}
-            onNext={onNext}
-            disabled={isScanning || interrogationLocked}
+            disabled={isScanning || decisionLocked}
             hasDecision={hasDecision}
             isNewGame={isNewGame}
             protocolStatus={{

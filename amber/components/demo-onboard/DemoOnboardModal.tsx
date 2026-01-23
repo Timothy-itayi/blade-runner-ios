@@ -10,35 +10,35 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    title: 'PERIMETER SECURED',
+    title: 'TRANSIT CHECKPOINT',
     lines: [
-      'AMBER DEPOT is under infiltration alert.',
-      'Identify every subject attempting entry.',
-      'Neutralize threats before they breach the core.',
+      'You are assigned to AMBER DEPOT perimeter.',
+      'Verify all subjects requesting transit clearance.',
+      'Approve or deny based on documentation.',
     ],
   },
   {
-    title: 'SECURE THE DEPOT',
+    title: 'VERIFICATION PROTOCOL',
     lines: [
-      'Each subject claims a valid reason for entry.',
-      'Cross-reference findings with their testimony.',
-      'Decide: ALLOW or REJECT.',
+      'Each subject presents credentials and testimony.',
+      'Cross-reference with transit records.',
+      'Decide: APPROVE or DENY entry.',
     ],
   },
   {
-    title: 'PROTOCOL',
+    title: 'INVESTIGATION TOOLS',
     lines: [
-      'Identity scans unlock the personnel database.',
-      'Query transit logs and incident histories.',
-      'Ask up to 3 questions. Do not hesitate.',
+      'Identity scans access the personnel database.',
+      'Query transit logs and warrant histories.',
+      'Ask up to 3 questions to clarify discrepancies.',
     ],
   },
   {
-    title: 'LIVE BREACH',
+    title: 'BEGIN PROCESSING',
     lines: [
-      'The facility is in lockdown.',
-      'Your accuracy ensures our survival.',
-      'They are coming. Watch the gates.',
+      'Subjects are waiting at the gate.',
+      'Follow the active directive from command.',
+      'Your decisions shape what comes next.',
     ],
   },
 ];

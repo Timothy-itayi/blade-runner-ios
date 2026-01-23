@@ -23,6 +23,8 @@ interface ShiftTransitionProps {
   messageHistory: string[];
   shiftDecisions: ShiftDecision[]; // NEW: Decisions made this shift
   onContinue: () => void;
+  isEndOfDemo?: boolean; // If true, show demo complete instead of next shift
+  onMainMenu?: () => void; // Callback to return to main menu
 }
 
 export const ShiftTransition = ({
@@ -34,9 +36,11 @@ export const ShiftTransition = ({
   messageHistory,
   shiftDecisions,
   onContinue,
+  isEndOfDemo = false,
+  onMainMenu,
 }: ShiftTransitionProps) => {
   // Start with 'news' phase to show news reports first
-  const [phase, setPhase] = useState<'news' | 'summary' | 'reports' | 'menu' | 'profile' | 'briefing'>('news');
+  const [phase, setPhase] = useState<'news' | 'summary' | 'reports' | 'menu' | 'profile' | 'briefing' | 'demoComplete'>('news');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const briefingOpacity = useRef(new Animated.Value(0)).current;
 
@@ -52,7 +56,11 @@ export const ShiftTransition = ({
 
   // Called when news broadcast ends
   const handleNewsComplete = () => {
-    setPhase('profile');
+    if (isEndOfDemo) {
+      setPhase('demoComplete');
+    } else {
+      setPhase('profile');
+    }
   };
 
   const handleStartBriefing = () => {
@@ -129,6 +137,38 @@ export const ShiftTransition = ({
           >
             <Text style={styles.continueText}>[ RECEIVE NEW DIRECTIVE ]</Text>
           </Pressable>
+        </View>
+      );
+    }
+
+    if (phase === 'demoComplete') {
+      return (
+        <View style={styles.demoCompleteContainer}>
+          <View style={styles.demoCompleteBox}>
+            <Text style={styles.demoCompleteLabel}>TRANSMISSION ENDED</Text>
+            <View style={styles.demoCompleteDivider} />
+            <Text style={styles.demoCompleteTitle}>AMBER DEMO COMPLETE</Text>
+            <Text style={styles.demoCompleteSubtitle}>SHIFT 1 // CLEARANCE CHECK</Text>
+            <View style={styles.demoCompleteDivider} />
+            <View style={styles.demoStatsRow}>
+              <Text style={styles.demoStatLabel}>SUBJECTS PROCESSED:</Text>
+              <Text style={styles.demoStatValue}>3</Text>
+            </View>
+            <View style={styles.demoCompleteDivider} />
+            <Text style={styles.demoCompleteFooter}>FULL VERSION COMING SOON</Text>
+          </View>
+          
+          {onMainMenu && (
+            <Pressable
+              onPress={onMainMenu}
+              style={({ pressed }) => [
+                styles.mainMenuButton,
+                pressed && styles.mainMenuButtonPressed
+              ]}
+            >
+              <Text style={styles.mainMenuButtonText}>[ MAIN MENU ]</Text>
+            </Pressable>
+          )}
         </View>
       );
     }
@@ -661,5 +701,95 @@ const styles = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 2,
     marginBottom: 8,
+  },
+  // Demo Complete styles
+  demoCompleteContainer: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  demoCompleteBox: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: 'rgba(20, 25, 30, 0.95)',
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    padding: 24,
+    alignItems: 'center',
+  },
+  demoCompleteLabel: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    letterSpacing: 3,
+    marginBottom: 12,
+  },
+  demoCompleteTitle: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 2,
+    textAlign: 'center',
+    marginVertical: 12,
+  },
+  demoCompleteSubtitle: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  demoCompleteDivider: {
+    width: '80%',
+    height: 1,
+    backgroundColor: Theme.colors.border,
+    marginVertical: 8,
+  },
+  demoStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 16,
+    marginVertical: 4,
+  },
+  demoStatLabel: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+  },
+  demoStatValue: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  demoCompleteFooter: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    letterSpacing: 2,
+    marginTop: 12,
+  },
+  mainMenuButton: {
+    marginTop: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    backgroundColor: 'rgba(20, 25, 30, 0.8)',
+  },
+  mainMenuButtonPressed: {
+    backgroundColor: 'rgba(74, 106, 122, 0.3)',
+    borderColor: Theme.colors.textSecondary,
+  },
+  mainMenuButtonText: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    letterSpacing: 2,
+    textAlign: 'center',
   },
 });

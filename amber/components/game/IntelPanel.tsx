@@ -73,6 +73,7 @@ export const IntelPanel = ({
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentQuestionText, setCurrentQuestionText] = useState<string>('');
   const autoAskedSubjectRef = useRef<string | null>(null);
+  const responseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Phase 4: Greeting and credential state
   const greetingData = getSubjectGreeting(data.id, data);
@@ -84,6 +85,10 @@ export const IntelPanel = ({
     setCurrentQuestionIndex(0);
     setCurrentQuestionText('');
     autoAskedSubjectRef.current = null;
+    if (responseTimeoutRef.current) {
+      clearTimeout(responseTimeoutRef.current);
+      responseTimeoutRef.current = null;
+    }
   }, [data.id]);
 
   // Phase 4: Establish BPM baseline when greeting is complete
@@ -167,7 +172,11 @@ export const IntelPanel = ({
     
     // Clear previous response first, then set new one (triggers typewriter)
     onResponseUpdate?.('');
-    setTimeout(() => {
+    if (responseTimeoutRef.current) {
+      clearTimeout(responseTimeoutRef.current);
+      responseTimeoutRef.current = null;
+    }
+    responseTimeoutRef.current = setTimeout(() => {
       onResponseUpdate?.(response);
     }, 50);
 
@@ -205,6 +214,21 @@ export const IntelPanel = ({
       friction: 12,
     }).start();
   }, [interactionPhase, investigationMode, investigationWidth]);
+
+  // Mark verification info as "presented" when the card is viewed.
+  useEffect(() => {
+    if (interactionPhase !== 'investigation') return;
+    if (investigationMode !== 'verification') return;
+    if (!data.verificationRecord) return;
+    if (info.verificationViewed) return;
+    onInformationUpdate?.({
+      verificationViewed: true,
+      timestamps: {
+        ...info.timestamps,
+        verificationViewed: Date.now(),
+      },
+    });
+  }, [interactionPhase, investigationMode, data.verificationRecord, info.verificationViewed, info.timestamps, onInformationUpdate]);
 
   const investigationPanResponder = useMemo(() => {
     const snapToIndex = (nextIndex: number) => {
@@ -353,7 +377,7 @@ export const IntelPanel = ({
         {/* Credentials Phase Button */}
         <View style={styles.mainRow}>
           <MechanicalButton 
-            label="PROCEED TO VERIFICATION" 
+            label="VERIFY" 
             onPress={handleProceedToInvestigation} 
             color={Theme.colors.buttonYellow}
             style={{ flex: 1 }}
@@ -513,6 +537,14 @@ export const IntelPanel = ({
             ? 'TRANSIT REPORT'
             : 'INCIDENT REPORT'
         : 'NO RECORD';
+
+      const recordTagStyle =
+        record?.type === 'WARRANT'
+          ? styles.verificationPreviewTagWarrant
+          : record?.type === 'TRANSIT'
+            ? styles.verificationPreviewTagTransit
+            : styles.verificationPreviewTagIncident;
+
       return (
         <View style={styles.investigationCard}>
           <View style={styles.investigationCardHeader}>
@@ -523,7 +555,7 @@ export const IntelPanel = ({
             {record ? (
               <View style={{ flex: 1 }}>
                 <View style={styles.verificationPreviewHeader}>
-                  <Text style={styles.verificationPreviewTag}>{recordTypeLabel}</Text>
+                  <Text style={[styles.verificationPreviewTag, recordTagStyle]}>{recordTypeLabel}</Text>
                   <Text style={styles.verificationPreviewMeta}>{record.referenceId}</Text>
                 </View>
                 <View style={styles.verificationPreviewBody}>
@@ -539,10 +571,11 @@ export const IntelPanel = ({
                     <Text style={styles.verificationPreviewLabel}>SUMMARY</Text>
                     <Text style={styles.verificationPreviewValue}>{record.summary}</Text>
                   </View>
-                  <View style={styles.verificationPreviewRow}>
-                    <Text style={styles.verificationPreviewLabel}>DISCREPANCY</Text>
-                    <Text style={styles.verificationPreviewValueAlert}>{record.contradiction}</Text>
+                  <View style={styles.verificationPreviewDiscrepancyBlock}>
+                    <Text style={styles.verificationPreviewDiscrepancyLabel}>DISCREPANCY DETECTED</Text>
+                    <Text style={styles.verificationPreviewDiscrepancyText}>{record.contradiction}</Text>
                   </View>
+              
                 </View>
                 <View style={styles.verificationPreviewFooter}>
                   <Text style={styles.verificationPreviewHint}>SINGLE-ENTRY VERIFICATION FILE</Text>

@@ -8,13 +8,12 @@ import { OriginPlanet } from './subjectTraits';
 
 // Eye image arrays (from subjects.ts)
 const FEMALE_EYES = [
+  require('../assets/female-eyes/mara.mp4'),
+  require('../assets/female-eyes/elena-vid.mp4'),
   require('../assets/female-eyes/female1.mp4'),
-  require('../assets/female-eyes/female2.mp4'),
   // Fill out indices used by fixed-subject definitions (avoid undefined)
   require('../assets/female-eyes/female1.mp4'),
-  require('../assets/female-eyes/female2.mp4'),
-  require('../assets/female-eyes/female1.mp4'),
-  require('../assets/female-eyes/female2.mp4'),
+   
 ];
 
 const MALE_EYES = [

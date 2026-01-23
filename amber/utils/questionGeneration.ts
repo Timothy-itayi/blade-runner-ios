@@ -182,8 +182,8 @@ export function generateDynamicQuestions(
   // This avoids "spam to win" and keeps interrogation tied to investigation.
   if (!hasSomeInformation(info)) return questions;
 
-  // Verification record: single contradictory file per subject.
-  if (subject.verificationRecord) {
+  // Verification record: single contradictory file per subject (only after viewing).
+  if (subject.verificationRecord && info.verificationViewed) {
     const record = subject.verificationRecord;
     const id = `verification-${record.type.toLowerCase()}`;
     questions.push({

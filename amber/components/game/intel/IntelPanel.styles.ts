@@ -133,6 +133,15 @@ export const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1.2,
   },
+  verificationPreviewTagWarrant: {
+    color: Theme.colors.accentDeny,
+  },
+  verificationPreviewTagTransit: {
+    color: Theme.colors.textSecondary,
+  },
+  verificationPreviewTagIncident: {
+    color: Theme.colors.accentWarn,
+  },
   verificationPreviewMeta: {
     color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
@@ -168,6 +177,51 @@ export const styles = StyleSheet.create({
     fontFamily: Theme.fonts.mono,
     fontSize: 9,
     letterSpacing: 0.3,
+    opacity: 0.92,
+  },
+  verificationPreviewDiscrepancyBlock: {
+    marginTop: 2,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(201, 162, 39, 0.35)',
+    backgroundColor: 'rgba(201, 162, 39, 0.08)',
+    gap: 4,
+  },
+  verificationPreviewDiscrepancyLabel: {
+    color: Theme.colors.accentWarn,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  verificationPreviewDiscrepancyText: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.2,
+    opacity: 0.95,
+  },
+  verificationPreviewLeadBlock: {
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(74, 106, 122, 0.35)',
+    gap: 4,
+  },
+  verificationPreviewLeadLabel: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+  },
+  verificationPreviewLeadText: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.2,
     opacity: 0.92,
   },
   verificationPreviewFooter: {

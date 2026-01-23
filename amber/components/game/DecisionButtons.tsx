@@ -23,7 +23,6 @@ interface ProtocolStatus {
 export const DecisionButtons = ({ 
   hudStage, 
   onDecision,
-  onNext,
   disabled,
   hasDecision,
   protocolStatus,
@@ -31,7 +30,6 @@ export const DecisionButtons = ({
 }: { 
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
   onDecision: (type: 'APPROVE' | 'DENY') => void,
-  onNext: () => void,
   disabled: boolean,
   hasDecision: boolean,
   protocolStatus?: ProtocolStatus,
@@ -71,15 +69,6 @@ export const DecisionButtons = ({
           <MechanicalButton label="ALLOW" onPress={() => {}} disabled color={Theme.colors.accentApprove} style={{ flex: 1 }} />
           <MechanicalButton label="REJECT" onPress={() => {}} disabled color={Theme.colors.accentDeny} style={{ flex: 1 }} />
         </View>
-        <MechanicalButton 
-          label="NEXT SUBJECT" 
-          onPress={() => {
-            playButtonSound();
-            onNext();
-          }} 
-          color={Theme.colors.buttonWhite}
-          style={{ marginTop: 12 }}
-        />
       </HUDBox>
     );
   }

@@ -109,6 +109,12 @@ export const EyeDisplay = ({
   const eyeScannerLaserOpacity = useRef(new Animated.Value(0)).current;
   const holdMarkerOpacity = useRef(new Animated.Value(0)).current;
   const holdTintOpacity = useRef(new Animated.Value(0)).current;
+  const identityTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
+
+  const clearIdentityTimers = () => {
+    identityTimersRef.current.forEach(clearTimeout);
+    identityTimersRef.current = [];
+  };
   
   // Identity scan animation states
   const identityScanLaser = useRef(new Animated.Value(0)).current;
@@ -272,6 +278,7 @@ export const EyeDisplay = ({
 
   // Identity scan animation sequence
   useEffect(() => {
+    clearIdentityTimers();
     if (isIdentityScanning && eyeScannerActive) {
       // Reset all animation values
       identityScanLaser.setValue(0);
@@ -309,7 +316,7 @@ export const EyeDisplay = ({
       ]).start(() => {
         setShowRedDots(true);
         // Step 3: After red dots visible, show green stamp
-        setTimeout(() => {
+        identityTimersRef.current.push(setTimeout(() => {
           setShowIdCompleted(true);
           Animated.timing(idCompletedStampOpacity, {
             toValue: 1,
@@ -317,13 +324,13 @@ export const EyeDisplay = ({
             useNativeDriver: true,
           }).start(() => {
             // Step 4: Complete - unlock dossier
-            setTimeout(() => {
+            identityTimersRef.current.push(setTimeout(() => {
               if (onIdentityScanComplete) {
                 onIdentityScanComplete();
               }
-            }, 500);
+            }, 500));
           });
-        }, 800);
+        }, 800));
       });
     } else {
       // Reset when not scanning
@@ -334,6 +341,9 @@ export const EyeDisplay = ({
       setShowRedDots(false);
       setShowIdCompleted(false);
     }
+    return () => {
+      clearIdentityTimers();
+    };
   }, [isIdentityScanning, eyeScannerActive]);
 
   if (hudStage === 'none') return <View style={styles.container} />;
@@ -355,10 +365,10 @@ export const EyeDisplay = ({
             <View style={styles.staticLabel}>
               <View style={styles.staticLabelBackground} />
               <Text style={styles.staticText}>
-                {interactionPhase === 'investigation' ? 'ID SCANNER READY' : 'ID SCANNER'}
+                {interactionPhase === 'investigation' ? 'ID SCANNER READY' : 'VERIFY TO BEGIN'}
               </Text>
               <Text style={styles.staticSubtext}>
-                {interactionPhase === 'investigation' ? 'TAP TO BEGIN' : 'TAP TO POWER ON'}
+                {interactionPhase === 'investigation' ? 'TAP TO BEGIN' : 'VERIFY TO BEGIN'}
               </Text>
             </View>
           </View>

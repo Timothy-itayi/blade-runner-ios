@@ -46,6 +46,9 @@ export interface GatheredInformation {
     responses: string[];
     bpmChanges: number[]; // BPM value at each question
   };
+
+  // Verification (single-record file)
+  verificationViewed?: boolean;
   
   // Equipment status
   equipmentFailures: EquipmentType[]; // Which equipment is broken
@@ -63,6 +66,7 @@ export interface GatheredInformation {
     warrantCheck?: number;
     transitLog?: number;
     incidentHistory?: number;
+    verificationViewed?: number;
     interrogation?: number[];
   };
 }
@@ -83,6 +87,7 @@ export const createEmptyInformation = (equipmentFailures: EquipmentType[] = []):
     responses: [],
     bpmChanges: [],
   },
+  verificationViewed: false,
   equipmentFailures,
   bpmDataAvailable: !equipmentFailures.includes('BPM_MONITOR'),
   eyeScannerActive: false,

@@ -498,7 +498,7 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
 
  
   useEffect(() => {
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.2,
@@ -511,7 +511,9 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    loop.start();
+    return () => loop.stop();
   }, []);
 
   return (

@@ -17,11 +17,9 @@ interface HeaderProps {
   onSettingsPress?: () => void;
   // Phase 6: Emergency alerts
   emergencyAlert?: EmergencyAlert | null;
-  // Lives system
-  lives?: number;
 }
 
-export const Header = ({ hudStage, shiftTime, shiftData, onSettingsPress, emergencyAlert, lives }: HeaderProps) => {
+export const Header = ({ hudStage, shiftTime, shiftData, onSettingsPress, emergencyAlert }: HeaderProps) => {
   const authorityLabel = shiftData?.authorityLabel || 'СУДЬБА (SUDBA)';
   const letters = authorityLabel.split('');
   
@@ -97,14 +95,6 @@ export const Header = ({ hudStage, shiftTime, shiftData, onSettingsPress, emerge
             </TouchableOpacity>
           )}
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          {lives !== undefined && hudStage === 'full' && (
-            <View style={livesStyles.container}>
-              <Text style={livesStyles.label}>LIVES</Text>
-              <Text style={livesStyles.value}>{lives}</Text>
-            </View>
-          )}
-        </View>
       </HUDBox>
 
       {/* Phase 6: Emergency Alert Banner */}
@@ -143,24 +133,4 @@ const emergencyStyles = StyleSheet.create({
   },
 });
 
-const livesStyles = StyleSheet.create({
-  container: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-  },
-  label: {
-    color: Theme.colors.textSecondary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 8,
-    letterSpacing: 1,
-    opacity: 0.7,
-  },
-  value: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-});
 

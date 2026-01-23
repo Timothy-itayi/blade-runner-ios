@@ -134,13 +134,13 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   sexColumn: {
-    flex: 1,
+    flex: 0.8,
   },
   bpmColumn: {
-    flex: 0.7,
+    flex: 1,
     alignItems: 'center',
-    minWidth: 42,
-    maxWidth: 52,
+    minWidth: 50,
+    maxWidth: 70,
     marginHorizontal: 2,
   },
   bpmRow: {
@@ -243,15 +243,15 @@ export const styles = StyleSheet.create({
   },
   sexLightsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 6,
     paddingVertical: 2,
   },
   sexLight: {
-    width: 32,
-    height: 32,
-    borderRadius: 4,
+    width: 24,
+    height: 24,
+    borderRadius: 3,
     backgroundColor: Theme.colors.knobBase,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: Theme.colors.knobHighlight,
     borderBottomColor: '#1a1d23',
     borderRightColor: '#1a1d23',
@@ -265,7 +265,7 @@ export const styles = StyleSheet.create({
   sexLightText: {
     color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
   },
   sexLightTextActive: {

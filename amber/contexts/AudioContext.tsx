@@ -6,6 +6,7 @@ interface GameAudioContextType {
   stopBootSequence: () => void;
   playButtonSound: () => void;
   playLoadingSound: () => void;
+  playDecisionSound: () => void;
   playGameSoundtrack: () => void;
   stopGameSoundtrack: () => void;
   sfxEnabled: boolean;
@@ -99,6 +100,23 @@ export const GameAudioProvider = ({ children }: { children: React.ReactNode }) =
     }
   }, [sfxEnabled]);
 
+  const playDecisionSound = useCallback(async () => {
+    if (!sfxEnabled) return;
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require('../assets/sound-effects/main-menu/digital-interface.mp3')
+      );
+      await sound.playAsync();
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
+    } catch (e) {
+      console.warn('Failed to play decision sound:', e);
+    }
+  }, [sfxEnabled]);
+
   const playGameSoundtrack = useCallback(async () => {
     try {
       if (soundtrackRef.current) {
@@ -133,6 +151,7 @@ export const GameAudioProvider = ({ children }: { children: React.ReactNode }) =
       stopBootSequence,
       playButtonSound,
       playLoadingSound,
+      playDecisionSound,
       playGameSoundtrack,
       stopGameSoundtrack,
       sfxEnabled,
@@ -151,6 +170,7 @@ export const useGameAudioContext = () => {
       stopBootSequence: () => {},
       playButtonSound: () => {},
       playLoadingSound: () => {},
+      playDecisionSound: () => {},
       playGameSoundtrack: () => {},
       stopGameSoundtrack: () => {},
       sfxEnabled: true,

@@ -35,12 +35,12 @@ export const DecisionButtons = ({
   protocolStatus?: ProtocolStatus,
   isNewGame?: boolean, // Only animate on first game start
 }) => {
-  const { playButtonSound } = useGameAudioContext();
+  const { playDecisionSound } = useGameAudioContext();
 
   const handleDecision = (type: 'APPROVE' | 'DENY') => {
     // Buttons are non-functional until game mechanics are added
     if (disabled) return;
-    playButtonSound();
+    playDecisionSound();
     onDecision(type);
   };
 

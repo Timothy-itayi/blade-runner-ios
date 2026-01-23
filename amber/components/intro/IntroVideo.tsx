@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Image, Animated, StyleSheet, Dimensions, Easing } from 'react-native';
-import { useAudioPlayer } from 'expo-audio';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, Text, Animated, StyleSheet, Dimensions, Easing } from 'react-native';
+import { VideoView, useVideoPlayer } from 'expo-video';
 
 interface IntroVideoProps {
   onComplete: () => void;
@@ -9,97 +9,115 @@ interface IntroVideoProps {
 
 const { width, height } = Dimensions.get('window');
 
-const INTRO_AUDIO = require('../../assets/amber-intro.mp3');
-const AUDIO_DURATION = 51000; // 51 seconds in milliseconds
-const BUFFER_TIME = 2000; // 2 seconds buffer after audio
-const GLITCH_DURATION = 800; // Glitch effect duration
-
+const INTRO_VIDEO = require('../../assets/videos/Amber-intro.mp4');
+const AUDIO_DURATION = 32000; // Duration in milliseconds
+const BUFFER_TIME = 1000; // Brief pause before boot
+const LOGO_FADE_MS = 700;
+const LOGO_HOLD_MS = 3000;
+const QUOTE_SPEED_MS = 28;
+const LETTER_FADE_MS = 200;
+const LETTER_STAGGER_MS = 25;
+const BUFFERING_MS = 2000;
+const PREPLAY_FADE_MS = 600;
+const PREPLAY_HOLD_MS = 1000;
+const INTRO_QUOTE = 'Securing identity. Protecting tomorrow.';
+const INTRO_LOGO = require('../../assets/app-icon.png');
 export const IntroVideo = ({ onComplete, duration = AUDIO_DURATION }: IntroVideoProps) => {
-  const [progress, setProgress] = useState(0);
-  const [showGlitch, setShowGlitch] = useState(false);
   const progressAnim = useRef(new Animated.Value(0)).current;
-  const glitchOffset = useRef(new Animated.Value(0)).current;
-  const interferenceOpacity = useRef(new Animated.Value(0)).current;
-  const blackoutOpacity = useRef(new Animated.Value(0)).current;
-  const audioPlayer = useAudioPlayer(INTRO_AUDIO);
+  const [phase, setPhase] = useState<'logo' | 'quote' | 'fadeLetters' | 'buffering' | 'preplay' | 'play'>('logo');
+  const [typedQuote, setTypedQuote] = useState('');
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const videoOpacity = useRef(new Animated.Value(0)).current;
+  const letterOpacitiesRef = useRef<Animated.Value[]>([]);
+  const videoPlayer = useVideoPlayer(INTRO_VIDEO, (player) => {
+    player.loop = false;
+  });
 
   useEffect(() => {
-    // Play audio when component mounts
-    if (audioPlayer) {
-      audioPlayer.volume = 0.7;
-      audioPlayer.loop = false;
-      audioPlayer.seekTo(0);
-      audioPlayer.play();
-    }
-
-    // Animate progress bar from 0 to 100% over audio duration
+    if (phase !== 'play') return;
+    progressAnim.setValue(0);
+    videoPlayer.play();
     Animated.timing(progressAnim, {
       toValue: 1,
       duration: duration,
       useNativeDriver: false,
     }).start();
 
-    // Update progress value for display
-    const listener = progressAnim.addListener(({ value }) => {
-      setProgress(value);
-    });
-
-    // After audio finishes, wait 2 seconds, then start glitch effect
-    const glitchStartTime = duration + BUFFER_TIME;
-    const glitchTimer = setTimeout(() => {
-      setShowGlitch(true);
-      runGlitchSequence();
-    }, glitchStartTime);
-
-    // Complete after glitch effect
     const completeTimer = setTimeout(() => {
-      // Don't try to pause if native object is gone
-      try {
-        if (audioPlayer && audioPlayer.playing !== undefined) {
-          audioPlayer.pause();
-        }
-      } catch (e) {
-        // Ignore errors if native object is already gone
-      }
       onComplete();
-    }, glitchStartTime + GLITCH_DURATION);
+    }, duration + BUFFER_TIME);
 
-    return () => {
-      progressAnim.removeListener(listener);
-      clearTimeout(glitchTimer);
-      clearTimeout(completeTimer);
-      // Don't try to pause if native object is gone
-      try {
-        if (audioPlayer && audioPlayer.playing !== undefined) {
-          audioPlayer.pause();
-        }
-      } catch (e) {
-        // Ignore errors if native object is already gone
+    return () => clearTimeout(completeTimer);
+  }, [phase, duration, onComplete, videoPlayer]);
+
+  useEffect(() => {
+    if (phase !== 'logo') return;
+    logoOpacity.setValue(0);
+    Animated.timing(logoOpacity, {
+      toValue: 1,
+      duration: LOGO_FADE_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      const timer = setTimeout(() => setPhase('quote'), LOGO_HOLD_MS);
+      return () => clearTimeout(timer);
+    });
+  }, [phase, logoOpacity]);
+
+  useEffect(() => {
+    if (phase !== 'quote') return;
+    setTypedQuote('');
+    let index = 0;
+    const interval = setInterval(() => {
+      index += 1;
+      setTypedQuote(INTRO_QUOTE.slice(0, index));
+      if (index >= INTRO_QUOTE.length) {
+        clearInterval(interval);
+        setTimeout(() => setPhase('fadeLetters'), 200);
       }
-    };
-  }, [duration, onComplete, audioPlayer]);
+    }, QUOTE_SPEED_MS);
+    return () => clearInterval(interval);
+  }, [phase]);
 
-  const runGlitchSequence = () => {
-    Animated.sequence([
-      // Glitch offset animation
-      Animated.sequence([
-        Animated.timing(glitchOffset, { toValue: 12, duration: 40, useNativeDriver: true }),
-        Animated.timing(glitchOffset, { toValue: -8, duration: 35, useNativeDriver: true }),
-        Animated.timing(glitchOffset, { toValue: 5, duration: 40, useNativeDriver: true }),
-        Animated.timing(glitchOffset, { toValue: -3, duration: 30, useNativeDriver: true }),
-        Animated.timing(glitchOffset, { toValue: 0, duration: 25, useNativeDriver: true }),
-      ]),
-      // Interference and blackout
-      Animated.parallel([
-        Animated.sequence([
-          Animated.timing(interferenceOpacity, { toValue: 0.8, duration: 60, useNativeDriver: true }),
-          Animated.timing(interferenceOpacity, { toValue: 0.2, duration: 50, useNativeDriver: true }),
-          Animated.timing(interferenceOpacity, { toValue: 0.6, duration: 55, useNativeDriver: true }),
-          Animated.timing(blackoutOpacity, { toValue: 1, duration: 80, useNativeDriver: true }),
-        ]),
-      ]),
-    ]).start();
-  };
+  useEffect(() => {
+    if (phase !== 'fadeLetters') return;
+    const opacities = INTRO_QUOTE.split('').map(() => new Animated.Value(1));
+    letterOpacitiesRef.current = opacities;
+    Animated.stagger(
+      LETTER_STAGGER_MS,
+      opacities.map((val) =>
+        Animated.timing(val, {
+          toValue: 0,
+          duration: LETTER_FADE_MS,
+          useNativeDriver: true,
+        })
+      )
+    ).start(() => {
+      setPhase('buffering');
+    });
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 'buffering') return;
+    const timer = setTimeout(() => setPhase('preplay'), BUFFERING_MS);
+    return () => clearTimeout(timer);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 'preplay') return;
+    videoOpacity.setValue(0);
+    Animated.timing(videoOpacity, {
+      toValue: 1,
+      duration: PREPLAY_FADE_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start(() => {
+      const timer = setTimeout(() => setPhase('play'), PREPLAY_HOLD_MS);
+      return () => clearTimeout(timer);
+    });
+  }, [phase, videoOpacity]);
+
+  const quoteLetters = useMemo(() => INTRO_QUOTE.split(''), []);
 
   const progressWidth = progressAnim.interpolate({
     inputRange: [0, 1],
@@ -108,49 +126,61 @@ export const IntroVideo = ({ onComplete, duration = AUDIO_DURATION }: IntroVideo
 
   return (
     <View style={styles.container}>
-      {/* News Report Background Image */}
-      <Animated.View
-        style={[
-          styles.imageContainer,
-          showGlitch && { transform: [{ translateX: glitchOffset }] }
-        ]}
-      >
-        <Image
-          source={require('../../assets/news-report.png')}
-          style={styles.backgroundImage}
-          resizeMode="contain"
-        />
-      </Animated.View>
+      <View style={styles.stageWrapper}>
+        {phase !== 'play' && (
+          <View style={styles.introStage}>
+          {phase === 'logo' && (
+            <Animated.Image source={INTRO_LOGO} style={[styles.logo, { opacity: logoOpacity }]} />
+          )}
+          {phase === 'quote' && (
+            <Text style={styles.quoteText}>{typedQuote}</Text>
+          )}
+          {phase === 'fadeLetters' && (
+            <View style={styles.quoteRow}>
+              {quoteLetters.map((char, idx) => (
+                <Animated.Text
+                  key={`${char}-${idx}`}
+                  style={[
+                    styles.quoteText,
+                    { opacity: letterOpacitiesRef.current[idx] || 1 },
+                  ]}
+                >
+                  {char}
+                </Animated.Text>
+              ))}
+            </View>
+          )}
+          {phase === 'buffering' && (
+            <Text style={styles.bufferingText}>BUFFERING...</Text>
+          )}
+          </View>
+        )}
 
-      {/* Glitch Effects */}
-      {showGlitch && (
-        <>
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.interferenceOverlay,
-              { opacity: interferenceOpacity }
-            ]}
-          />
-          <Animated.View
-            pointerEvents="none"
-            style={[
-              styles.blackoutOverlay,
-              { opacity: blackoutOpacity }
-            ]}
-          />
-        </>
-      )}
-
-      {/* Progress Bar at Bottom */}
-      <View style={styles.progressBarContainer}>
-        <Animated.View
-          style={[
-            styles.progressBar,
-            { width: progressWidth }
-          ]}
-        />
+        {(phase === 'preplay' || phase === 'play') && (
+          <Animated.View style={[styles.videoContainer, { opacity: videoOpacity }]}>
+            <VideoView
+              style={styles.video}
+              player={videoPlayer}
+              contentFit="cover"
+              nativeControls={false}
+              allowsFullscreen={false}
+              allowsPictureInPicture={false}
+            />
+          </Animated.View>
+        )}
       </View>
+
+      {/* Progress Bar under video */}
+      {phase === 'play' && (
+        <View style={styles.progressBarContainer}>
+          <Animated.View
+            style={[
+              styles.progressBar,
+              { width: progressWidth }
+            ]}
+          />
+        </View>
+      )}
     </View>
   );
 };
@@ -162,37 +192,60 @@ const styles = StyleSheet.create({
     height: height,
     position: 'relative',
     backgroundColor: '#000',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  imageContainer: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-    top: 0,
-    left: 0,
+  stageWrapper: {
+    width: Math.min(width, height) * 0.9,
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  backgroundImage: {
-    width: '100%',
-    height: '100%',
+  introStage: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  interferenceOverlay: {
+  logo: {
+    width: 140,
+    height: 140,
+    marginBottom: 20,
+  },
+  quoteText: {
+    fontSize: 12,
+    color: '#d9c7b0',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  quoteRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  bufferingText: {
+    fontSize: 12,
+    color: '#d9c7b0',
+    letterSpacing: 2,
+    marginTop: 10,
+  },
+  videoContainer: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#000',
-    opacity: 0.6,
-    zIndex: 5,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  blackoutOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000',
-    zIndex: 6,
+  video: {
+    width: '100%',
+    height: '100%',
+    transform: [{ scale: 1.8 }, { translateY: -20 }],
   },
   progressBarContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    width: Math.min(width, height) * 0.6,
+    marginTop: 12,
     height: 6,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 10,
   },
   progressBar: {
     height: '100%',

@@ -58,6 +58,7 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
   // Menu animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const messagesFadeAnim = useRef(new Animated.Value(0)).current;
+  const blackFadeAnim = useRef(new Animated.Value(0)).current;
   
   // Alert animations
   const alertOpacity = useRef(new Animated.Value(0)).current;
@@ -101,24 +102,40 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
   };
 
   const startNewGame = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 300,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(blackFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       // Don't fade out music - let it continue through AmberIntro
       onComplete();
     });
   };
 
   const handleContinue = () => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 300,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(blackFadeAnim, {
+        toValue: 1,
+        duration: 300,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
       fadeOutMenuSoundtrack();
       onContinue?.();
     });
@@ -363,7 +380,7 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
                       CONTINUE
                     </Text>
                     <Text style={[styles.continueSubtext, pressed && styles.continueSubtextPressed]}>
-                      Shift {saveShiftNumber || 1} / 20
+                      CONTINUE
                     </Text>
                   </View>
                 )}
@@ -424,7 +441,7 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
               <View style={styles.confirmContent}>
                 <Text style={styles.confirmIcon}>⚠</Text>
                 <Text style={styles.confirmMessage}>
-                  This will erase your current progress (Shift {saveShiftNumber || 1}/20).
+                  This will erase your current progress.
                 </Text>
                 <Text style={styles.confirmQuestion}>Continue?</Text>
               </View>
@@ -448,6 +465,11 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
             </View>
           </View>
         </Modal>
+
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.blackoutOverlay, { opacity: blackFadeAnim }]}
+        />
       </View>
     );
   }

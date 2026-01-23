@@ -7,11 +7,28 @@
 
 export type EquipmentType = 'BIOMETRIC_SCANNER' | 'BPM_MONITOR';
 
+// “Terminal services” are concurrent processes limited by memory slots.
+// This is per-subject state (resets when the next subject loads).
+export type ServiceType =
+  | 'IDENTITY_SCAN'
+  | 'HEALTH_SCAN'
+  | 'WARRANT'
+  | 'TRANSIT'
+  | 'INCIDENT'
+  | 'DB_LOOKUP';
+
+export const MEMORY_SLOT_CAPACITY = 3;
+
 /**
  * Scan quality levels based on pressure hold duration
  * Determines how much information is revealed from identity scan
  */
 export type ScanQuality = 'PARTIAL' | 'STANDARD' | 'DEEP' | 'COMPLETE';
+
+export interface LastExtractSnapshot {
+  lines: string[]; // 1–2 lines, by design
+  timestamp: number;
+}
 
 export interface GatheredInformation {
   // Basic scan (free, always available)
@@ -37,6 +54,10 @@ export interface GatheredInformation {
   bpmDataAvailable: boolean; // Is BPM monitor working?
   eyeScannerActive: boolean; // Is eye scanner turned on?
   
+  // Per-subject memory slots (Model B): slots gate acquiring/reading, not “using learned facts”
+  activeServices: ServiceType[];
+  lastExtracted: Partial<Record<ServiceType, LastExtractSnapshot>>;
+
   // Timestamps for tracking
   timestamps: {
     basicScan?: number;
@@ -69,6 +90,8 @@ export const createEmptyInformation = (equipmentFailures: EquipmentType[] = []):
   equipmentFailures,
   bpmDataAvailable: !equipmentFailures.includes('BPM_MONITOR'),
   eyeScannerActive: false,
+  activeServices: [],
+  lastExtracted: {},
   timestamps: {},
 });
 

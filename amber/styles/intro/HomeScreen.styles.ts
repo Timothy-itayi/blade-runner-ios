@@ -24,6 +24,11 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: XP.windowBg,
   },
+  blackoutOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+    zIndex: 50,
+  },
 
   // Windows XP Title Bar
   titleBar: {

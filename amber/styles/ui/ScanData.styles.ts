@@ -5,8 +5,8 @@ export const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderTopWidth: 1,
     borderTopColor: Theme.colors.border,
   },
@@ -89,13 +89,12 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
     gap: 8,
   },
   statusContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: -40, // Move status further to the left
   },
   statusDot: {
     width: 6,
@@ -108,12 +107,42 @@ export const styles = StyleSheet.create({
     color: Theme.colors.textSecondary,
   },
   idSection: {
+    marginTop: 2,
+  },
+  verificationRow: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 2,
     marginTop: 4,
+  },
+  verificationLabel: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  verificationTicks: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  verificationTick: {
+    width: 8,
+    height: 6,
+    borderWidth: 1,
+    borderColor: Theme.colors.textDim,
+    backgroundColor: 'transparent',
+  },
+  verificationTickActive: {
+    borderColor: Theme.colors.textPrimary,
+    backgroundColor: Theme.colors.textPrimary,
   },
   progressRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    marginTop: 1,
   },
   progressBarText: {
     fontFamily: Theme.fonts.mono,
@@ -223,11 +252,11 @@ export const styles = StyleSheet.create({
   },
   scanButton: {
     width: '100%',
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 6,
     borderWidth: 1,
   },
   identityScanButton: {
@@ -266,8 +295,8 @@ export const styles = StyleSheet.create({
   },
   // Subject Response Styles
   responseBox: {
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: 8,
+    paddingTop: 8,
     width: '100%',
   },
   responseHeader: {
@@ -277,9 +306,9 @@ export const styles = StyleSheet.create({
   responseField: {
     // Keep a stable layout height so the UI doesn't jump as content changes.
     // Sized for header + ~4 lines of response text at 18px lineHeight.
-    minHeight: 14 + 8 + 18 * 4,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    minHeight: 14 + 6 + 18 * 3,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     backgroundColor: 'rgba(13, 17, 23, 0.65)', // Theme.colors.bgPanel w/ opacity
     borderWidth: 1,
     borderColor: 'rgba(26, 42, 58, 0.55)', // Theme.colors.border w/ opacity

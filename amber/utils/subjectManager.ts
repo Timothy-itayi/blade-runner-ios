@@ -118,12 +118,13 @@ export function getSubjectByIndex(
 
 /**
  * Creates a default subject pool for the game
- * Uses only manual subjects (all 12 narrative subjects)
+ * Uses 12 narrative subjects + 3 generated subjects (padding)
  */
 export function createDefaultSubjectPool(): SubjectData[] {
   return createSubjectPool({
-    generatedRatio: 0.0, // Use only manual subjects
-    totalSubjects: 12, // Exactly 12 subjects (3 shifts × 4 subjects)
+    generatedRatio: 1.0, // Only the non-required slots are generated
+    totalSubjects: 15, // 12 narrative + 3 extra subjects
+    seed: 41017, // deterministic extra subjects (stable progression)
     requiredSubjectIds: [
       'S1-01', 'S1-02', 'S1-03', 'S1-04', // Shift 1
       'S2-01', 'S2-02', 'S2-03', 'S2-04', // Shift 2

@@ -62,6 +62,9 @@ export const EyeDisplay = ({
   onChannelChange,
   eyeScannerActive = false,
   onEyeScannerTap,
+  identityScanHoldActive = false,
+  onIdentityScanHoldStart,
+  onIdentityScanHoldEnd,
   interactionPhase = 'investigation',
   isIdentityScanning = false,
   onIdentityScanComplete,
@@ -81,7 +84,10 @@ export const EyeDisplay = ({
   viewChannel?: 'facial' | 'eye',
   onChannelChange?: () => void,
   eyeScannerActive?: boolean,
-  onEyeScannerTap?: () => void,
+  onEyeScannerTap?: (holdDurationMs?: number) => void,
+  identityScanHoldActive?: boolean,
+  onIdentityScanHoldStart?: () => void,
+  onIdentityScanHoldEnd?: (holdDurationMs: number) => void,
   interactionPhase?: 'greeting' | 'credentials' | 'investigation',
   isIdentityScanning?: boolean,
   onIdentityScanComplete?: () => void,
@@ -95,7 +101,7 @@ export const EyeDisplay = ({
   const irisScanOpacity = useRef(new Animated.Value(0)).current;
   const eyeScannerLaser = useRef(new Animated.Value(0)).current;
   const eyeScannerLaserOpacity = useRef(new Animated.Value(0)).current;
-  const [isScanningEye, setIsScanningEye] = useState(false);
+  const holdMarkerOpacity = useRef(new Animated.Value(0)).current;
   
   // Identity scan animation states
   const identityScanLaser = useRef(new Animated.Value(0)).current;
@@ -208,38 +214,45 @@ export const EyeDisplay = ({
     }
   }, [scanningIris, subjectLooking]);
 
-  // Eye scanner tap handler - triggers laser scan
-  const handleEyeScannerTap = () => {
-    if (!eyeScannerActive || isScanningEye || interactionPhase !== 'investigation') return;
-    
-    setIsScanningEye(true);
-    eyeScannerLaser.setValue(0);
-    eyeScannerLaserOpacity.setValue(0);
-    
-    Animated.sequence([
-      Animated.timing(eyeScannerLaserOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(eyeScannerLaser, {
-        toValue: 1,
-        duration: 1500,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
-      Animated.timing(eyeScannerLaserOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setIsScanningEye(false);
-      if (onEyeScannerTap) {
-        onEyeScannerTap();
-      }
-    });
-  };
+  const holdStartRef = useRef<number | null>(null);
+  const HOLD_FULL_DURATION_MS = 1800;
+
+  useEffect(() => {
+    if (identityScanHoldActive && eyeScannerActive) {
+      eyeScannerLaser.stopAnimation();
+      eyeScannerLaserOpacity.stopAnimation();
+      holdMarkerOpacity.stopAnimation();
+      eyeScannerLaser.setValue(0);
+      eyeScannerLaserOpacity.setValue(0);
+      holdMarkerOpacity.setValue(0);
+
+      Animated.parallel([
+        Animated.timing(eyeScannerLaserOpacity, {
+          toValue: 1,
+          duration: 120,
+          useNativeDriver: true,
+        }),
+        Animated.timing(eyeScannerLaser, {
+          toValue: 1,
+          duration: HOLD_FULL_DURATION_MS,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(holdMarkerOpacity, {
+          toValue: 1,
+          duration: HOLD_FULL_DURATION_MS,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      eyeScannerLaser.stopAnimation();
+      eyeScannerLaserOpacity.stopAnimation();
+      holdMarkerOpacity.stopAnimation();
+      eyeScannerLaser.setValue(0);
+      eyeScannerLaserOpacity.setValue(0);
+      holdMarkerOpacity.setValue(0);
+    }
+  }, [identityScanHoldActive, eyeScannerActive]);
 
   // Identity scan animation sequence
   useEffect(() => {
@@ -407,8 +420,8 @@ export const EyeDisplay = ({
             />
           )}
 
-          {/* Eye scanner laser - slides down when tapped */}
-          {eyeScannerActive && (
+          {/* Eye scanner laser - slides down while holding */}
+          {eyeScannerActive && identityScanHoldActive && (
             <Animated.View
               style={[
                 styles.eyeScannerLaser,
@@ -444,12 +457,12 @@ export const EyeDisplay = ({
           )}
 
           {/* Red dots and lines in semi-circle pattern - identity scan analysis */}
-          {showRedDots && eyeScannerActive && (
+          {(showRedDots || identityScanHoldActive) && eyeScannerActive && (
             <Animated.View
               style={[
                 StyleSheet.absoluteFill,
                 {
-                  opacity: redDotsOpacity,
+                  opacity: showRedDots ? redDotsOpacity : holdMarkerOpacity,
                   zIndex: 12,
                   justifyContent: 'center',
                   alignItems: 'center',
@@ -547,12 +560,22 @@ export const EyeDisplay = ({
   );
 
   // Wrap in Pressable if eye scanner is active (Pressable doesn't cause layout changes)
-  // Only allow tap in investigation phase
-  if (eyeScannerActive && onEyeScannerTap && interactionPhase === 'investigation') {
+  if (eyeScannerActive && onEyeScannerTap && interactionPhase !== 'greeting') {
     return (
       <Pressable 
-        onPress={handleEyeScannerTap}
-        disabled={isScanningEye}
+        onPressIn={() => {
+          holdStartRef.current = Date.now();
+          onIdentityScanHoldStart?.();
+        }}
+        onPressOut={() => {
+          const startedAt = holdStartRef.current;
+          holdStartRef.current = null;
+          if (!startedAt) return;
+          const duration = Date.now() - startedAt;
+          onIdentityScanHoldEnd?.(duration);
+          onEyeScannerTap(duration);
+        }}
+        disabled={isIdentityScanning}
         style={{ flex: 1 }}
       >
         {content}

@@ -12,7 +12,15 @@ import { ShiftData } from '../constants/shifts';
 export type ConsequenceType = 'NONE' | 'WARNING' | 'CITATION' | 'SERIOUS_INFRACTION';
 
 export interface MissedInformation {
-  type: 'WARRANT' | 'BIO_SCAN' | 'TRANSIT_LOG' | 'INCIDENT_HISTORY' | 'INTERROGATION';
+  // Note: These are *fact categories* revealed by services, not “buttons the player forgot to press”.
+  // They’re used for diegetic reporting (“ACTIVE WARRANT”, etc.) without coaching.
+  type:
+    | 'WARRANT'
+    | 'IDENTITY_SCAN'
+    | 'HEALTH_SCAN'
+    | 'TRANSIT_LOG'
+    | 'INCIDENT_HISTORY'
+    | 'INTERROGATION';
   description: string;
   reveal: string; // What would have been revealed
   impact: string; // How it would have affected the decision

@@ -6,7 +6,7 @@ import { ShiftTransition } from '../components/game/ShiftTransition';
 import { SubjectDossier } from '../components/game/SubjectDossier';
 import { HealthScanModal } from '../components/game/HealthScanModal';
 import { SettingsModal } from '../components/settings/SettingsModal';
-import { CitationModal } from '../components/game/CitationModal';
+// Citation is rendered as an inline strip (diegetic), not a modal.
 // Phase 4: Subject interaction phase type
 type InteractionPhase = 'greeting' | 'credentials' | 'investigation';
 // Boot components
@@ -30,13 +30,13 @@ import { createDefaultSubjectPool, getSubjectByIndex, SubjectManagerConfig } fro
 import { SubjectData } from '../data/subjects';
 import { getShiftForSubject, isEndOfShift } from '../constants/shifts';
 import { useGameStore } from '../store/gameStore';
-import { createEmptyInformation } from '../types/information';
+import { createEmptyInformation, MEMORY_SLOT_CAPACITY } from '../types/information';
 import { determineEquipmentFailures } from '../utils/equipmentFailures';
 import { Consequence } from '../types/consequence';
 import { SupervisorWarning, WarningPattern } from '../components/game/SupervisorWarning';
 import { createPatternTracker, checkWarningPatterns, PatternTracker } from '../utils/warningPatterns';
 
-const DEV_MODE = true; // Set to true to bypass onboarding and boot
+const DEV_MODE = false; // Set to true to bypass onboarding and boot
 
 export default function MainScreen() {
   const { credits: storeCredits, resourcesRemaining, resourcesPerShift } = useGameStore();
@@ -58,6 +58,7 @@ export default function MainScreen() {
   
   // Phase 3: Consequence evaluation state
   const [consequence, setConsequence] = useState<Consequence | null>(null);
+  const [citationAcknowledged, setCitationAcknowledged] = useState(false);
   
   // Phase 3: Supervisor warning state
   const [warningTracker, setWarningTracker] = useState<PatternTracker>(createPatternTracker());
@@ -135,6 +136,17 @@ export default function MainScreen() {
 
   const gameOpacity = useRef(new Animated.Value(DEV_MODE ? 1 : 0)).current;
 
+  // If a new subject arrives (or a new citation is generated), the modal should be “un-acknowledged”.
+  useEffect(() => {
+    setCitationAcknowledged(false);
+  }, [currentSubject?.id]);
+
+  useEffect(() => {
+    if (hasDecision && consequence && consequence.type !== 'NONE') {
+      setCitationAcknowledged(false);
+    }
+  }, [hasDecision, consequence?.type]);
+
   const triggerScan = () => {
     setIsScanning(true);
     scanProgress.setValue(0);
@@ -149,7 +161,7 @@ export default function MainScreen() {
 
     Animated.timing(scanProgress, {
       toValue: 1,
-      duration: 3000,
+      duration: 4500,
       useNativeDriver: true,
     }).start(() => {
       setIsScanning(false);
@@ -317,7 +329,9 @@ export default function MainScreen() {
     // Initialize resources and credits for new game
     useGameStore.getState().resetResourcesForShift(3);
     useGameStore.getState().spendCredits(useGameStore.getState().credits); // Reset to 0
-    setGamePhase('introVideo');
+    setTimeout(() => {
+      setGamePhase('introVideo');
+    }, 1000);
   };
 
   const handleIntroVideoComplete = () => {
@@ -400,7 +414,7 @@ export default function MainScreen() {
         {gamePhase === 'introVideo' && (
           <IntroVideo
             onComplete={handleIntroVideoComplete}
-            duration={51000}
+            duration={32000}
           />
         )}
 
@@ -458,32 +472,73 @@ export default function MainScreen() {
               onScanHands={() => {
                 // Legacy - kept for compatibility
               }}
-              onIdentityScan={() => {
+              onIdentityScan={(holdDurationMs = 0) => {
+                // Model B: Starting a scan consumes a memory slot, not a “resource.”
+                // The gathered flag flips ONLY when the scan completes.
+                const MIN_HOLD_MS = 600;
+                if (holdDurationMs < MIN_HOLD_MS) return;
                 const store = useGameStore.getState();
-                // Identity scan uses 1 resource (eye scan - reveals dossier/identity)
-                // Only works if eye scanner is active
-                if (eyeScannerActive && store.useSubjectResource() && !gatheredInformation.identityScan) {
-                  setIsIdentityScanning(true);
+                if (!eyeScannerActive) {
+                  setEyeScannerActive(true);
                   setGatheredInformation(prev => ({
                     ...prev,
-                    identityScan: true,
-                    timestamps: {
-                      ...prev.timestamps,
-                      identityScan: Date.now(),
-                    },
+                    eyeScannerActive: true,
                   }));
                 }
+                const active = gatheredInformation.activeServices || [];
+                if (gatheredInformation.identityScan) return;
+                if (active.includes('IDENTITY_SCAN')) return;
+                if (active.length >= MEMORY_SLOT_CAPACITY) return;
+                if (!store.useSubjectResource()) return;
+                setGatheredInformation(prev => ({
+                  ...prev,
+                  activeServices: [...(prev.activeServices || []), 'IDENTITY_SCAN'],
+                }));
+                const quality =
+                  holdDurationMs >= 1800
+                    ? 'COMPLETE'
+                    : holdDurationMs >= 1200
+                      ? 'DEEP'
+                      : holdDurationMs >= 700
+                        ? 'STANDARD'
+                        : 'PARTIAL';
+                setGatheredInformation(prev => ({
+                  ...prev,
+                  identityScanQuality: quality,
+                }));
+                setIsIdentityScanning(true);
               }}
               onIdentityScanComplete={() => {
-                // Called after ID scan animation completes
+                // Called after ID scan animation completes.
                 setDossierRevealed(true);
                 setIsIdentityScanning(false);
+                setGatheredInformation(prev => ({
+                  ...prev,
+                  identityScan: true,
+                  timestamps: {
+                    ...prev.timestamps,
+                    identityScan: Date.now(),
+                  },
+                  activeServices: (prev.activeServices || []).filter((s) => s !== 'IDENTITY_SCAN'),
+                }));
               }}
               isIdentityScanning={isIdentityScanning}
               onHealthScan={() => {
+                // Model B: Scan occupies a slot while running; auto-stops on completion.
                 const store = useGameStore.getState();
-                // Health scan uses 1 resource (body scan - reveals biometrics/diseases)
-                if (store.useSubjectResource() && !gatheredInformation.healthScan) {
+                if (gatheredInformation.healthScan) return;
+                const active = gatheredInformation.activeServices || [];
+                if (active.includes('HEALTH_SCAN')) return;
+                if (active.length >= MEMORY_SLOT_CAPACITY) return;
+                if (!store.useSubjectResource()) return;
+                setGatheredInformation(prev => ({
+                  ...prev,
+                  activeServices: [...(prev.activeServices || []), 'HEALTH_SCAN'],
+                }));
+                setScanningHands(true);
+                setTimeout(() => {
+                  setScanningHands(false);
+                  setShowHealthScan(true);
                   setGatheredInformation(prev => ({
                     ...prev,
                     healthScan: true,
@@ -491,28 +546,21 @@ export default function MainScreen() {
                       ...prev.timestamps,
                       healthScan: Date.now(),
                     },
+                    activeServices: (prev.activeServices || []).filter((s) => s !== 'HEALTH_SCAN'),
                   }));
-                  setScanningHands(true);
-                  setTimeout(() => {
-                    setScanningHands(false);
-                    setShowHealthScan(true);
-                  }, 1500);
-                }
+                }, 1500);
               }}
               identityScanUsed={gatheredInformation.identityScan}
               healthScanUsed={gatheredInformation.healthScan}
               eyeScannerActive={eyeScannerActive}
               onToggleEyeScanner={() => {
                 if (!eyeScannerActive) {
-                  // Turning on eye scanner uses 1 resource
-                  const store = useGameStore.getState();
-                  if (store.useSubjectResource()) {
-                    setEyeScannerActive(true);
-                    setGatheredInformation(prev => ({
-                      ...prev,
-                      eyeScannerActive: true,
-                    }));
-                  }
+                  // Model B: Eye scanner is a channel/tool toggle; turning it on is free.
+                  setEyeScannerActive(true);
+                  setGatheredInformation(prev => ({
+                    ...prev,
+                    eyeScannerActive: true,
+                  }));
                 } else {
                   // Turning off is free
                   setEyeScannerActive(false);
@@ -522,21 +570,49 @@ export default function MainScreen() {
                   }));
                 }
               }}
-              onEyeScannerTap={() => {
-                // Eye scanner tap unlocks dossier without modal
+              onEyeScannerTap={(holdDurationMs = 0) => {
+                // Tap/hold scan from the eye view. Hold duration upgrades quality.
+                const MIN_HOLD_MS = 600;
+                if (holdDurationMs < MIN_HOLD_MS) return;
                 const store = useGameStore.getState();
-                if (store.useSubjectResource() && !gatheredInformation.identityScan) {
+                if (!eyeScannerActive) {
+                  setEyeScannerActive(true);
                   setGatheredInformation(prev => ({
                     ...prev,
-                    identityScan: true,
-                    timestamps: {
-                      ...prev.timestamps,
-                      identityScan: Date.now(),
-                    },
+                    eyeScannerActive: true,
                   }));
-                  // Unlock dossier directly - no modal
-                  setDossierRevealed(true);
                 }
+                if (gatheredInformation.identityScan) return;
+
+                const quality =
+                  holdDurationMs >= 1800
+                    ? 'COMPLETE'
+                    : holdDurationMs >= 1200
+                      ? 'DEEP'
+                      : holdDurationMs >= 700
+                        ? 'STANDARD'
+                        : holdDurationMs > 0
+                          ? 'PARTIAL'
+                          : undefined;
+
+                const active = gatheredInformation.activeServices || [];
+                if (active.includes('IDENTITY_SCAN')) {
+                  if (quality) {
+                    setGatheredInformation(prev => ({
+                      ...prev,
+                      identityScanQuality: quality,
+                    }));
+                  }
+                  return;
+                }
+                if (active.length >= MEMORY_SLOT_CAPACITY) return;
+                if (!store.useSubjectResource()) return;
+                setGatheredInformation(prev => ({
+                  ...prev,
+                  activeServices: [...(prev.activeServices || []), 'IDENTITY_SCAN'],
+                  ...(quality ? { identityScanQuality: quality } : {}),
+                }));
+                setIsIdentityScanning(true);
               }}
               onOpenDossier={() => setShowDossier(true)}
               onInterrogate={() => {
@@ -558,6 +634,10 @@ export default function MainScreen() {
                 setGatheredInformation(prev => ({
                   ...prev,
                   ...info,
+                  lastExtracted: {
+                    ...(prev.lastExtracted || {}),
+                    ...(info.lastExtracted || {}),
+                  },
                   interrogation: {
                     ...prev.interrogation,
                     ...(info.interrogation || {}),
@@ -569,8 +649,8 @@ export default function MainScreen() {
                 }));
               }}
               onQueryPerformed={(queryType: 'WARRANT' | 'TRANSIT' | 'INCIDENT') => {
-                // Each verification query uses 1 resource
-                useGameStore.getState().useSubjectResource();
+                // Model B: Queries are “files as services” gated by memory slots (handled in drawer).
+                void queryType;
               }}
               isNewGame={isNewGame}
               equipmentFailures={gatheredInformation.equipmentFailures}
@@ -593,6 +673,9 @@ export default function MainScreen() {
                 }));
               }}
               onEstablishBPM={(bpm) => setEstablishedBPM(bpm)}
+              consequence={consequence}
+              citationVisible={hasDecision && !!consequence && consequence.type !== 'NONE' && !citationAcknowledged}
+              onAcknowledgeCitation={() => setCitationAcknowledged(true)}
             />
 
             {showDossier && (
@@ -611,18 +694,6 @@ export default function MainScreen() {
               <HealthScanModal
                 subject={currentSubject}
                 onClose={() => setShowHealthScan(false)}
-              />
-            )}
-
-            {/* Phase 3: Citation Modal - Shows consequences and missed information */}
-            {hasDecision && consequence && (
-              <CitationModal
-                visible={hasDecision && consequence.type !== 'NONE'}
-                consequence={consequence}
-                onClose={() => {
-                  // Don't close immediately - let user acknowledge
-                  // Will be reset when moving to next subject
-                }}
               />
             )}
 

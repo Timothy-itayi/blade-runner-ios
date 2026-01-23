@@ -56,7 +56,6 @@ export const IntelPanel = ({
   onQueryPerformed, // Phase 1: Callback when a verification query is performed
   // Phase 4: Subject interaction props
   interactionPhase = 'greeting',
-  onGreetingComplete,
   onCredentialsComplete,
   onEstablishBPM,
   greetingDisplayed = false,
@@ -80,7 +79,6 @@ export const IntelPanel = ({
   onQueryPerformed?: (queryType: QueryType) => void, // Phase 1: Callback when a verification query is performed
   // Phase 4: Subject interaction props
   interactionPhase?: InteractionPhase,
-  onGreetingComplete?: () => void,
   onCredentialsComplete?: (hasAnomalies: boolean) => void,
   onEstablishBPM?: (bpm: number) => void,
   greetingDisplayed?: boolean,
@@ -88,13 +86,6 @@ export const IntelPanel = ({
   const [questionsAsked, setQuestionsAsked] = useState<string[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentQuestionText, setCurrentQuestionText] = useState<string>('');
-
-  // Phase 3: Layout tracking for slider
-  const [panelWidth, setPanelWidth] = useState(0);
-  const handleLayout = (event: any) => {
-    const { width } = event.nativeEvent.layout;
-    if (width > 0) setPanelWidth(width);
-  };
 
   // Phase 4: Greeting and credential state
   const greetingData = getSubjectGreeting(data.id, data);
@@ -130,6 +121,8 @@ export const IntelPanel = ({
     equipmentFailures: [],
     bpmDataAvailable: true,
     eyeScannerActive: false,
+    activeServices: [],
+    lastExtracted: {},
     timestamps: {},
   };
   
@@ -298,83 +291,21 @@ export const IntelPanel = ({
     });
   }, [interactionPhase, investigationMode, investigationWidth]);
 
-  // Interrogate is always available (free, 3 questions max)
-  const canInterrogate = hudStage === 'full' && questionsAsked.length < 3;
+  // Evidence-driven interrogation: only enabled once some investigation evidence exists.
+  const hasInterrogationEvidence =
+    !!info.identityScan ||
+    !!info.healthScan ||
+    !!info.warrantCheck ||
+    !!info.transitLog ||
+    !!info.incidentHistory;
 
-  // Phase 4: Interrogation press-and-hold (JS timers; avoid GestureDetector native crashes)
-  const [interrogationProgress, setInterrogationProgress] = useState(0);
-  const interrogationHoldStartMsRef = useRef<number | null>(null);
-  const interrogationHoldTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const interrogationHoldCompletedRef = useRef(false);
+  const canInterrogate =
+    hudStage === 'full' && hasInterrogationEvidence && questionsAsked.length < 3 && !!currentQuestion;
 
-  const clearInterrogationHoldTimer = () => {
-    if (interrogationHoldTickRef.current) {
-      clearInterval(interrogationHoldTickRef.current);
-      interrogationHoldTickRef.current = null;
-    }
-  };
-
-  useEffect(() => {
-    return () => {
-      clearInterrogationHoldTimer();
-    };
-  }, []);
-
-  const startInterrogationHold = () => {
+  const handleInterrogationAction = (tone: 'soft' | 'firm' | 'harsh') => {
     if (interactionPhase !== 'investigation') return;
     if (!canInterrogate) return;
-
-    interrogationHoldStartMsRef.current = Date.now();
-    interrogationHoldCompletedRef.current = false;
-    setInterrogationProgress(0);
-
-    clearInterrogationHoldTimer();
-    const MAX_MS = 1500;
-
-    interrogationHoldTickRef.current = setInterval(() => {
-      const startMs = interrogationHoldStartMsRef.current;
-      if (startMs == null) return;
-
-      const elapsed = Date.now() - startMs;
-      const progress = Math.max(0, Math.min(1, elapsed / MAX_MS));
-      setInterrogationProgress(progress);
-    }, 16);
-  };
-
-  const endInterrogationHold = () => {
-    const startMs = interrogationHoldStartMsRef.current;
-    interrogationHoldStartMsRef.current = null;
-    clearInterrogationHoldTimer();
-
-    // If we already completed, state is already reset.
-    if (interrogationHoldCompletedRef.current) return;
-
-    // Cancel/reset on early release.
-    if (startMs == null) {
-      setInterrogationProgress(0);
-      return;
-    }
-
-    const MIN_MS = 200;
-    const duration = Date.now() - startMs;
-    if (duration < MIN_MS) {
-      setInterrogationProgress(0);
-      return;
-    }
-
-    // Released after MIN => ask question; longer hold = harsher tone.
-    const SOFT_MAX_MS = 650;
-    const FIRM_MAX_MS = 1150;
-    const tone: 'soft' | 'firm' | 'harsh' =
-      duration < SOFT_MAX_MS ? 'soft' : duration < FIRM_MAX_MS ? 'firm' : 'harsh';
-
-    setInterrogationProgress(0);
     handleAskQuestion(tone);
-  };
-
-  // Phase 4: Handle Request Credentials button
-  const handleRequestCredentials = () => {
-    onGreetingComplete?.();
   };
 
   // Phase 4: Handle Proceed to Investigation button
@@ -385,80 +316,6 @@ export const IntelPanel = ({
 
   // Verification drawer now owns folder selection + unlock behavior.
 
-  // Phase 3: Credentials swipe state
-  const [credentialsDrawerProgress, setCredentialsDrawerProgress] = useState(0);
-  const credentialsDrawerOffset = useRef(new Animated.Value(0)).current;
-
-  // Phase 3: Credentials ratchet swipe (PanResponder)
-  // We avoid GestureDetector here because we are seeing device-only native crashes on swipe.
-  const credentialsGateRef = useRef(0);
-  const credentialsPanResponder = useMemo(() => {
-    const NUM_GATES = 8;
-    const HANDLE_WIDTH = 60;
-
-    const snapToGate = (gateIndex: number) => {
-      const maxTranslate = Math.max(0, panelWidth - HANDLE_WIDTH);
-      const gateProgress = gateIndex / NUM_GATES;
-      setCredentialsDrawerProgress(gateProgress);
-      Animated.spring(credentialsDrawerOffset, {
-        toValue: gateProgress * maxTranslate,
-        useNativeDriver: true,
-        tension: 140,
-        friction: 14,
-      }).start();
-    };
-
-    const reset = () => {
-      credentialsGateRef.current = 0;
-      setCredentialsDrawerProgress(0);
-      Animated.spring(credentialsDrawerOffset, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 70,
-        friction: 10,
-      }).start();
-    };
-
-    return PanResponder.create({
-      onStartShouldSetPanResponder: () => interactionPhase === 'greeting' && !!greetingDisplayed,
-      onMoveShouldSetPanResponder: (_evt, gestureState) => {
-        if (interactionPhase !== 'greeting' || !greetingDisplayed) return false;
-        // Only capture if it's a horizontal intent.
-        return Math.abs(gestureState.dx) > 8 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-      },
-      onPanResponderGrant: () => {
-        credentialsGateRef.current = 0;
-      },
-      onPanResponderMove: (_evt, gestureState) => {
-        if (interactionPhase !== 'greeting' || !greetingDisplayed) return;
-        const maxTranslate = Math.max(0, panelWidth - HANDLE_WIDTH);
-        if (maxTranslate <= 0) return;
-
-        const dx = Math.max(0, Math.min(maxTranslate, gestureState.dx));
-        const rawProgress = dx / maxTranslate; // 0..1
-        const gateIndex = Math.max(0, Math.min(NUM_GATES, Math.floor(rawProgress * NUM_GATES + 1e-6)));
-
-        if (gateIndex !== credentialsGateRef.current) {
-          credentialsGateRef.current = gateIndex;
-          snapToGate(gateIndex);
-        }
-      },
-      onPanResponderRelease: () => {
-        if (interactionPhase !== 'greeting' || !greetingDisplayed) return reset();
-
-        // Release behavior: only commit if they release at the final gate.
-        if (credentialsGateRef.current >= NUM_GATES) {
-          handleRequestCredentials();
-        }
-        reset();
-      },
-      onPanResponderTerminate: () => {
-        reset();
-      },
-      onPanResponderTerminationRequest: () => true,
-    });
-  }, [interactionPhase, greetingDisplayed, panelWidth]);
-
   // Phase 4: Render greeting phase content
   const renderGreetingPhase = () => {
     const content = (
@@ -468,55 +325,19 @@ export const IntelPanel = ({
           <Text style={styles.sectionLabel}>CREDENTIAL PROTOCOL</Text>
         </View>
 
-        {/* Greeting Phase - Slider Area */}
+        {/* Greeting Phase - Automated Intake */}
         <View style={styles.mainRow}>
-          <View 
-            style={[styles.credentialSwipeArea, styles.sliderTrack]}
-            onLayout={handleLayout}
-          >
-            {/* Gate Indicators */}
-            <View style={styles.gateContainer}>
-              {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <View 
-                  key={i} 
-                  style={[
-                    styles.gateMark, 
-                    credentialsDrawerProgress >= (i / 8) && styles.gateMarkActive
-                  ]} 
-                >
-                  <Text style={[
-                    styles.gateIcon,
-                    credentialsDrawerProgress >= (i / 8) && styles.gateIconActive
-                  ]}>▮</Text>
-                </View>
-              ))}
-            </View>
-
-            <Animated.View
-              style={[
-                styles.credentialDrawerHandle,
-                styles.sliderHandle,
-                {
-                  transform: [{ translateX: credentialsDrawerOffset }],
-                  opacity: greetingDisplayed ? 1 : 0.3,
-                },
-              ]}
-            >
-              <Text style={styles.sliderHandleText}>
-                {greetingDisplayed ? 'VERIFY' : '----'}
-              </Text>
-            </Animated.View>
-        
+          <View style={styles.greetingNotice}>
+            <Text style={styles.greetingLabel}>INTAKE GATE</Text>
+            <Text style={styles.greetingText}>
+              {greetingDisplayed ? 'INITIALIZATION IN PROGRESS' : 'AWAITING SUBJECT'}
+            </Text>
           </View>
         </View>
       </View>
     );
 
-    return (
-      <View {...credentialsPanResponder.panHandlers}>
-        {content}
-      </View>
-    );
+    return content;
   };
 
   // Phase 4: Render credentials phase content
@@ -668,9 +489,9 @@ export const IntelPanel = ({
             ) : (
               <View style={{ flex: 1, justifyContent: 'space-between' }}>
                 <View>
-                  <Text style={styles.dossierPreviewName}>BIO SCAN REQUIRED</Text>
+                  <Text style={styles.dossierPreviewName}>ID SCAN REQUIRED</Text>
                   <Text style={[styles.dossierPreviewId, { marginTop: 6 }]}>
-                    Dossier preview available after scan unlock.
+                    Dossier preview available after ID scan.
                   </Text>
                 </View>
                 <View style={styles.dossierPreviewFooter}>
@@ -706,6 +527,11 @@ export const IntelPanel = ({
     }
 
     // interrogation
+    const nextQuestionText = currentQuestion
+      ? currentQuestion.text(data)
+      : hasInterrogationEvidence
+        ? 'NO FURTHER QUESTIONS'
+        : 'EVIDENCE REQUIRED — RUN A SCAN / QUERY';
     return (
       <View style={styles.investigationCard}>
         <View style={styles.investigationCardHeader}>
@@ -713,31 +539,89 @@ export const IntelPanel = ({
           <Text style={styles.investigationNavHint}>← SWIPE {navText}</Text>
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.actionButton,
-            styles.interrogateButton,
-            !canInterrogate && styles.actionButtonDisabled,
-          ]}
-          onPressIn={startInterrogationHold}
-          onPressOut={endInterrogationHold}
-          disabled={!canInterrogate}
-          activeOpacity={0.85}
-        >
-          <Text
-            style={[
-              styles.actionButtonText,
-              styles.interrogateButtonText,
-              !canInterrogate && styles.actionButtonTextDisabled,
-            ]}
-          >
-            {interrogationProgress > 0 ? `${Math.round(interrogationProgress * 100)}%` : 'HOLD'}
-          </Text>
-          {interrogationProgress > 0 && (
-            <View style={[styles.drawerProgressBar, { width: `${interrogationProgress * 100}%` }]} />
-          )}
-        </TouchableOpacity>
-        <Text style={styles.sectionHint}>Tap &amp; Hold</Text>
+        <View style={styles.interrogateRow}>
+          <View style={styles.interrogateQuestionBox}>
+            <Text style={styles.interrogateQuestionLabel}>SYSTEM QUESTION</Text>
+            <Text
+              style={[
+                styles.interrogateQuestionText,
+                !canInterrogate && styles.interrogateQuestionTextDisabled,
+              ]}
+            >
+              {nextQuestionText}
+            </Text>
+          </View>
+
+          <View style={styles.interrogateActionColumn}>
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                styles.interrogateActionButton,
+                styles.interrogateClarifyButton,
+                !canInterrogate && styles.actionButtonDisabled,
+              ]}
+              onPress={() => handleInterrogationAction('soft')}
+              disabled={!canInterrogate}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[
+                  styles.actionButtonText,
+                  styles.interrogateClarifyButtonText,
+                  !canInterrogate && styles.actionButtonTextDisabled,
+                ]}
+              >
+                REQUEST CLARIFICATION
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                styles.interrogateActionButton,
+                styles.interrogateContestButton,
+                !canInterrogate && styles.actionButtonDisabled,
+              ]}
+              onPress={() => handleInterrogationAction('firm')}
+              disabled={!canInterrogate}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[
+                  styles.actionButtonText,
+                  styles.interrogateContestButtonText,
+                  !canInterrogate && styles.actionButtonTextDisabled,
+                ]}
+              >
+                CONTEST STATEMENT
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                styles.interrogateActionButton,
+                styles.interrogateRecordButton,
+                !canInterrogate && styles.actionButtonDisabled,
+              ]}
+              onPress={() => handleInterrogationAction('harsh')}
+              disabled={!canInterrogate}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[
+                  styles.actionButtonText,
+                  styles.interrogateRecordButtonText,
+                  !canInterrogate && styles.actionButtonTextDisabled,
+                ]}
+              >
+                RECORD NON-COMPLIANCE
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.sectionHint}>One action logs a response</Text>
+          </View>
+        </View>
       </View>
     );
   };

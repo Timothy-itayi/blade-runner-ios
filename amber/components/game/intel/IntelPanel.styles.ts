@@ -117,6 +117,85 @@ export const styles = StyleSheet.create({
     borderColor: Theme.colors.accentApprove,
     backgroundColor: 'rgba(74, 138, 90, 0.1)',
   },
+  interrogateRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'stretch',
+    marginTop: 10,
+  },
+  interrogateQuestionBox: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 42, 58, 0.55)',
+    backgroundColor: 'rgba(13, 17, 23, 0.55)',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    justifyContent: 'center',
+  },
+  interrogateQuestionLabel: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: 6,
+    opacity: 0.85,
+  },
+  interrogateQuestionText: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    lineHeight: 18,
+    flexShrink: 1,
+  },
+  interrogateQuestionTextDisabled: {
+    color: Theme.colors.textDim,
+    opacity: 0.85,
+  },
+  interrogateHoldColumn: {
+    width: 190,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
+  interrogateHoldButton: {
+    flex: 0,
+    width: '100%',
+    height: 64,
+  },
+  interrogateActionColumn: {
+    width: 200,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
+  interrogateActionButton: {
+    flex: 0,
+    width: '100%',
+    height: 40,
+    paddingHorizontal: 8,
+  },
+  interrogateClarifyButton: {
+    borderColor: Theme.colors.textSecondary,
+    backgroundColor: 'rgba(127, 184, 216, 0.12)',
+  },
+  interrogateClarifyButtonText: {
+    color: Theme.colors.textSecondary,
+  },
+  interrogateContestButton: {
+    borderColor: Theme.colors.accentWarn,
+    backgroundColor: 'rgba(201, 162, 39, 0.14)',
+  },
+  interrogateContestButtonText: {
+    color: Theme.colors.accentWarn,
+  },
+  interrogateRecordButton: {
+    borderColor: Theme.colors.accentDeny,
+    backgroundColor: 'rgba(212, 83, 74, 0.14)',
+  },
+  interrogateRecordButtonText: {
+    color: Theme.colors.accentDeny,
+  },
   // Phase 4: Credential request button
   credentialButton: {
     borderColor: Theme.colors.textPrimary,
@@ -158,6 +237,14 @@ export const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 1,
+  },
+  greetingNotice: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+    backgroundColor: 'rgba(10, 12, 15, 0.6)',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
   greetingText: {
     color: Theme.colors.textPrimary,
@@ -371,10 +458,10 @@ export const styles = StyleSheet.create({
   },
   folderTabsContainer: {
     flexDirection: 'row',
-    gap: 4,
-    paddingHorizontal: 4,
-    alignItems: 'flex-end',
-    height: 30,
+    gap: 8,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    height: 56,
   },
   folderTab: {
     flex: 1,
@@ -430,117 +517,139 @@ export const styles = StyleSheet.create({
     textAlign: 'center',
     letterSpacing: 1,
   },
-  // Phase 3: Credentials swipe styles
-  swipeIndicator: {
-    alignItems: 'center',
-    marginBottom: 8,
-    paddingVertical: 4,
-  },
-  swipeIndicatorText: {
-    color: Theme.colors.textDim,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 8,
-    letterSpacing: 1,
-    opacity: 0.6,
-  },
-  credentialSwipeArea: {
+
+  // Tape-style tabs (replacement UI for VerificationFolders)
+  tapeTab: {
     flex: 1,
-    height: 60,
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  sliderTrack: {
-    backgroundColor: 'rgba(10, 12, 15, 0.8)',
+    height: 50,
     borderWidth: 1,
-    borderColor: Theme.colors.border,
-    borderRadius: 0, // Hard edges
-    overflow: 'hidden',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 0,
-  },
-  sliderHandle: {
-    width: 60,
-    height: 58,
-    borderRadius: 0, // Hard edges
-    backgroundColor: 'rgba(27, 126, 184, 0.1)',
-    borderStyle: 'solid',
-    borderWidth: 1,
-    borderColor: Theme.colors.textPrimary,
-    zIndex: 3,
-    justifyContent: 'center',
-    alignItems: 'flex-start', // Align the handle content to the left
-    flexDirection: 'row',
-    position: 'absolute',
-    left: 0, // Ensure handle hugs the left—start of gate row
-    top: 0,
-    paddingTop: 4,
-  },
-  gateContainer: {
-    ...StyleSheet.absoluteFillObject,
-    flexDirection: 'row',
+    borderColor: 'rgba(74, 106, 122, 0.45)',
+    backgroundColor: 'rgba(13, 17, 23, 0.70)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingTop: 7,
+    paddingBottom: 6,
     justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  tapeTabActive: {
+    borderColor: Theme.colors.accentWarn,
+    backgroundColor: 'rgba(13, 17, 23, 0.92)',
+    transform: [{ translateY: -2 }],
+  },
+  tapeTabComplete: {
+    borderColor: 'rgba(74, 138, 90, 0.55)',
+  },
+  tapeNotch: {
+    position: 'absolute',
+    right: -1,
+    top: 14,
+    width: 18,
+    height: 22,
+    borderLeftWidth: 1,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: 'rgba(74, 106, 122, 0.45)',
+    backgroundColor: 'rgba(10, 12, 15, 0.75)',
+    borderTopLeftRadius: 3,
+    borderBottomLeftRadius: 3,
+  },
+  tapeNameplate: {
+    position: 'absolute',
+    right: 20, // leave room for the notch
+    top: 6,
+    maxWidth: 110,
+    height: 18,
+    paddingHorizontal: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(74, 106, 122, 0.35)',
+    backgroundColor: 'rgba(10, 12, 15, 0.75)',
+    borderRadius: 3,
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 5, // Start gates after the handle's initial width
-    paddingRight: 12,
-    zIndex: 1,
+    justifyContent: 'space-between',
+    gap: 8,
   },
-  gateMark: {
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    opacity: 0.3,
+  tapeNameplateActive: {
+    borderColor: 'rgba(201, 162, 39, 0.75)',
+    backgroundColor: 'rgba(13, 17, 23, 0.85)',
   },
-  gateMarkActive: {
-    opacity: 1,
-  },
-  gateIcon: {
-    color: Theme.colors.textDim,
-    fontSize: 14,
-  },
-  gateIconActive: {
-    color: Theme.colors.accentApprove,
-    textShadowColor: Theme.colors.accentApprove,
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 4,
-  },
-  sliderHandleText: {
+  tapeLabel: {
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontWeight: '800',
+    letterSpacing: 1.2,
   },
-  sliderLabel: {
+  tapeLabelActive: {
+    color: Theme.colors.accentWarn,
+  },
+  tapeStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  tapeStatusDotIdle: {
+    borderColor: 'rgba(74, 106, 122, 0.7)',
+    backgroundColor: 'rgba(10, 12, 15, 0.9)',
+  },
+  tapeStatusDotComplete: {
+    borderColor: 'rgba(74, 138, 90, 0.9)',
+    backgroundColor: 'rgba(74, 138, 90, 0.35)',
+  },
+  tapeStatusDotActive: {
+    borderColor: Theme.colors.accentWarn,
+  },
+  tapeWindow: {
+    height: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(74, 106, 122, 0.35)',
+    backgroundColor: 'rgba(10, 12, 15, 0.55)',
+    borderRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 6,
+    marginTop: 2,
+  },
+  tapeReel: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(127, 184, 216, 0.35)',
+    backgroundColor: 'rgba(13, 17, 23, 0.55)',
+  },
+  tapeWindowRidge: {
     position: 'absolute',
-    right: 12,
+    left: 0,
+    right: 0,
+    top: 0,
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+  },
+  tapeSubLabel: {
     color: Theme.colors.textDim,
     fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    fontWeight: '600',
-    letterSpacing: 1,
-    zIndex: 2,
-    pointerEvents: 'none',
+    fontSize: 8,
+    letterSpacing: 1.1,
+    opacity: 0.9,
   },
-  credentialDrawerHandle: {
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: Theme.colors.textPrimary,
-    backgroundColor: 'rgba(127, 184, 216, 0.05)',
-    position: 'relative',
-    borderRadius: 2,
+  tapeSubLabelActive: {
+    color: Theme.colors.textSecondary,
+    opacity: 1,
   },
-  drawerProgressBar: {
+  tapeMeta: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    height: 2,
-    backgroundColor: Theme.colors.accentApprove,
+    left: 8,
+    bottom: 6,
+    color: 'rgba(127, 184, 216, 0.65)',
+    fontFamily: Theme.fonts.mono,
+    fontSize: 7,
+    letterSpacing: 1,
   },
+  // Phase 3: Credentials swipe styles removed (automated intake gate)
 
   // =============================================================================
   // Verification Drawer (physical drawer / hinged door)

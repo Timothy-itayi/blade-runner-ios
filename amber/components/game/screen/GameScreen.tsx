@@ -4,6 +4,7 @@ import { Header } from '../Header';
 import { ScanPanel } from '../ScanPanel';
 import { IntelPanel } from '../IntelPanel';
 import { DecisionButtons } from '../DecisionButtons';
+import { CitationStrip } from '../CitationStrip';
 import { EyeDisplay } from '../../ui/EyeDisplay';
 import { ScanData } from '../../ui/ScanData';
 import { SubjectData } from '../../../data/subjects';
@@ -11,6 +12,7 @@ import { ShiftData } from '../../../constants/shifts';
 import { styles } from '../../../styles/game/MainScreen.styles';
 import { Theme } from '../../../constants/theme';
 import { useGameStore } from '../../../store/gameStore';
+import type { Consequence } from '../../../types/consequence';
 
 interface GameScreenProps {
   hudStage: 'none' | 'wireframe' | 'outline' | 'full';
@@ -24,6 +26,9 @@ interface GameScreenProps {
   biometricsRevealed: boolean;
   hasDecision: boolean;
   decisionOutcome: { type: 'APPROVE' | 'DENY', outcome: any } | null;
+  consequence?: Consequence | null;
+  citationVisible?: boolean;
+  onAcknowledgeCitation?: () => void;
   credits: number;
   resourcesRemaining?: number;
   resourcesPerShift?: number;
@@ -54,12 +59,12 @@ interface GameScreenProps {
   onCredentialsComplete?: (hasAnomalies: boolean) => void; // Phase 4: Callback when credentials are examined
   onEstablishBPM?: (bpm: number) => void; // Phase 4: Callback to establish BPM baseline
   eyeScannerActive?: boolean; // Phase 5: Is eye scanner turned on?
-  onIdentityScan?: () => void; // Phase 5: Identity scan handler
+  onIdentityScan?: (holdDurationMs?: number) => void; // Phase 5: Identity scan handler
   onHealthScan?: () => void; // Phase 5: Health scan handler
   identityScanUsed?: boolean; // Phase 5: Has identity scan been used?
   healthScanUsed?: boolean; // Phase 5: Has health scan been used?
   onToggleEyeScanner?: () => void; // Phase 5: Toggle eye scanner
-  onEyeScannerTap?: () => void; // Phase 5: Eye scanner tap handler (unlocks dossier)
+  onEyeScannerTap?: (holdDurationMs?: number) => void; // Phase 5: Eye scanner tap handler (unlocks dossier)
   isIdentityScanning?: boolean; // Phase 5: Is identity scan animation active?
   onIdentityScanComplete?: () => void; // Phase 5: Callback when identity scan animation completes
 }
@@ -76,6 +81,9 @@ export const GameScreen = ({
   biometricsRevealed,
   hasDecision,
   decisionOutcome,
+  consequence = null,
+  citationVisible = false,
+  onAcknowledgeCitation,
   credits,
   resourcesRemaining,
   resourcesPerShift,
@@ -118,11 +126,56 @@ export const GameScreen = ({
 
   // Phase 4: Lifted greeting state
   const [greetingDisplayed, setGreetingDisplayed] = useState(false);
+  const [verificationStep, setVerificationStep] = useState(0);
+  const verificationTimersRef = React.useRef<Array<ReturnType<typeof setTimeout>>>([]);
+  const [identityScanHoldActive, setIdentityScanHoldActive] = useState(false);
+
+  const clearVerificationTimers = () => {
+    verificationTimersRef.current.forEach(clearTimeout);
+    verificationTimersRef.current = [];
+  };
 
   // Reset greeting state when subject changes
   React.useEffect(() => {
     setGreetingDisplayed(false);
+    setVerificationStep(0);
+    clearVerificationTimers();
   }, [currentSubject.id]);
+
+  // Automated intake verification ratchet (system-driven, no gestures)
+  React.useEffect(() => {
+    clearVerificationTimers();
+
+    if (interactionPhase !== 'greeting') {
+      setVerificationStep(4);
+      return;
+    }
+
+    if (!greetingDisplayed) {
+      setVerificationStep(0);
+      return;
+    }
+
+    setVerificationStep(prev => Math.max(prev, 1));
+    verificationTimersRef.current.push(setTimeout(() => {
+      setVerificationStep(prev => Math.max(prev, 2));
+    }, 700));
+
+    if (biometricsRevealed) {
+      verificationTimersRef.current.push(setTimeout(() => {
+        setVerificationStep(prev => Math.max(prev, 3));
+      }, 1400));
+
+      verificationTimersRef.current.push(setTimeout(() => {
+        setVerificationStep(prev => Math.max(prev, 4));
+        if (interactionPhase === 'greeting') {
+          onGreetingComplete?.();
+        }
+      }, 2100));
+    }
+
+    return clearVerificationTimers;
+  }, [interactionPhase, greetingDisplayed, biometricsRevealed, onGreetingComplete]);
 
   return (
     <>
@@ -170,6 +223,9 @@ export const GameScreen = ({
             viewChannel={viewChannel}
             eyeScannerActive={eyeScannerActive}
             onEyeScannerTap={onEyeScannerTap}
+            identityScanHoldActive={identityScanHoldActive}
+            onIdentityScanHoldStart={() => setIdentityScanHoldActive(true)}
+            onIdentityScanHoldEnd={() => setIdentityScanHoldActive(false)}
             interactionPhase={interactionPhase}
             isIdentityScanning={isIdentityScanning}
             onIdentityScanComplete={onIdentityScanComplete}
@@ -185,15 +241,17 @@ export const GameScreen = ({
             hasDecision={hasDecision}
             decisionType={decisionOutcome?.type}
             onIdentityScan={onIdentityScan}
+            onIdentityScanHoldStart={() => setIdentityScanHoldActive(true)}
+            onIdentityScanHoldEnd={() => setIdentityScanHoldActive(false)}
             onHealthScan={onHealthScan}
             viewChannel={viewChannel}
             resourcesRemaining={resourcesRemaining}
             identityScanUsed={identityScanUsed}
             healthScanUsed={healthScanUsed}
-            eyeScannerActive={eyeScannerActive}
-            onToggleEyeScanner={onToggleEyeScanner}
+            activeServices={gatheredInformation?.activeServices || []}
             interactionPhase={interactionPhase}
             subjectResponse={subjectResponse}
+            verificationStep={verificationStep}
             onResponseComplete={() => {
               if (interactionPhase === 'greeting') {
                 setGreetingDisplayed(true);
@@ -219,7 +277,6 @@ export const GameScreen = ({
           onInformationUpdate={onInformationUpdate}
           onQueryPerformed={onQueryPerformed}
           interactionPhase={interactionPhase}
-          onGreetingComplete={onGreetingComplete}
           onCredentialsComplete={onCredentialsComplete}
           onEstablishBPM={onEstablishBPM}
           greetingDisplayed={greetingDisplayed}
@@ -227,6 +284,19 @@ export const GameScreen = ({
         
         {/* Decision buttons - always visible */}
         {hudStage === 'full' && (
+          <>
+            <CitationStrip
+              visible={!!citationVisible}
+              consequence={consequence || null}
+              caseId={currentSubject.id}
+              onAcknowledge={() => {
+                // Papers, Please-style: acknowledging a violation continues the line.
+                onAcknowledgeCitation?.();
+                if (hasDecision) {
+                  onNext();
+                }
+              }}
+            />
           <DecisionButtons 
             hudStage={hudStage} 
             onDecision={onDecision}
@@ -235,8 +305,9 @@ export const GameScreen = ({
             hasDecision={hasDecision}
             isNewGame={isNewGame}
             hasUsedResource={
-              // Phase 2: Require at least 1 resource to be used (bio scan, warrant check, transit log, or incident history)
-              gatheredInformation?.bioScan || 
+              // Require at least 1 resource to be used (ID/Health scan or verification tapes)
+              gatheredInformation?.identityScan ||
+              gatheredInformation?.healthScan ||
               gatheredInformation?.warrantCheck || 
               gatheredInformation?.transitLog || 
               gatheredInformation?.incidentHistory || 
@@ -253,6 +324,7 @@ export const GameScreen = ({
               warrantChecked: false,
             }}
           />
+          </>
         )}
       </View>
     </>

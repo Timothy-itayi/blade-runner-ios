@@ -178,32 +178,10 @@ export function generateDynamicQuestions(
 ): QuestionTemplate[] {
   const questions: QuestionTemplate[] = [];
 
-  // Tier 1: No information - Basic questions
-  if (!hasSomeInformation(info)) {
-    questions.push(
-      {
-        id: 'origin',
-        text: () => `Why are you coming to Earth from ${subject.originPlanet}?`,
-      },
-      {
-        id: 'purpose',
-        text: () => `What is your specific purpose for this visit?`,
-      },
-      {
-        id: 'duration',
-        text: () => `How long do you plan to stay on Earth?`,
-      },
-      {
-        id: 'background',
-        text: () => `Tell me about your background.`,
-      },
-      {
-        id: 'previous',
-        text: () => `Have you been to Earth before?`,
-      }
-    );
-    return questions;
-  }
+  // Evidence-driven interrogation:
+  // No questions are available until some actionable evidence has been gathered.
+  // This avoids "spam to win" and keeps interrogation tied to investigation.
+  if (!hasSomeInformation(info)) return questions;
 
   // Tier 2: Some information - Questions about specific findings
   if (!hasAllInformation(info)) {
@@ -359,18 +337,20 @@ export function generateDynamicQuestions(
     }
   }
 
-  // Phase 4: Add personality-targeted questions
-  const personalityQuestions = getPersonalityTargetedQuestions(subject, info);
+  // Phase 4: Add personality-targeted questions (only once evidence exists)
+  if (hasSomeInformation(info)) {
+    const personalityQuestions = getPersonalityTargetedQuestions(subject, info);
 
-  // Merge personality questions with existing ones, avoiding duplicates
-  personalityQuestions.forEach(pq => {
-    if (!questions.some(q => q.id === pq.id)) {
-      questions.push(pq);
-    }
-  });
+    // Merge personality questions with existing ones, avoiding duplicates
+    personalityQuestions.forEach(pq => {
+      if (!questions.some(q => q.id === pq.id)) {
+        questions.push(pq);
+      }
+    });
+  }
 
-  // Fallback: If no specific questions generated, provide basic ones
-  if (questions.length === 0) {
+  // Fallback: If evidence exists but no specific questions generated, provide a basic one.
+  if (questions.length === 0 && hasSomeInformation(info)) {
     questions.push({
       id: 'purpose',
       text: () => `What is your specific purpose for this visit?`,

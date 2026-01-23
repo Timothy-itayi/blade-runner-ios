@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { NativeModules, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
+import { MEMORY_SLOT_CAPACITY, type ServiceType } from '../../../types/information';
 
 type QueryType = 'WARRANT' | 'TRANSIT' | 'INCIDENT';
 
@@ -11,6 +12,7 @@ export interface VerificationFolder3DItem {
   accent: string;
   complete: boolean;
   locked: boolean;
+  active: boolean;
 }
 
 function hasExpoGLNativeModule() {
@@ -57,22 +59,27 @@ function FolderStackFallback2D({
         ]}
       >
         {items.map((it, idx) => {
-          const body = it.locked ? 'rgba(42,47,54,0.95)' : 'rgba(191,164,101,0.95)';
-          const ear = it.locked ? 'rgba(58,63,71,0.95)' : 'rgba(215,198,143,0.95)';
-          const earText = it.locked ? 'rgba(230,235,240,0.9)' : 'rgba(11,15,20,0.9)';
+          const body = it.locked ? 'rgba(42,47,54,0.95)' : 'rgba(13,17,23,0.92)';
+          const labelPlate = it.locked ? 'rgba(58,63,71,0.95)' : 'rgba(26,42,58,0.85)';
+          const labelText = it.locked ? 'rgba(230,235,240,0.92)' : 'rgba(230,235,240,0.92)';
           const stepX = 14; // diagonal spread (x)
           const stepY = 7; // diagonal spread (y)
+          const borderColor = it.active
+            ? it.accent
+            : it.complete
+              ? 'rgba(74,138,90,0.85)'
+              : 'rgba(0,0,0,0.25)';
           return (
             <TouchableOpacity
               key={it.id}
               onPress={() => onPressFolder(it.id)}
               activeOpacity={0.9}
               style={{
-                width: 132,
-                height: 86,
+                width: 142,
+                height: 78,
                 marginRight: -58, // overlap like physical folders (stronger for diagonal read)
                 borderWidth: 1,
-                borderColor: 'rgba(0,0,0,0.25)',
+                borderColor,
                 backgroundColor: body,
                 padding: 10,
                 justifyContent: 'space-between',
@@ -95,17 +102,18 @@ function FolderStackFallback2D({
               <View
                 style={{
                   position: 'absolute',
-                  top: -1,
-                  right: 8,
+                  top: 6,
+                  right: 22, // leave room for the notch on the far right
                   // “Snug”: width driven by content, but capped.
-                  maxWidth: 86,
+                  maxWidth: 92,
                   height: 18,
                   borderWidth: 1,
                   borderColor: 'rgba(0,0,0,0.2)',
-                  backgroundColor: ear,
+                  backgroundColor: labelPlate,
                   paddingHorizontal: 6,
                   justifyContent: 'center',
                   alignItems: 'center',
+                  borderRadius: 3,
                 }}
               >
                 <Text
@@ -115,12 +123,32 @@ function FolderStackFallback2D({
                     fontSize: 8,
                     letterSpacing: 0.6,
                     fontWeight: '800',
-                    color: earText,
+                    color: labelText,
                   }}
                 >
                   {it.label}
                 </Text>
               </View>
+
+              {/* Notch / write-protect cutout */}
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  right: -1,
+                  top: 18,
+                  width: 18,
+                  height: 24,
+                  borderLeftWidth: 1,
+                  borderTopWidth: 1,
+                  borderBottomWidth: 1,
+                  borderColor: it.active ? it.accent : 'rgba(0,0,0,0.25)',
+                  backgroundColor: it.locked ? 'rgba(22,26,32,0.95)' : 'rgba(10,12,15,0.85)',
+                  borderTopLeftRadius: 3,
+                  borderBottomLeftRadius: 3,
+                }}
+              />
+
               <View
                 style={{
                   position: 'absolute',
@@ -131,10 +159,70 @@ function FolderStackFallback2D({
                   backgroundColor: it.complete ? it.accent : 'rgba(74,106,122,0.95)',
                 }}
               />
-              {/* Label lives on the top-right tab now. */}
-              <View />
-              <Text style={{ fontSize: 8, color: 'rgba(11,15,20,0.7)', letterSpacing: 0.5 }}>
-                {it.locked ? 'LOCKED' : it.complete ? 'COMPLETE' : 'UNOPENED'}
+
+              {/* Cartridge window + reels */}
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: 10,
+                  right: 28,
+                  top: 28,
+                  height: 18,
+                  borderWidth: 1,
+                  borderColor: 'rgba(74,106,122,0.35)',
+                  backgroundColor: 'rgba(10,12,15,0.55)',
+                  borderRadius: 4,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 10,
+                }}
+              >
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    borderWidth: 1,
+                    borderColor: 'rgba(127, 184, 216, 0.35)',
+                    backgroundColor: 'rgba(13, 17, 23, 0.55)',
+                  }}
+                />
+                <View
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: 5,
+                    borderWidth: 1,
+                    borderColor: 'rgba(127, 184, 216, 0.35)',
+                    backgroundColor: 'rgba(13, 17, 23, 0.55)',
+                  }}
+                />
+                <View
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: 0,
+                    height: 3,
+                    backgroundColor: 'rgba(255,255,255,0.06)',
+                  }}
+                />
+              </View>
+
+              <Text
+                pointerEvents="none"
+                style={{
+                  position: 'absolute',
+                  left: 10,
+                  bottom: 8,
+                  fontSize: 8,
+                  color: it.locked ? 'rgba(230,235,240,0.55)' : 'rgba(230,235,240,0.75)',
+                  letterSpacing: 0.8,
+                }}
+              >
+                {it.locked ? 'LOCKED' : it.complete ? 'COMPLETE' : it.active ? 'PLAYING' : 'UNOPENED'}
               </Text>
             </TouchableOpacity>
           );
@@ -162,6 +250,10 @@ export function VerificationFolderStack3D({
   onPressFolder: (id: QueryType) => void;
 }) {
   const items = useMemo<VerificationFolder3DItem[]>(() => {
+    const activeServices: ServiceType[] = gatheredInformation?.activeServices || [];
+    const memoryFull = activeServices.length >= MEMORY_SLOT_CAPACITY;
+    const isActive = (t: ServiceType) => activeServices.includes(t);
+
     const completeWarrant = !!gatheredInformation?.warrantCheck;
     const completeTransit = !!gatheredInformation?.transitLog;
     const completeIncident = !!gatheredInformation?.incidentHistory;
@@ -172,26 +264,27 @@ export function VerificationFolderStack3D({
         label: 'WARRANT',
         accent: '#c9a227',
         complete: completeWarrant,
-        locked: !completeWarrant && resourcesRemaining === 0,
+        locked: !isActive('WARRANT') && memoryFull,
+        active: activeFolder === 'WARRANT',
       },
       {
         id: 'TRANSIT',
         label: 'TRANSIT',
         accent: '#7fb8d8',
         complete: completeTransit,
-        locked: !completeTransit && resourcesRemaining === 0,
+        locked: !isActive('TRANSIT') && memoryFull,
+        active: activeFolder === 'TRANSIT',
       },
       {
         id: 'INCIDENT',
         label: 'INCIDENT',
         accent: '#d4534a',
         complete: completeIncident,
-        locked: !completeIncident && resourcesRemaining === 0,
+        locked: !isActive('INCIDENT') && memoryFull,
+        active: activeFolder === 'INCIDENT',
       },
     ];
-  }, [gatheredInformation, resourcesRemaining]);
-
-  void activeFolder;
+  }, [gatheredInformation, resourcesRemaining, activeFolder]);
 
   // Hard stop: if the native module isn’t in this build, do NOT import fiber/native.
   // That import crashes immediately (your screenshot).
@@ -224,10 +317,11 @@ export function VerificationFolderStack3D({
   }) {
     const baseX = index * 1.15;
     const baseZ = -index * 0.18;
-    const liftY = item.complete ? 0.06 : 0;
+    const liftY = item.active ? 0.10 : item.complete ? 0.06 : 0;
 
-    const bodyColor = item.locked ? '#2a2f36' : '#bfa465';
-    const edgeColor = item.locked ? '#3a3f47' : '#d7c68f';
+    const bodyColor = item.locked ? '#2a2f36' : '#141a21';
+    const edgeColor = item.locked ? '#3a3f47' : '#223240';
+    const rimColor = item.active ? item.accent : item.complete ? '#4a8a5a' : '#4a6a7a';
 
     return (
       <group
@@ -243,24 +337,48 @@ export function VerificationFolderStack3D({
           castShadow
           receiveShadow
         >
-          <boxGeometry args={[1.0, 0.66, 0.09]} />
-          <meshStandardMaterial color={bodyColor} roughness={0.9} metalness={0.08} />
+          <boxGeometry args={[1.06, 0.6, 0.1]} />
+          <meshStandardMaterial color={bodyColor} roughness={0.95} metalness={0.06} />
         </mesh>
 
-        <mesh position={[0.18, 0.24, 0.055]} castShadow receiveShadow>
-          <boxGeometry args={[0.64, 0.22, 0.02]} />
-          <meshStandardMaterial color={edgeColor} roughness={0.85} metalness={0.05} />
+        {/* Label plate (top-right) */}
+        <mesh position={[0.20, 0.18, 0.065]} castShadow receiveShadow>
+          <boxGeometry args={[0.72, 0.16, 0.02]} />
+          <meshStandardMaterial color={edgeColor} roughness={0.88} metalness={0.07} />
         </mesh>
 
-        <mesh position={[-0.44, 0.0, 0.055]}>
-          <boxGeometry args={[0.05, 0.62, 0.012]} />
+        {/* Accent stripe */}
+        <mesh position={[-0.505, 0.0, 0.066]}>
+          <boxGeometry args={[0.05, 0.56, 0.014]} />
           <meshStandardMaterial
-            color={item.complete ? item.accent : '#4a6a7a'}
+            color={rimColor}
             roughness={0.75}
             metalness={0.18}
-            emissive={item.complete ? item.accent : '#000000'}
-            emissiveIntensity={item.complete ? 0.18 : 0}
+            emissive={item.active ? rimColor : item.complete ? rimColor : '#000000'}
+            emissiveIntensity={item.active ? 0.22 : item.complete ? 0.12 : 0}
           />
+        </mesh>
+
+        {/* Window frame */}
+        <mesh position={[-0.02, -0.02, 0.064]} castShadow receiveShadow>
+          <boxGeometry args={[0.78, 0.22, 0.02]} />
+          <meshStandardMaterial color={'#0b0f14'} roughness={0.95} metalness={0.05} />
+        </mesh>
+
+        {/* Reels (two cylinders) */}
+        <mesh position={[-0.28, -0.02, 0.075]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.075, 0.075, 0.016, 16]} />
+          <meshStandardMaterial color={'#1c2630'} roughness={0.92} metalness={0.06} />
+        </mesh>
+        <mesh position={[0.24, -0.02, 0.075]} castShadow receiveShadow>
+          <cylinderGeometry args={[0.075, 0.075, 0.016, 16]} />
+          <meshStandardMaterial color={'#1c2630'} roughness={0.92} metalness={0.06} />
+        </mesh>
+
+        {/* Notch (write-protect cutout proxy) */}
+        <mesh position={[0.52, -0.02, 0.065]} castShadow receiveShadow>
+          <boxGeometry args={[0.16, 0.28, 0.02]} />
+          <meshStandardMaterial color={'#0a0c0f'} roughness={0.98} metalness={0.03} />
         </mesh>
       </group>
     );

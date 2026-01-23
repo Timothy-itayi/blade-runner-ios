@@ -100,6 +100,8 @@ export const useGameHandlers = (props: GameHandlersProps) => {
       equipmentFailures: [],
       bpmDataAvailable: true,
       eyeScannerActive: false,
+      activeServices: [],
+      lastExtracted: {},
       timestamps: {},
     };
     
@@ -251,7 +253,7 @@ export const useGameHandlers = (props: GameHandlersProps) => {
       setShowShiftTransition(true);
     } else {
       setCurrentSubjectIndex(nextIndex);
-      setTimeout(triggerScan, 500);
+      setTimeout(triggerScan, 1200);
     }
   };
 

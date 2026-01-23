@@ -156,8 +156,8 @@ export const SubjectDossier = ({
             ) : (
               <View style={styles.dossierPlaceholder}>
                 <Text style={styles.dossierPlaceholderText}>
-                  BIO SCAN REQUIRED{'\n'}
-                  Dossier data will be revealed after biometric scan
+                  ID SCAN REQUIRED{'\n'}
+                  Dossier data will be revealed after identity scan
                 </Text>
               </View>
             )}

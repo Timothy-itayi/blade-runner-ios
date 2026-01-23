@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, Animated, TouchableOpacity, Easing } from 'react-native';
 import { styles } from '../../styles/ui/ScanData.styles';
 import { HUDBox } from './HUDBox';
 import { SubjectData } from '../../data/subjects';
 import { BUILD_SEQUENCE } from '../../constants/animations';
 import { Theme } from '../../constants/theme';
 import { getSubjectGreeting } from '../../data/subjectGreetings';
+import { MEMORY_SLOT_CAPACITY, type ServiceType } from '../../types/information';
 
 export const TypewriterText = ({
   text,
@@ -138,15 +139,18 @@ export const ScanData = ({
   hasDecision, 
   decisionType,
   onIdentityScan,
+  onIdentityScanHoldStart,
+  onIdentityScanHoldEnd,
   onHealthScan,
   viewChannel = 'facial',
   resourcesRemaining = 0,
   identityScanUsed = false,
   healthScanUsed = false,
-  eyeScannerActive = false,
-  onToggleEyeScanner,
+  activeServices = [],
+  memoryCapacity = MEMORY_SLOT_CAPACITY,
   interactionPhase = 'investigation',
   subjectResponse = '',
+  verificationStep = 0,
   onResponseComplete,
 }: { 
   id: string, 
@@ -156,18 +160,26 @@ export const ScanData = ({
   subject: SubjectData,
   hasDecision?: boolean,
   decisionType?: 'APPROVE' | 'DENY',
-  onIdentityScan?: () => void,
+  onIdentityScan?: (holdDurationMs?: number) => void,
+  onIdentityScanHoldStart?: () => void,
+  onIdentityScanHoldEnd?: (holdDurationMs: number) => void,
   onHealthScan?: () => void,
   viewChannel?: 'facial' | 'eye',
   resourcesRemaining?: number,
   identityScanUsed?: boolean,
   healthScanUsed?: boolean,
-  eyeScannerActive?: boolean,
-  onToggleEyeScanner?: () => void,
+  activeServices?: ServiceType[],
+  memoryCapacity?: number,
   interactionPhase?: 'greeting' | 'credentials' | 'investigation',
   subjectResponse?: string,
+  verificationStep?: number,
   onResponseComplete?: () => void,
 }) => {
+  const memoryFull = (activeServices?.length || 0) >= (memoryCapacity || MEMORY_SLOT_CAPACITY);
+  const identityRunning = !!activeServices?.includes('IDENTITY_SCAN');
+  const healthRunning = !!activeServices?.includes('HEALTH_SCAN');
+  const identityHoldStartRef = React.useRef<number | null>(null);
+
   const getStatusLine = () => {
     if (!hasDecision) {
       return null;
@@ -253,11 +265,78 @@ export const ScanData = ({
     );
   };
 
+  const verificationAnim = React.useRef(new Animated.Value(0)).current;
+  const infoCardAnim = React.useRef(new Animated.Value(0)).current;
+  const verificationLabelOpacity = React.useRef(new Animated.Value(1)).current;
+  const readyLabelOpacity = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(verificationAnim, {
+      toValue: verificationStep,
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [verificationStep]);
+
+  React.useEffect(() => {
+    if (hudStage !== 'full') {
+      infoCardAnim.setValue(0);
+      verificationLabelOpacity.setValue(1);
+      readyLabelOpacity.setValue(0);
+      return;
+    }
+
+    if (verificationStep >= 4) {
+      verificationLabelOpacity.setValue(1);
+      readyLabelOpacity.setValue(0);
+      infoCardAnim.setValue(0);
+      Animated.sequence([
+        Animated.timing(verificationLabelOpacity, {
+          toValue: 0,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(readyLabelOpacity, {
+          toValue: 1,
+          duration: 240,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+        Animated.timing(infoCardAnim, {
+          toValue: 1,
+          duration: 280,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: false,
+        }),
+      ]).start();
+    } else {
+      verificationLabelOpacity.setValue(1);
+      readyLabelOpacity.setValue(0);
+      Animated.timing(infoCardAnim, {
+        toValue: 0,
+        duration: 120,
+        useNativeDriver: false,
+      }).start();
+    }
+  }, [hudStage, verificationStep]);
+
+  const verificationLabelColor = verificationAnim.interpolate({
+    inputRange: [0, 1, 2, 3, 4],
+    outputRange: [
+      '#6a4a2a',
+      '#8a5a2a',
+      '#a36a2a',
+      '#c97a2a',
+      '#e08f3a',
+    ],
+  });
+
   return (
     <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.locRecord}>
       <View style={styles.leftColumn}>
         <View style={styles.identHeader}>
-          <TypewriterText text="IDENT CONFIRM" active={hudStage !== 'none'} delay={BUILD_SEQUENCE.identification} style={styles.label} />
           <View style={styles.statusContainer}>
             {getStatusLine()}
           </View>
@@ -274,7 +353,56 @@ export const ScanData = ({
           {renderProgressBar()}
         </View>
 
-        {renderResponseBox()}
+        {hudStage === 'full' && (
+          <View style={styles.verificationRow}>
+            <View>
+              <Animated.Text style={[styles.verificationLabel, { color: verificationLabelColor, opacity: verificationLabelOpacity }]}>
+                VERIFICATION
+              </Animated.Text>
+              <Animated.Text style={[styles.verificationLabel, { color: verificationLabelColor, opacity: readyLabelOpacity, position: 'absolute', left: 0, top: 0 }]}>
+                SUBJECT READY
+              </Animated.Text>
+            </View>
+            <View style={styles.verificationTicks}>
+              {[0, 1, 2, 3].map((step) => (
+                <Animated.View
+                  key={step}
+                  style={[
+                    styles.verificationTick,
+                    {
+                      borderColor: verificationAnim.interpolate({
+                        inputRange: [step, step + 1],
+                        outputRange: ['#2a3a4a', '#c9a227'],
+                        extrapolate: 'clamp',
+                      }),
+                      backgroundColor: verificationAnim.interpolate({
+                        inputRange: [step, step + 1],
+                        outputRange: ['rgba(0,0,0,0)', '#c9a227'],
+                        extrapolate: 'clamp',
+                      }),
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        <Animated.View
+          style={{
+            opacity: infoCardAnim,
+            transform: [
+              {
+                translateY: infoCardAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [6, 0],
+                }),
+              },
+            ],
+          }}
+        >
+          {renderResponseBox()}
+        </Animated.View>
       </View>
       
       {/* Scan Buttons - Identity & Health */}
@@ -284,16 +412,26 @@ export const ScanData = ({
             style={[
               styles.scanButton,
               styles.identityScanButton,
-              (resourcesRemaining === 0 || identityScanUsed || interactionPhase !== 'investigation' || !eyeScannerActive) && styles.channelToggleButtonDisabled
+              (identityScanUsed || identityRunning || memoryFull || interactionPhase === 'greeting') && styles.channelToggleButtonDisabled
             ]}
-            onPress={onIdentityScan}
-            disabled={resourcesRemaining === 0 || identityScanUsed || interactionPhase !== 'investigation' || !eyeScannerActive}
+            onPressIn={() => {
+              identityHoldStartRef.current = Date.now();
+              onIdentityScanHoldStart?.();
+            }}
+            onPressOut={() => {
+              const startedAt = identityHoldStartRef.current;
+              identityHoldStartRef.current = null;
+              const duration = startedAt ? Date.now() - startedAt : 0;
+              onIdentityScan?.(duration);
+              onIdentityScanHoldEnd?.(duration);
+            }}
+            disabled={identityScanUsed || identityRunning || memoryFull || interactionPhase === 'greeting'}
           >
             <Text style={[
               styles.channelToggleText,
-              (resourcesRemaining === 0 || identityScanUsed || interactionPhase !== 'investigation') && styles.channelToggleTextDisabled
+              (identityScanUsed || identityRunning || memoryFull || interactionPhase === 'greeting') && styles.channelToggleTextDisabled
             ]}>
-              {identityScanUsed ? 'IDENTITY [USED]' : 'IDENTITY SCAN'}
+              {identityRunning ? 'ID SCAN [RUNNING]' : identityScanUsed ? 'ID SCAN [USED]' : 'ID SCAN [HOLD]'}
             </Text>
           </TouchableOpacity>
           
@@ -301,38 +439,19 @@ export const ScanData = ({
             style={[
               styles.scanButton,
               styles.healthScanButton,
-              (resourcesRemaining === 0 || healthScanUsed || interactionPhase !== 'investigation') && styles.channelToggleButtonDisabled
+              (healthScanUsed || healthRunning || memoryFull || interactionPhase === 'greeting') && styles.channelToggleButtonDisabled
             ]}
             onPress={onHealthScan}
-            disabled={resourcesRemaining === 0 || healthScanUsed || interactionPhase !== 'investigation'}
+            disabled={healthScanUsed || healthRunning || memoryFull || interactionPhase === 'greeting'}
           >
             <Text style={[
               styles.channelToggleText,
-              (resourcesRemaining === 0 || healthScanUsed || interactionPhase !== 'investigation') && styles.channelToggleTextDisabled
+              (healthScanUsed || healthRunning || memoryFull || interactionPhase === 'greeting') && styles.channelToggleTextDisabled
             ]}>
-              {healthScanUsed ? 'HEALTH [USED]' : 'HEALTH SCAN'}
+              {healthRunning ? 'HEALTH [RUNNING]' : healthScanUsed ? 'HEALTH [USED]' : 'HEALTH SCAN'}
             </Text>
           </TouchableOpacity>
 
-          {/* Eye Scanner Toggle */}
-          <TouchableOpacity 
-            style={[
-              styles.scanButton,
-              styles.eyeScannerButton,
-              eyeScannerActive && styles.eyeScannerButtonActive,
-              interactionPhase !== 'investigation' && styles.channelToggleButtonDisabled
-            ]}
-            onPress={onToggleEyeScanner}
-            disabled={interactionPhase !== 'investigation'}
-          >
-            <Text style={[
-              styles.channelToggleText,
-              eyeScannerActive && styles.eyeScannerTextActive,
-              interactionPhase !== 'investigation' && styles.channelToggleTextDisabled
-            ]}>
-              {eyeScannerActive ? 'EYE SCANNER [ON]' : 'EYE SCANNER [OFF]'}
-            </Text>
-          </TouchableOpacity>
         </View>
       )}
     </HUDBox>

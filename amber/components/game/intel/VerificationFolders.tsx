@@ -86,7 +86,7 @@ export const VerificationFolders = ({
         {processedTransitLog.slice(0, 3).map((entry: any, i: number) => (
           <View key={i} style={{ marginBottom: 4 }}>
             <Text style={{ color: Theme.colors.textDim, fontSize: 8, fontFamily: Theme.fonts.mono }}>
-              {entry.date}: {entry.fromPlanet} -> {entry.toPlanet}
+              {entry.date}: {entry.fromPlanet} &rarr; {entry.toPlanet}
             </Text>
             {entry.flagged && <Text style={{ color: Theme.colors.accentWarn, fontSize: 8, fontFamily: Theme.fonts.mono }}>  [!] SUSPICIOUS ROUTE</Text>}
           </View>
@@ -102,7 +102,8 @@ export const VerificationFolders = ({
   };
 
   const renderIncidentHistory = () => {
-    const incidents = subject.incidentHistory || [];
+    const incidents = subject.databaseQuery?.discrepancies || [];
+    const incidentsCount = incidents.length;
     return (
       <View>
         <TerminalPrompt 
@@ -114,7 +115,7 @@ export const VerificationFolders = ({
         {incidents.length === 0 ? (
           <Text style={{ color: Theme.colors.textDim, fontSize: 9, fontFamily: Theme.fonts.mono }}>-- NO RECORDS FOUND --</Text>
         ) : (
-          incidents.slice(0, 2).map((inc, i) => (
+          incidents.slice(0, 2).map((inc: any, i: number) => (
             <View key={i} style={{ marginBottom: 6 }}>
               <Text style={{ color: Theme.colors.accentWarn, fontSize: 9, fontFamily: Theme.fonts.mono }}>INCIDENT #{i+1}: {inc.type}</Text>
               <Text style={{ color: Theme.colors.textDim, fontSize: 8, fontFamily: Theme.fonts.mono }}>  DATE: {inc.date}</Text>
@@ -140,34 +141,6 @@ export const VerificationFolders = ({
       );
     }
 
-    const isComplete = 
-      (activeFolder === 'WARRANT' && gatheredInformation.warrantCheck) ||
-      (activeFolder === 'TRANSIT' && gatheredInformation.transitLog) ||
-      (activeFolder === 'INCIDENT' && gatheredInformation.incidentHistory);
-
-    if (!isComplete && resourcesRemaining === 0) {
-      return (
-        <View style={styles.folderEmptyState}>
-          <Text style={[styles.folderEmptyText, { color: Theme.colors.accentDeny }]}>INSUFFICIENT RESOURCES</Text>
-          <Text style={[styles.folderEmptyText, { marginTop: 4 }]}>Access Denied</Text>
-        </View>
-      );
-    }
-
-    if (!isComplete) {
-      return (
-        <View style={styles.folderEmptyState}>
-          <Text style={styles.folderEmptyText}>FILE LOCKED</Text>
-          <TouchableOpacity 
-            style={[styles.actionButton, styles.verifyButton, { marginTop: 12, height: 40, width: 120 }]}
-            onPress={() => onSelectFolder(activeFolder)}
-          >
-            <Text style={styles.actionButtonText}>OPEN FILE</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
     switch (activeFolder) {
       case 'WARRANT': return renderWarrantCheck();
       case 'TRANSIT': return renderTransitLog();
@@ -184,23 +157,56 @@ export const VerificationFolders = ({
             (type === 'WARRANT' && gatheredInformation.warrantCheck) ||
             (type === 'TRANSIT' && gatheredInformation.transitLog) ||
             (type === 'INCIDENT' && gatheredInformation.incidentHistory);
+
+          const isActive = activeFolder === type;
           
           return (
             <TouchableOpacity 
               key={type}
               style={[
-                styles.folderTab,
-                activeFolder === type && styles.folderTabActive,
-                isComplete && { borderBottomWidth: 0 }
+                styles.tapeTab,
+                isActive && styles.tapeTabActive,
+                isComplete && styles.tapeTabComplete,
               ]}
               onPress={() => onSelectFolder(type)}
+              activeOpacity={0.85}
             >
-              <Text style={[
-                styles.folderTabText,
-                activeFolder === type && styles.folderTabTextActive
-              ]}>
-                {type}{isComplete ? ' ●' : ''}
+              {/* Notch / write-protect cutout */}
+              <View style={styles.tapeNotch} pointerEvents="none" />
+
+              {/* Top-right nameplate (easy to scan) */}
+              <View
+                pointerEvents="none"
+                style={[styles.tapeNameplate, isActive && styles.tapeNameplateActive]}
+              >
+                <Text style={[styles.tapeLabel, isActive && styles.tapeLabelActive]} numberOfLines={1}>
+                  {type}
+                </Text>
+                <View
+                  style={[
+                    styles.tapeStatusDot,
+                    isComplete ? styles.tapeStatusDotComplete : styles.tapeStatusDotIdle,
+                    isActive && styles.tapeStatusDotActive,
+                  ]}
+                />
+              </View>
+
+              {/* Cartridge window + reels */}
+              <View style={styles.tapeWindow} pointerEvents="none">
+                <View style={styles.tapeReel} />
+                <View style={styles.tapeReel} />
+                <View style={styles.tapeWindowRidge} />
+              </View>
+
+              <Text style={[styles.tapeSubLabel, isActive && styles.tapeSubLabelActive]} pointerEvents="none">
+                INTEL TAPE
               </Text>
+
+              {!!resourcesRemaining && (
+                <Text style={styles.tapeMeta} pointerEvents="none">
+                  SLOT 1
+                </Text>
+              )}
             </TouchableOpacity>
           );
         })}

@@ -31,42 +31,32 @@ export const IntroSettingsModal = ({
   onSfxVolumeChange,
 }: IntroSettingsModalProps) => {
   
-  const adjustVolume = (
-    current: number, 
-    delta: number, 
-    onChange: (v: number) => void
-  ) => {
-    const newValue = Math.max(0, Math.min(1, current + delta));
-    onChange(newValue);
+  const lastMusicVolume = React.useRef(musicVolume || 1);
+  const lastSfxVolume = React.useRef(sfxVolume || 1);
+
+  const toggleMute = (current: number, onChange: (v: number) => void, lastRef: React.MutableRefObject<number>) => {
+    if (current > 0) {
+      lastRef.current = current;
+      onChange(0);
+    } else {
+      onChange(lastRef.current || 1);
+    }
   };
 
   const renderVolumeControl = (
     label: string,
     value: number,
-    onChange: (v: number) => void
+    onChange: (v: number) => void,
+    lastRef: React.MutableRefObject<number>
   ) => (
     <View style={styles.controlRow}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.controlGroup}>
-        <Pressable 
-          onPress={() => adjustVolume(value, -0.1, onChange)}
-          style={({ pressed }) => [styles.adjustButton, pressed && styles.adjustButtonPressed]}
-        >
-          <Text style={styles.adjustButtonText}>−</Text>
-        </Pressable>
-        
-        <View style={styles.volumeBarContainer}>
-          <View style={[styles.volumeBarFill, { width: `${value * 100}%` }]} />
-          <Text style={styles.volumeText}>{Math.round(value * 100)}%</Text>
-        </View>
-        
-        <Pressable 
-          onPress={() => adjustVolume(value, 0.1, onChange)}
-          style={({ pressed }) => [styles.adjustButton, pressed && styles.adjustButtonPressed]}
-        >
-          <Text style={styles.adjustButtonText}>+</Text>
-        </Pressable>
-      </View>
+      <Pressable 
+        onPress={() => toggleMute(value, onChange, lastRef)}
+        style={({ pressed }) => [styles.muteButton, pressed && styles.muteButtonPressed]}
+      >
+        <Text style={styles.muteButtonText}>{value > 0 ? '[ MUTE ]' : '[ UNMUTE ]'}</Text>
+      </Pressable>
     </View>
   );
 
@@ -82,8 +72,8 @@ export const IntroSettingsModal = ({
           <Text style={styles.title}>AUDIO</Text>
           <View style={styles.divider} />
           
-          {renderVolumeControl('MUSIC', musicVolume, onMusicVolumeChange)}
-          {renderVolumeControl('SFX', sfxVolume, onSfxVolumeChange)}
+          {renderVolumeControl('MUSIC', musicVolume, onMusicVolumeChange, lastMusicVolume)}
+          {renderVolumeControl('SFX', sfxVolume, onSfxVolumeChange, lastSfxVolume)}
           
           <Pressable 
             onPress={onClose}
@@ -155,13 +145,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 10,
   },
-  controlGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  adjustButton: {
-    width: 36,
+  muteButton: {
+    width: '100%',
     height: 36,
     backgroundColor: XP.buttonFace,
     borderRadius: 0, // Match menu style
@@ -182,7 +167,7 @@ const styles = StyleSheet.create({
     shadowRadius: 1,
     elevation: 2,
   },
-  adjustButtonPressed: {
+  muteButtonPressed: {
     // Inverted borders for pressed effect
     borderTopColor: XP.buttonDarkShadow,
     borderLeftColor: XP.buttonShadow,
@@ -193,42 +178,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0,
     elevation: 0,
   },
-  adjustButtonText: {
+  muteButtonText: {
     fontFamily: 'Courier',
-    fontSize: 20,
+    fontSize: 12,
     color: XP.textDark,
     fontWeight: '700',
-  },
-  volumeBarContainer: {
-    flex: 1,
-    height: 28,
-    backgroundColor: XP.buttonFace,
-    borderRadius: 0, // Match menu style
-    overflow: 'hidden',
-    justifyContent: 'center',
-    // 3D inset effect
-    borderTopWidth: 2,
-    borderLeftWidth: 2,
-    borderTopColor: XP.buttonDarkShadow,
-    borderLeftColor: XP.buttonShadow,
-    borderBottomWidth: 2,
-    borderRightWidth: 2,
-    borderBottomColor: XP.buttonHighlight,
-    borderRightColor: XP.buttonHighlight,
-  },
-  volumeBarFill: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: XP.textGray, // Dark gray fill instead of green
-  },
-  volumeText: {
-    fontFamily: 'Courier',
-    fontSize: 11,
-    color: XP.textDark,
-    fontWeight: '600',
-    textAlign: 'center',
+    letterSpacing: 1,
   },
   closeButton: {
     marginTop: 8,

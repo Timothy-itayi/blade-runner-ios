@@ -4,15 +4,13 @@ import { Header } from '../Header';
 import { ScanPanel } from '../ScanPanel';
 import { IntelPanel } from '../IntelPanel';
 import { DecisionButtons } from '../DecisionButtons';
-import { CitationStrip } from '../CitationStrip';
 import { EyeDisplay } from '../../ui/EyeDisplay';
 import { ScanData } from '../../ui/ScanData';
 import { SubjectData } from '../../../data/subjects';
 import { ShiftData } from '../../../constants/shifts';
 import { styles } from '../../../styles/game/MainScreen.styles';
 import { Theme } from '../../../constants/theme';
-import { useGameStore } from '../../../store/gameStore';
-import type { Consequence } from '../../../types/consequence';
+import { hasSomeInformation } from '../../../types/information';
 
 interface GameScreenProps {
   hudStage: 'none' | 'wireframe' | 'outline' | 'full';
@@ -26,18 +24,11 @@ interface GameScreenProps {
   biometricsRevealed: boolean;
   hasDecision: boolean;
   decisionOutcome: { type: 'APPROVE' | 'DENY', outcome: any } | null;
-  consequence?: Consequence | null;
-  citationVisible?: boolean;
-  onAcknowledgeCitation?: () => void;
-  credits?: number;
-  resourcesRemaining?: number;
-  resourcesPerShift?: number;
+  lives?: number;
   onSettingsPress: () => void;
-  onRevealVerify: () => void;
   onDecision: (type: 'APPROVE' | 'DENY') => void;
   onNext: () => void;
   onScanHands?: () => void;
-  onOpenDossier?: () => void;
   onInterrogate?: () => void;
   onBioScan?: () => void;
   bioScanUsed?: boolean; // Phase 1: Track if bio scan has been used (one-time only)
@@ -60,9 +51,7 @@ interface GameScreenProps {
   onEstablishBPM?: (bpm: number) => void; // Phase 4: Callback to establish BPM baseline
   eyeScannerActive?: boolean; // Phase 5: Is eye scanner turned on?
   onIdentityScan?: (holdDurationMs?: number) => void; // Phase 5: Identity scan handler
-  onHealthScan?: () => void; // Phase 5: Health scan handler
   identityScanUsed?: boolean; // Phase 5: Has identity scan been used?
-  healthScanUsed?: boolean; // Phase 5: Has health scan been used?
   onToggleEyeScanner?: () => void; // Phase 5: Toggle eye scanner
   onEyeScannerTap?: (holdDurationMs?: number) => void; // Phase 5: Eye scanner tap handler (unlocks dossier)
   isIdentityScanning?: boolean; // Phase 5: Is identity scan animation active?
@@ -81,18 +70,11 @@ export const GameScreen = ({
   biometricsRevealed,
   hasDecision,
   decisionOutcome,
-  consequence = null,
-  citationVisible = false,
-  onAcknowledgeCitation,
-  credits,
-  resourcesRemaining,
-  resourcesPerShift,
+  lives,
   onSettingsPress,
-  onRevealVerify,
   onDecision,
   onNext,
   onScanHands,
-  onOpenDossier,
   onInterrogate,
   dossierRevealed = false,
   subjectResponse = '',
@@ -113,9 +95,7 @@ export const GameScreen = ({
   onEstablishBPM,
   eyeScannerActive = false,
   onIdentityScan,
-  onHealthScan,
   identityScanUsed = false,
-  healthScanUsed = false,
   onToggleEyeScanner,
   onEyeScannerTap,
   isIdentityScanning = false,
@@ -123,6 +103,9 @@ export const GameScreen = ({
 }: GameScreenProps) => {
   // Eye scanner toggle controls view channel
   const viewChannel: 'facial' | 'eye' = eyeScannerActive ? 'eye' : 'facial';
+  const questionsAsked = gatheredInformation?.interrogation?.questionsAsked || 0;
+  const hasEvidence = gatheredInformation ? hasSomeInformation(gatheredInformation) : false;
+  const interrogationLocked = hasEvidence && questionsAsked < 3;
 
   // Phase 4: Lifted greeting state
   const [greetingDisplayed, setGreetingDisplayed] = useState(false);
@@ -184,9 +167,7 @@ export const GameScreen = ({
         shiftTime={currentShift.timeBlock}
         shiftData={currentShift}
         onSettingsPress={onSettingsPress}
-        credits={credits}
-        resourcesRemaining={resourcesRemaining}
-        resourcesPerShift={resourcesPerShift}
+        lives={lives}
       />
       
       <View style={styles.content}>
@@ -222,12 +203,14 @@ export const GameScreen = ({
             subjectLooking={true}
             viewChannel={viewChannel}
             eyeScannerActive={eyeScannerActive}
+            onToggleEyeScanner={onToggleEyeScanner}
             onEyeScannerTap={onEyeScannerTap}
             identityScanHoldActive={identityScanHoldActive}
             onIdentityScanHoldStart={() => setIdentityScanHoldActive(true)}
             onIdentityScanHoldEnd={() => setIdentityScanHoldActive(false)}
             interactionPhase={interactionPhase}
             isIdentityScanning={isIdentityScanning}
+            identityScanComplete={identityScanUsed}
             onIdentityScanComplete={onIdentityScanComplete}
             biometricsRevealed={biometricsRevealed}
           />
@@ -242,13 +225,8 @@ export const GameScreen = ({
             hasDecision={hasDecision}
             decisionType={decisionOutcome?.type}
             onIdentityScan={onIdentityScan}
-            onIdentityScanHoldStart={() => setIdentityScanHoldActive(true)}
-            onIdentityScanHoldEnd={() => setIdentityScanHoldActive(false)}
-            onHealthScan={onHealthScan}
             viewChannel={viewChannel}
-            resourcesRemaining={resourcesRemaining}
             identityScanUsed={identityScanUsed}
-            healthScanUsed={healthScanUsed}
             activeServices={gatheredInformation?.activeServices || []}
             interactionPhase={interactionPhase}
             subjectResponse={subjectResponse}
@@ -265,18 +243,14 @@ export const GameScreen = ({
           hudStage={hudStage}
           hasDecision={hasDecision}
           decisionType={decisionOutcome?.type}
-          onRevealVerify={onRevealVerify}
-          onOpenDossier={onOpenDossier}
           onInterrogate={onInterrogate}
           biometricsRevealed={biometricsRevealed}
           dossierRevealed={dossierRevealed}
-          resourcesRemaining={resourcesRemaining}
           subjectResponse={subjectResponse}
           onResponseUpdate={onResponseUpdate}
           gatheredInformation={gatheredInformation}
           onBPMChange={onBPMChange}
           onInformationUpdate={onInformationUpdate}
-          onQueryPerformed={onQueryPerformed}
           interactionPhase={interactionPhase}
           onCredentialsComplete={onCredentialsComplete}
           onEstablishBPM={onEstablishBPM}
@@ -286,34 +260,13 @@ export const GameScreen = ({
         {/* Decision buttons - always visible */}
         {hudStage === 'full' && (
           <>
-            <CitationStrip
-              visible={!!citationVisible}
-              consequence={consequence || null}
-              caseId={currentSubject.id}
-              onAcknowledge={() => {
-                // Papers, Please-style: acknowledging a violation continues the line.
-                onAcknowledgeCitation?.();
-                if (hasDecision) {
-                  onNext();
-                }
-              }}
-            />
           <DecisionButtons 
             hudStage={hudStage} 
             onDecision={onDecision}
             onNext={onNext}
-            disabled={isScanning}
+            disabled={isScanning || interrogationLocked}
             hasDecision={hasDecision}
             isNewGame={isNewGame}
-            hasUsedResource={
-              // Require at least 1 resource to be used (ID/Health scan or verification tapes)
-              gatheredInformation?.identityScan ||
-              gatheredInformation?.healthScan ||
-              gatheredInformation?.warrantCheck || 
-              gatheredInformation?.transitLog || 
-              gatheredInformation?.incidentHistory || 
-              false
-            }
             protocolStatus={{
               scanComplete: !isScanning,
               credentialViewed: false,

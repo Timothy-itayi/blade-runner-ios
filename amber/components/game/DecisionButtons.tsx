@@ -2,7 +2,9 @@ import React from 'react';
 import { View, TouchableOpacity, Text } from 'react-native';
 import { styles } from '../../styles/game/DecisionButtons.styles';
 import { HUDBox } from '../ui/HUDBox';
+import { MechanicalButton } from '../ui/MechanicalUI';
 import { useGameAudioContext } from '../../contexts/AudioContext';
+import { Theme } from '../../constants/theme';
 
 interface ProtocolStatus {
   scanComplete: boolean;
@@ -26,7 +28,6 @@ export const DecisionButtons = ({
   hasDecision,
   protocolStatus,
   isNewGame = false,
-  hasUsedResource = false, // Phase 2: Require at least 1 resource to be used
 }: { 
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
   onDecision: (type: 'APPROVE' | 'DENY') => void,
@@ -35,7 +36,6 @@ export const DecisionButtons = ({
   hasDecision: boolean,
   protocolStatus?: ProtocolStatus,
   isNewGame?: boolean, // Only animate on first game start
-  hasUsedResource?: boolean, // Phase 2: At least 1 resource must be used before decisions
 }) => {
   const { playButtonSound } = useGameAudioContext();
 
@@ -60,67 +60,48 @@ export const DecisionButtons = ({
     probesCompleted: true,
   };
 
-  // Phase 2: Require at least 1 resource to be used before decisions are allowed
-  // This ensures players gather some information before making decisions
-  const approveDisabled = disabled || !ps.scanComplete || !hasUsedResource;
-  const denyDisabled = disabled || !ps.scanComplete || !hasUsedResource;
+  const approveDisabled = disabled || !ps.scanComplete;
+  const denyDisabled = disabled || !ps.scanComplete;
 
   // When decision is made, show disabled decision buttons and a "Next" button for player control
   if (hasDecision) {
     return (
-      <HUDBox hudStage={hudStage} style={styles.container}>
+      <HUDBox hudStage={hudStage} style={styles.container} mechanical>
         <View style={styles.buttonRow}>
-          <View style={[styles.button, styles.buttonDisabled]}>
-            <Text style={[styles.buttonText, styles.buttonTextDisabled]}>APPROVE</Text>
-          </View>
-          <View style={[styles.button, styles.buttonDisabled]}>
-            <Text style={[styles.buttonText, styles.buttonTextDisabled]}>DENY</Text>
-          </View>
+          <MechanicalButton label="ALLOW" onPress={() => {}} disabled color={Theme.colors.accentApprove} style={{ flex: 1 }} />
+          <MechanicalButton label="REJECT" onPress={() => {}} disabled color={Theme.colors.accentDeny} style={{ flex: 1 }} />
         </View>
-        <TouchableOpacity
-          style={[styles.button, styles.nextButton]}
+        <MechanicalButton 
+          label="NEXT SUBJECT" 
           onPress={() => {
             playButtonSound();
             onNext();
-          }}
-        >
-          <Text style={styles.buttonText}>NEXT</Text>
-        </TouchableOpacity>
+          }} 
+          color={Theme.colors.buttonWhite}
+          style={{ marginTop: 12 }}
+        />
       </HUDBox>
     );
   }
 
   // No animations - always show buttons immediately
   return (
-    <HUDBox hudStage={hudStage} style={styles.container}>
+    <HUDBox hudStage={hudStage} style={styles.container} mechanical>
       <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.approveButton,
-            approveDisabled && styles.buttonDisabled
-          ]}
-          onPress={() => handleDecision('APPROVE')}
-          disabled={approveDisabled}
-        >
-          <Text style={[styles.buttonText, approveDisabled && styles.buttonTextDisabled]}>
-            APPROVE
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.button,
-            styles.denyButton,
-            denyDisabled && styles.buttonDisabled
-          ]}
-          onPress={() => handleDecision('DENY')}
-          disabled={denyDisabled}
-        >
-          <Text style={[styles.buttonText, denyDisabled && styles.buttonTextDisabled]}>
-            DENY
-          </Text>
-        </TouchableOpacity>
+        <MechanicalButton 
+          label="ALLOW" 
+          onPress={() => handleDecision('APPROVE')} 
+          disabled={approveDisabled} 
+          color={Theme.colors.accentApprove}
+          style={{ flex: 1 }}
+        />
+        <MechanicalButton 
+          label="REJECT" 
+          onPress={() => handleDecision('DENY')} 
+          disabled={denyDisabled} 
+          color={Theme.colors.accentDeny}
+          style={{ flex: 1 }}
+        />
       </View>
     </HUDBox>
   );

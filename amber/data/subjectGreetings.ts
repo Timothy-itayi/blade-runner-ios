@@ -55,28 +55,28 @@ export const SUBJECT_GREETINGS: SubjectGreeting[] = [
   {
     subjectId: 'S1-01', // EVA PROM - Replicant with false memories
     communicationStyle: 'BROKEN',
-    greeting: "I'm here to... to meet Jacob. Price.",
+    greeting: "I'm here to enter the depot. Clearance should be in the file.",
     credentialBehavior: 'COOPERATIVE',
     bpmBaselineModifier: 15,
   },
   {
     subjectId: 'S1-02', // MARA VOLKOV - Human with active warrant
     communicationStyle: 'AGITATED',
-    greeting: "Please, I need to get through. Family.",
+    greeting: "Please—let me inside. They're still in the depot.",
     credentialBehavior: 'RELUCTANT',
     bpmBaselineModifier: 20,
   },
   {
     subjectId: 'S1-03', // JAMES CHEN - Human cyborg
     communicationStyle: 'FORMAL',
-    greeting: "Good day. Documentation prepared.",
+    greeting: "Security escort. Documentation ready for breach protocol.",
     credentialBehavior: 'COOPERATIVE',
     bpmBaselineModifier: 5,
   },
   {
     subjectId: 'S1-04', // SILAS REX - Corporate cyborg
     communicationStyle: 'FORMAL',
-    greeting: "I have a corporate schedule. Hurry.",
+    greeting: "Corporate clearance. Open the gate.",
     credentialBehavior: 'COOPERATIVE',
     bpmBaselineModifier: 0,
   },
@@ -85,28 +85,28 @@ export const SUBJECT_GREETINGS: SubjectGreeting[] = [
   {
     subjectId: 'S2-01', // VERA OKONKWO - Fingerprint modification
     communicationStyle: 'FLUENT',
-    greeting: "Professor Okonkwo. Europa University.",
+    greeting: "Okonkwo. Systems consultant. Breach response team.",
     credentialBehavior: 'COOPERATIVE',
     bpmBaselineModifier: -5,
   },
   {
     subjectId: 'S2-02', // DMITRI VOLKOV - Mara's brother
     communicationStyle: 'AGITATED',
-    greeting: "I'm here for family. My sister Mara.",
+    greeting: "My sister's inside. I need access now.",
     credentialBehavior: 'COOPERATIVE',
     bpmBaselineModifier: 12,
   },
   {
     subjectId: 'S2-03', // CLARA VANCE - Extensive plastic surgery
     communicationStyle: 'BROKEN',
-    greeting: "I... I need to continue treatment.",
+    greeting: "I... I need to get inside. It's not safe out here.",
     credentialBehavior: 'COOPERATIVE',
     bpmBaselineModifier: 10,
   },
   {
     subjectId: 'S2-04', // ELENA ROSS - Replicant unaware
     communicationStyle: 'BROKEN',
-    greeting: "Hi. I'm Elena. Looking for work.",
+    greeting: "Elena. Maintenance applicant. I was told to report here.",
     credentialBehavior: 'RELUCTANT',
     bpmBaselineModifier: 18,
   },
@@ -115,28 +115,28 @@ export const SUBJECT_GREETINGS: SubjectGreeting[] = [
   {
     subjectId: 'S3-01', // YUKI TANAKA - Recent surgery, family emergency
     communicationStyle: 'AGITATED',
-    greeting: "Please, emergency! My brother is sick.",
+    greeting: "Emergency—my brother is trapped inside.",
     credentialBehavior: 'COOPERATIVE',
     bpmBaselineModifier: 25,
   },
   {
     subjectId: 'S3-02', // KENJI TANAKA - Yuki's brother
     communicationStyle: 'FLUENT',
-    greeting: "Hello. Visiting family. Yuki Tanaka.",
+    greeting: "I'm with Tanaka. We need access to the inner ring.",
     credentialBehavior: 'COOPERATIVE',
     bpmBaselineModifier: 8,
   },
   {
     subjectId: 'S3-03', // MARCUS STONE - Amputee
     communicationStyle: 'FLUENT',
-    greeting: "Hey. Prosthetic maintenance. Leg needs work.",
+    greeting: "Prosthetic service. I have a scheduled repair window.",
     credentialBehavior: 'COOPERATIVE',
     bpmBaselineModifier: 0,
   },
   {
     subjectId: 'S3-04', // NEXUS PRIME - Advanced replicant
     communicationStyle: 'FORMAL',
-    greeting: "Titan Corporate business. Designation: TCP.",
+    greeting: "Titan Corporate. Breach audit team. Designation TCP.",
     credentialBehavior: 'COOPERATIVE',
     bpmBaselineModifier: -10,
   },

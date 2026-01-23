@@ -10,7 +10,6 @@ import { WarningPattern } from '../components/game/SupervisorWarning';
 export interface PatternTracker {
   approvalsWithoutVerification: number;
   approvalsWithoutWarrantCheck: number;
-  approvalsWithoutBioScan: number;
   equipmentFailuresNoted: number;
   directiveViolations: number;
 }
@@ -21,7 +20,6 @@ export interface PatternTracker {
 export const createPatternTracker = (): PatternTracker => ({
   approvalsWithoutVerification: 0,
   approvalsWithoutWarrantCheck: 0,
-  approvalsWithoutBioScan: 0,
   equipmentFailuresNoted: 0,
   directiveViolations: 0,
 });
@@ -41,7 +39,7 @@ export const checkWarningPatterns = (
   }
 
   // Pattern: Approved without any verification checks
-  if (!gatheredInfo.warrantCheck && !gatheredInfo.identityScan && !gatheredInfo.healthScan && !gatheredInfo.transitLog && !gatheredInfo.incidentHistory) {
+  if (!gatheredInfo.warrantCheck && !gatheredInfo.identityScan && !gatheredInfo.transitLog && !gatheredInfo.incidentHistory) {
     tracker.approvalsWithoutVerification++;
     if (tracker.approvalsWithoutVerification >= 2) {
       return {
@@ -60,18 +58,6 @@ export const checkWarningPatterns = (
         type: 'NO_VERIFICATION',
         count: tracker.approvalsWithoutWarrantCheck,
         message: `Operator, you've approved ${tracker.approvalsWithoutWarrantCheck} subjects without warrant verification. Active warrants must be checked before approval.`,
-      };
-    }
-  }
-
-  // Pattern: Approved without health scan (important for Shift 3 - deny synthetic entities)
-  if (!gatheredInfo.healthScan) {
-    tracker.approvalsWithoutBioScan++;
-    if (tracker.approvalsWithoutBioScan >= 2) {
-      return {
-        type: 'NO_VERIFICATION',
-        count: tracker.approvalsWithoutBioScan,
-        message: `Operator, you've approved ${tracker.approvalsWithoutBioScan} subjects without health verification. Synthetic entity detection requires health scan.`,
       };
     }
   }

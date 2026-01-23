@@ -16,43 +16,43 @@ export interface ShiftData {
 
 export const SHIFTS: ShiftData[] = [
   // =============================================================================
-  // SHIFT 1: ROUTINE (Subjects 1-4)
+  // SHIFT 1: BREACH ALERT (Subjects 1-4)
   // =============================================================================
   {
     id: 1,
     timeBlock: '06:00',
-    chapter: 'Routine',
-    stationName: 'EARTH BORDER CONTROL',
-    authorityLabel: 'AMBER SECURITY',
-    briefing: 'Establish baseline efficiency. Process interplanetary arrivals.',
+    chapter: 'Breach Alert',
+    stationName: 'AMBER DEPOT PERIMETER',
+    authorityLabel: 'DEPOT SECURITY',
+    briefing: 'Perimeter compromise detected. Verify all personnel attempting core access.',
     directive: 'DENY ALL SUBJECTS WITH ACTIVE WARRANTS',
     unlockedChecks: ['DATABASE'],
     activeRules: ['CHECK_WARRANTS'],
   },
   // =============================================================================
-  // SHIFT 2: COMPLEXITY (Subjects 5-8)
+  // SHIFT 2: COMPROMISE (Subjects 5-8)
   // =============================================================================
   {
     id: 2,
     timeBlock: '12:00',
-    chapter: 'Complexity',
-    stationName: 'EARTH BORDER CONTROL',
-    authorityLabel: 'AMBER SECURITY',
-    briefing: 'Increased traffic. Verify all credentials. Watch for discrepancies.',
+    chapter: 'Compromise',
+    stationName: 'AMBER DEPOT PERIMETER',
+    authorityLabel: 'DEPOT SECURITY',
+    briefing: 'Infiltration depth increasing. High level of deceptive patterns observed.',
     directive: 'VERIFY ALL CREDENTIALS BEFORE APPROVAL',
     unlockedChecks: ['DATABASE', 'CREDENTIAL'],
     activeRules: ['CHECK_WARRANTS', 'CHECK_CREDENTIALS'],
   },
   // =============================================================================
-  // SHIFT 3: PRESSURE (Subjects 9-12)
+  // SHIFT 3: LOCKDOWN (Subjects 9-12)
   // =============================================================================
   {
     id: 3,
     timeBlock: '18:00',
-    chapter: 'Pressure',
-    stationName: 'EARTH BORDER CONTROL',
-    authorityLabel: 'AMBER SECURITY',
-    briefing: 'High volume. Equipment failures increasing. Make final calls.',
+    chapter: 'Lockdown',
+    stationName: 'AMBER DEPOT PERIMETER',
+    authorityLabel: 'DEPOT SECURITY',
+    briefing: 'Final security tier breach imminent. No unauthorized entities permitted.',
     directive: 'DENY ALL SYNTHETIC ENTITIES (REPLICANTS, ROBOTS)',
     unlockedChecks: ['DATABASE', 'CREDENTIAL', 'TURING'],
     activeRules: ['CHECK_WARRANTS', 'DENY_SYNTHETIC', 'TURING_TEST'],

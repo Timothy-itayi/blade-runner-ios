@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Animated, StyleSheet, Image } from 'react-native';
-import { useAudioPlayer } from 'expo-audio';
 import { SubjectData } from '../../data/subjects';
 import { HUDBox } from '../ui/HUDBox';
 import { Theme } from '../../constants/theme';

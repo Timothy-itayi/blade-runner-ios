@@ -11,15 +11,17 @@ export const styles = StyleSheet.create({
     borderTopColor: Theme.colors.border,
   },
   leftColumn: {
-    flex: 1.4,
-  },
-  rightColumn: {
     flex: 1,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingLeft: 16,
-    borderLeftWidth: 1,
-    borderLeftColor: 'rgba(26, 42, 58, 0.4)',
-    justifyContent: 'center',
+  },
+  statusColumn: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    paddingLeft: 12,
   },
   locationHeader: {
     flexDirection: 'row',
@@ -262,6 +264,26 @@ export const styles = StyleSheet.create({
   identityScanButton: {
     backgroundColor: 'rgba(127, 184, 216, 0.1)',
     borderColor: Theme.colors.textSecondary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    shadowColor: 'rgba(0,0,0,0.6)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  identityScanButtonHold: {
+    backgroundColor: 'rgba(127, 184, 216, 0.25)',
+    borderColor: Theme.colors.textPrimary,
+    shadowColor: Theme.colors.textPrimary,
+    shadowOpacity: 0.6,
+    shadowRadius: 10,
+    transform: [{ scale: 1.03 }],
+  },
+  identityScanTextHold: {
+    color: Theme.colors.textPrimary,
+    fontWeight: '800',
   },
   healthScanButton: {
     backgroundColor: 'rgba(201, 162, 39, 0.1)',

@@ -37,8 +37,6 @@ interface GameHandlersProps {
   totalAccuracy: number;
   infractions: number;
   triggerConsequence: boolean;
-  familyNeeds: { food: number; medicine: number; housing: number };
-  daysPassed: number;
   gatheredInformation?: GatheredInformation; // Phase 3: Information gathered for consequence evaluation
   
   // Functions
@@ -50,6 +48,7 @@ interface GameHandlersProps {
   
   // Phase 5: Subject pool size
   subjectPoolSize?: number; // If not provided, uses SUBJECTS.length
+  getNextSubjectIndex?: (currentIndex: number, poolSize: number) => number;
 }
 
 export const useGameHandlers = (props: GameHandlersProps) => {
@@ -76,8 +75,6 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     totalAccuracy,
     infractions,
     triggerConsequence,
-    familyNeeds,
-    daysPassed,
     triggerScan,
     gatheredInformation,
     setConsequence,
@@ -85,6 +82,7 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     warningTracker,
     setWarningTracker,
     subjectPoolSize,
+    getNextSubjectIndex,
   } = props;
 
   const handleDecision = (type: 'APPROVE' | 'DENY') => {
@@ -92,7 +90,6 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     const defaultInfo: GatheredInformation = {
       basicScan: true,
       identityScan: false,
-      healthScan: false,
       warrantCheck: false,
       transitLog: false,
       incidentHistory: false,
@@ -131,37 +128,18 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     // Determine if decision was "correct" based on consequence severity
     const correct = consequence.type === 'NONE' || consequence.type === 'WARNING';
 
-    // Credits system: +3 for correct - resources used, -2 for wrong (still pay resources)
+    // Lives system: wrong decisions cost 1 life
     const store = useGameStore.getState();
-    const resourcesUsed = store.currentSubjectResources;
-    
-    // Phase 3: Credits based on consequence severity
     if (consequence.type === 'NONE') {
-      // Perfect decision: earn credits, deduct resources
-      store.addCredits(3);
-      if (resourcesUsed > 0) {
-        store.spendCredits(resourcesUsed);
-      }
+      // Clean decision: no life loss
     } else if (consequence.type === 'WARNING') {
-      // Minor issue: small credit gain
-      store.addCredits(1);
-      if (resourcesUsed > 0) {
-        store.spendCredits(resourcesUsed);
-      }
       setInfractions(prev => prev + consequence.infractionCount);
       setTriggerConsequence(true);
     } else {
-      // Citation or serious infraction: lose credits
-      store.spendCredits(consequence.creditsPenalty);
-      if (resourcesUsed > 0) {
-        store.spendCredits(resourcesUsed);
-      }
+      store.loseLife(1);
       setInfractions(prev => prev + consequence.infractionCount);
       setTriggerConsequence(true);
     }
-    
-    // Reset resources for next subject
-    store.resetSubjectResources();
 
     // Save decision to history
     setDecisionHistory(prev => ({
@@ -220,8 +198,10 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     // This will be handled by the component that uses this hook
     // by calling setGatheredInformation(createEmptyInformation())
 
-    const poolSize = props.subjectPoolSize || SUBJECTS.length;
-    const nextIndex = (currentSubjectIndex + 1) % poolSize;
+    const poolSize = subjectPoolSize || SUBJECTS.length;
+    const nextIndex = getNextSubjectIndex
+      ? getNextSubjectIndex(currentSubjectIndex, poolSize)
+      : (currentSubjectIndex + 1) % poolSize;
 
     // Queue narrative messages silently
     if (triggerConsequence || isEndOfShift(currentSubjectIndex)) {
@@ -239,17 +219,6 @@ export const useGameHandlers = (props: GameHandlersProps) => {
 
     // Check if we're at end of shift
     if (isEndOfShift(currentSubjectIndex) && nextIndex !== 0) {
-      // Deduct family needs at end of shift
-      const totalNeeds = familyNeeds.food + (familyNeeds.medicine / 7) + (familyNeeds.housing / 30);
-      const store = useGameStore.getState();
-      store.spendCredits(Math.floor(totalNeeds));
-      
-      // Reset resources for new shift (3 per shift)
-      store.resetResourcesForShift(3);
-      
-      // Update family needs
-      // Note: This logic should be moved to a helper or hook
-      
       setShowShiftTransition(true);
     } else {
       setCurrentSubjectIndex(nextIndex);

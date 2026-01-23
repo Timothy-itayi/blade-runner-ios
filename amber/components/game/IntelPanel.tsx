@@ -1,30 +1,24 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Animated, PanResponder, Image } from 'react-native';
+import { View, Text, ScrollView, Animated, PanResponder, Image } from 'react-native';
 import { SubjectData } from '../../data/subjects';
 import { HUDBox } from '../ui/HUDBox';
+import { MechanicalButton } from '../ui/MechanicalUI';
+import { Theme } from '../../constants/theme';
 import { BUILD_SEQUENCE } from '../../constants/animations';
-import { GatheredInformation } from '../../types/information';
+import { GatheredInformation, hasSomeInformation } from '../../types/information';
 import { generateDynamicQuestions } from '../../utils/questionGeneration';
 // Phase 4: Subject interaction imports
 import { getSubjectGreeting, CommunicationStyle, COMMUNICATION_STYLE_DESCRIPTIONS } from '../../data/subjectGreetings';
 import { getSubjectCredentials, getCredentialTypeName, getExpirationStatus } from '../../data/credentialTypes';
 import { styles } from './intel/IntelPanel.styles';
 import { calculateQuestionBPM, generateDefaultResponse } from './intel/helpers/interrogation';
-import { VerificationDrawer } from './intel/VerificationDrawer';
+// Stripped-down build: verification drawer removed.
 
 // Phase 4: Interaction phase type
 type InteractionPhase = 'greeting' | 'credentials' | 'investigation';
 
 // Phase 3: Carousel mode type
-type PanelMode = 'verification' | 'dossier' | 'interrogation';
-
-type QueryType = 'WARRANT' | 'TRANSIT' | 'INCIDENT';
-
-const QUERY_LABELS: Record<QueryType, string> = {
-  WARRANT: 'warrant_check',
-  TRANSIT: 'transit_log',
-  INCIDENT: 'incident_history',
-};
+type PanelMode = 'dossier' | 'interrogation' | 'verification';
 
 // Operator ID
 const OPERATOR_ID = 'OP-7734';
@@ -39,21 +33,17 @@ interface AmbiguousConditionDisplay {
 export const IntelPanel = ({
   data,
   hudStage,
-  onRevealVerify,
-  onOpenDossier,
   onInterrogate,
   hasDecision,
   decisionType,
   ambiguousCondition,
   biometricsRevealed,
   dossierRevealed = false,
-  resourcesRemaining = 0,
   subjectResponse = '',
   onResponseUpdate,
   gatheredInformation, // Phase 2: Information gathered for dynamic questions
   onBPMChange, // Phase 2: Callback when BPM changes during interrogation
   onInformationUpdate, // Phase 2: Update gathered information
-  onQueryPerformed, // Phase 1: Callback when a verification query is performed
   // Phase 4: Subject interaction props
   interactionPhase = 'greeting',
   onCredentialsComplete,
@@ -62,21 +52,17 @@ export const IntelPanel = ({
 }: {
   data: SubjectData,
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
-  onRevealVerify: () => void,
-  onOpenDossier?: () => void,
   onInterrogate?: () => void,
   hasDecision?: boolean,
   decisionType?: 'APPROVE' | 'DENY',
   ambiguousCondition?: AmbiguousConditionDisplay | null,
   biometricsRevealed?: boolean,
   dossierRevealed?: boolean,
-  resourcesRemaining?: number,
   subjectResponse?: string,
   onResponseUpdate?: (response: string) => void,
   gatheredInformation?: GatheredInformation,
   onBPMChange?: (bpm: number) => void, // Phase 2: Callback when BPM changes during interrogation
   onInformationUpdate?: (info: Partial<GatheredInformation>) => void, // Phase 2: Update gathered information
-  onQueryPerformed?: (queryType: QueryType) => void, // Phase 1: Callback when a verification query is performed
   // Phase 4: Subject interaction props
   interactionPhase?: InteractionPhase,
   onCredentialsComplete?: (hasAnomalies: boolean) => void,
@@ -86,6 +72,7 @@ export const IntelPanel = ({
   const [questionsAsked, setQuestionsAsked] = useState<string[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [currentQuestionText, setCurrentQuestionText] = useState<string>('');
+  const autoAskedSubjectRef = useRef<string | null>(null);
 
   // Phase 4: Greeting and credential state
   const greetingData = getSubjectGreeting(data.id, data);
@@ -96,6 +83,7 @@ export const IntelPanel = ({
     setQuestionsAsked([]);
     setCurrentQuestionIndex(0);
     setCurrentQuestionText('');
+    autoAskedSubjectRef.current = null;
   }, [data.id]);
 
   // Phase 4: Establish BPM baseline when greeting is complete
@@ -113,7 +101,7 @@ export const IntelPanel = ({
   const defaultInfo: GatheredInformation = {
     basicScan: true,
     identityScan: false,
-    healthScan: false,
+    // stripped-down: no health scan
     warrantCheck: false,
     transitLog: false,
     incidentHistory: false,
@@ -129,7 +117,13 @@ export const IntelPanel = ({
   const info = gatheredInformation || defaultInfo;
   const dynamicQuestions = useMemo(() => {
     return generateDynamicQuestions(data, info);
-  }, [data.id, info.identityScan, info.healthScan, info.warrantCheck, info.transitLog, info.incidentHistory]);
+  }, [
+    data.id,
+    info.identityScan,
+    info.warrantCheck,
+    info.transitLog,
+    info.incidentHistory,
+  ]);
   
   // Filter out already asked questions
   const availableQuestions = dynamicQuestions.filter(q => !questionsAsked.includes(q.id));
@@ -184,21 +178,17 @@ export const IntelPanel = ({
     }
   };
 
-  // Verification button only active when HUD is full
-  // Note: Clean subject check removed - verification available for all subjects
-  const verificationDisabled = hudStage !== 'full';
-
   // Phase 4: Investigation carousel (single module at a time)
-  // Order: DOSSIER -> VERIFICATION -> INTERROGATE
-  const INVESTIGATION_ORDER: PanelMode[] = ['dossier', 'verification', 'interrogation'];
-  const [investigationMode, setInvestigationMode] = useState<PanelMode>('dossier');
+  // Stripped-down: INTERROGATE -> VERIFICATION -> DOSSIER
+  const INVESTIGATION_ORDER: PanelMode[] = ['interrogation', 'verification', 'dossier'];
+  const [investigationMode, setInvestigationMode] = useState<PanelMode>('interrogation');
   const [investigationWidth, setInvestigationWidth] = useState(0);
   const investigationTranslateX = useRef(new Animated.Value(0)).current;
   const investigationBaseXRef = useRef(0);
 
   useEffect(() => {
     if (interactionPhase === 'investigation') {
-      setInvestigationMode('dossier');
+      setInvestigationMode('interrogation');
       investigationTranslateX.setValue(0);
     }
   }, [interactionPhase]);
@@ -292,12 +282,7 @@ export const IntelPanel = ({
   }, [interactionPhase, investigationMode, investigationWidth]);
 
   // Evidence-driven interrogation: only enabled once some investigation evidence exists.
-  const hasInterrogationEvidence =
-    !!info.identityScan ||
-    !!info.healthScan ||
-    !!info.warrantCheck ||
-    !!info.transitLog ||
-    !!info.incidentHistory;
+  const hasInterrogationEvidence = hasSomeInformation(info);
 
   const canInterrogate =
     hudStage === 'full' && hasInterrogationEvidence && questionsAsked.length < 3 && !!currentQuestion;
@@ -307,6 +292,24 @@ export const IntelPanel = ({
     if (!canInterrogate) return;
     handleAskQuestion(tone);
   };
+
+  // Auto-ask the first question once evidence exists (per subject).
+  useEffect(() => {
+    if (interactionPhase !== 'investigation') return;
+    if (!hasInterrogationEvidence) return;
+    if (questionsAsked.length > 0) return;
+    if (!currentQuestion) return;
+    if (autoAskedSubjectRef.current === data.id) return;
+
+    autoAskedSubjectRef.current = data.id;
+    handleAskQuestion('firm');
+  }, [
+    interactionPhase,
+    hasInterrogationEvidence,
+    questionsAsked.length,
+    currentQuestion?.id,
+    data.id,
+  ]);
 
   // Phase 4: Handle Proceed to Investigation button
   const handleProceedToInvestigation = () => {
@@ -349,14 +352,12 @@ export const IntelPanel = ({
       <>
         {/* Credentials Phase Button */}
         <View style={styles.mainRow}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.interrogateButton, { flex: 1 }]}
-            onPress={handleProceedToInvestigation}
-          >
-            <Text style={[styles.actionButtonText, styles.interrogateButtonText]}>
-              PROCEED
-            </Text>
-          </TouchableOpacity>
+          <MechanicalButton 
+            label="PROCEED TO VERIFICATION" 
+            onPress={handleProceedToInvestigation} 
+            color={Theme.colors.buttonYellow}
+            style={{ flex: 1 }}
+          />
         </View>
 
         {/* Credentials Response Box */}
@@ -414,27 +415,24 @@ export const IntelPanel = ({
     // Use the card’s index so the hint stays coherent during swipes.
     const cardIndex = INVESTIGATION_ORDER.indexOf(mode);
     const navText = `${String(cardIndex + 1).padStart(2, '0')}/${String(INVESTIGATION_ORDER.length).padStart(2, '0')}`;
+    const navHint =
+      cardIndex === 0
+        ? `SWIPE → ${navText}`
+        : cardIndex === INVESTIGATION_ORDER.length - 1
+          ? `← SWIPE ${navText}`
+          : `← SWIPE → ${navText}`;
 
     if (mode === 'dossier') {
       const dossierUnlocked = hudStage === 'full' && dossierRevealed;
       const dossierHasContent = dossierUnlocked && !!data.dossier;
-      const dossierZoomEnabled = dossierUnlocked && !!onOpenDossier;
 
       return (
         <View style={styles.investigationCard}>
           <View style={styles.investigationCardHeader}>
             <Text style={styles.sectionLabel}>DOSSIER</Text>
-            <Text style={styles.investigationNavHint}>SWIPE → {navText}</Text>
+            <Text style={styles.investigationNavHint}>{navHint}</Text>
           </View>
-          <TouchableOpacity
-            style={[
-              styles.dossierPreview,
-              !dossierZoomEnabled && styles.dossierPreviewDisabled,
-            ]}
-            onPress={onOpenDossier}
-            disabled={!dossierZoomEnabled}
-            activeOpacity={0.85}
-          >
+          <View style={[styles.dossierPreview, !dossierUnlocked && styles.dossierPreviewDisabled]}>
             {dossierHasContent ? (
               <View style={{ flex: 1 }}>
                 <View style={styles.dossierPreviewHeader}>
@@ -483,7 +481,7 @@ export const IntelPanel = ({
                 </View>
 
                 <View style={styles.dossierPreviewFooter}>
-                  <Text style={styles.dossierPreviewHint}>TAP TO ZOOM</Text>
+                  <Text style={styles.dossierPreviewHint}>DOSSIER LOCKED TO PANEL</Text>
                 </View>
               </View>
             ) : (
@@ -501,26 +499,68 @@ export const IntelPanel = ({
                 </View>
               </View>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
       );
     }
 
     if (mode === 'verification') {
+      const record = data.verificationRecord;
+      const recordTypeLabel = record
+        ? record.type === 'WARRANT'
+          ? 'WARRANT FILE'
+          : record.type === 'TRANSIT'
+            ? 'TRANSIT REPORT'
+            : 'INCIDENT REPORT'
+        : 'NO RECORD';
       return (
         <View style={styles.investigationCard}>
           <View style={styles.investigationCardHeader}>
             <Text style={styles.sectionLabel}>VERIFICATION</Text>
-            <Text style={styles.investigationNavHint}>← SWIPE {navText} SWIPE →</Text>
+            <Text style={styles.investigationNavHint}>{navHint}</Text>
           </View>
-          <View style={{ flex: 1, opacity: verificationDisabled ? 0.35 : 1 }}>
-            <VerificationDrawer
-              subject={data}
-              gatheredInformation={info}
-              resourcesRemaining={resourcesRemaining || 0}
-              onQueryPerformed={onQueryPerformed}
-              onInformationUpdate={onInformationUpdate}
-            />
+          <View style={styles.verificationPreview}>
+            {record ? (
+              <View style={{ flex: 1 }}>
+                <View style={styles.verificationPreviewHeader}>
+                  <Text style={styles.verificationPreviewTag}>{recordTypeLabel}</Text>
+                  <Text style={styles.verificationPreviewMeta}>{record.referenceId}</Text>
+                </View>
+                <View style={styles.verificationPreviewBody}>
+                  <View style={styles.verificationPreviewRow}>
+                    <Text style={styles.verificationPreviewLabel}>DATE</Text>
+                    <Text style={styles.verificationPreviewValue}>{record.date}</Text>
+                  </View>
+                  <View style={styles.verificationPreviewRow}>
+                    <Text style={styles.verificationPreviewLabel}>SOURCE</Text>
+                    <Text style={styles.verificationPreviewValue}>{record.source}</Text>
+                  </View>
+                  <View style={styles.verificationPreviewRow}>
+                    <Text style={styles.verificationPreviewLabel}>SUMMARY</Text>
+                    <Text style={styles.verificationPreviewValue}>{record.summary}</Text>
+                  </View>
+                  <View style={styles.verificationPreviewRow}>
+                    <Text style={styles.verificationPreviewLabel}>DISCREPANCY</Text>
+                    <Text style={styles.verificationPreviewValueAlert}>{record.contradiction}</Text>
+                  </View>
+                </View>
+                <View style={styles.verificationPreviewFooter}>
+                  <Text style={styles.verificationPreviewHint}>SINGLE-ENTRY VERIFICATION FILE</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                <View>
+                  <Text style={styles.verificationPreviewTag}>NO RECORD ON FILE</Text>
+                  <Text style={[styles.verificationPreviewMeta, { marginTop: 6 }]}>
+                    Verification registry is empty for this subject.
+                  </Text>
+                </View>
+                <View style={styles.verificationPreviewFooter}>
+                  <Text style={styles.verificationPreviewHint}>NO CONTRADICTIONS DETECTED</Text>
+                </View>
+              </View>
+            )}
           </View>
         </View>
       );
@@ -536,7 +576,7 @@ export const IntelPanel = ({
       <View style={styles.investigationCard}>
         <View style={styles.investigationCardHeader}>
           <Text style={styles.sectionLabel}>INTERROGATE</Text>
-          <Text style={styles.investigationNavHint}>← SWIPE {navText}</Text>
+          <Text style={styles.investigationNavHint}>{navHint}</Text>
         </View>
 
         <View style={styles.interrogateRow}>
@@ -552,75 +592,32 @@ export const IntelPanel = ({
             </Text>
           </View>
 
-          <View style={styles.interrogateActionColumn}>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.interrogateActionButton,
-                styles.interrogateClarifyButton,
-                !canInterrogate && styles.actionButtonDisabled,
-              ]}
-              onPress={() => handleInterrogationAction('soft')}
+          <View style={styles.interrogateActionRow}>
+            <MechanicalButton 
+              label="CLARIFY" 
+              onPress={() => handleInterrogationAction('soft')} 
               disabled={!canInterrogate}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.actionButtonText,
-                  styles.interrogateClarifyButtonText,
-                  !canInterrogate && styles.actionButtonTextDisabled,
-                ]}
-              >
-                REQUEST CLARIFICATION
-              </Text>
-            </TouchableOpacity>
+              color={Theme.colors.buttonWhite}
+              style={styles.interrogateActionButton}
+            />
 
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.interrogateActionButton,
-                styles.interrogateContestButton,
-                !canInterrogate && styles.actionButtonDisabled,
-              ]}
-              onPress={() => handleInterrogationAction('firm')}
+            <MechanicalButton 
+              label="CONTEST" 
+              onPress={() => handleInterrogationAction('firm')} 
               disabled={!canInterrogate}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.actionButtonText,
-                  styles.interrogateContestButtonText,
-                  !canInterrogate && styles.actionButtonTextDisabled,
-                ]}
-              >
-                CONTEST STATEMENT
-              </Text>
-            </TouchableOpacity>
+              color={Theme.colors.buttonYellow}
+              style={styles.interrogateActionButton}
+            />
 
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                styles.interrogateActionButton,
-                styles.interrogateRecordButton,
-                !canInterrogate && styles.actionButtonDisabled,
-              ]}
-              onPress={() => handleInterrogationAction('harsh')}
+            <MechanicalButton 
+              label="NON-COMPLIANCE" 
+              onPress={() => handleInterrogationAction('harsh')} 
               disabled={!canInterrogate}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.actionButtonText,
-                  styles.interrogateRecordButtonText,
-                  !canInterrogate && styles.actionButtonTextDisabled,
-                ]}
-              >
-                RECORD NON-COMPLIANCE
-              </Text>
-            </TouchableOpacity>
-
-            <Text style={styles.sectionHint}>One action logs a response</Text>
+              color={Theme.colors.buttonRed}
+              style={styles.interrogateActionButton}
+            />
           </View>
+          <Text style={styles.sectionHint}>One action logs a response</Text>
         </View>
       </View>
     );
@@ -671,7 +668,7 @@ export const IntelPanel = ({
   };
 
   return (
-    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.subjectIntel}>
+    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.subjectIntel} mechanical>
       {interactionPhase === 'greeting' && renderGreetingPhase()}
       {interactionPhase === 'credentials' && renderCredentialsPhase()}
       {interactionPhase === 'investigation' && renderInvestigationPhase()}

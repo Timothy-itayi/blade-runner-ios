@@ -17,13 +17,11 @@ interface HeaderProps {
   onSettingsPress?: () => void;
   // Phase 6: Emergency alerts
   emergencyAlert?: EmergencyAlert | null;
-  // Credits system
-  credits?: number;
-  resourcesRemaining?: number;
-  resourcesPerShift?: number;
+  // Lives system
+  lives?: number;
 }
 
-export const Header = ({ hudStage, shiftTime, shiftData, onSettingsPress, emergencyAlert, credits, resourcesRemaining, resourcesPerShift }: HeaderProps) => {
+export const Header = ({ hudStage, shiftTime, shiftData, onSettingsPress, emergencyAlert, lives }: HeaderProps) => {
   const authorityLabel = shiftData?.authorityLabel || 'СУДЬБА (SUDBA)';
   const letters = authorityLabel.split('');
   
@@ -76,13 +74,13 @@ export const Header = ({ hudStage, shiftTime, shiftData, onSettingsPress, emerge
 
   return (
     <View>
-      <HUDBox hudStage={hudStage} style={styles.container}>
+      <HUDBox hudStage={hudStage} style={styles.container} mechanical>
         <View style={{ flexDirection: 'column', flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {letters.map((char: string, i: number) => (
               <Animated.Text
                 key={`${authorityLabel}-${i}`}
-                style={[styles.orgText, { opacity: letterAnims[i] }]}
+                style={[styles.orgText, { opacity: letterAnims[i], color: Theme.colors.industrialCream }]}
               >
                 {char}
               </Animated.Text>
@@ -94,22 +92,16 @@ export const Header = ({ hudStage, shiftTime, shiftData, onSettingsPress, emerge
               style={styles.locationButton}
               hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }}
             >
-              <Text style={styles.locationText}>{shiftData.stationName} — {shiftData.chapter}</Text>
-              <Text style={styles.locationArrow}>›</Text>
+              <Text style={[styles.locationText, { color: Theme.colors.buttonYellow }]}>{shiftData.stationName} — {shiftData.chapter}</Text>
+              <Text style={[styles.locationArrow, { color: Theme.colors.buttonYellow }]}>›</Text>
             </TouchableOpacity>
           )}
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          {resourcesRemaining !== undefined && resourcesPerShift !== undefined && hudStage === 'full' && (
-            <View style={resourcesStyles.resourcesContainer}>
-              <Text style={resourcesStyles.resourcesLabel}>RESOURCES</Text>
-              <Text style={resourcesStyles.resourcesValue}>{resourcesRemaining}/{resourcesPerShift}</Text>
-            </View>
-          )}
-          {credits !== undefined && hudStage === 'full' && (
-            <View style={creditsStyles.creditsContainer}>
-              <Text style={creditsStyles.creditsLabel}>CREDITS</Text>
-              <Text style={creditsStyles.creditsValue}>{credits}</Text>
+          {lives !== undefined && hudStage === 'full' && (
+            <View style={livesStyles.container}>
+              <Text style={livesStyles.label}>LIVES</Text>
+              <Text style={livesStyles.value}>{lives}</Text>
             </View>
           )}
         </View>
@@ -151,19 +143,19 @@ const emergencyStyles = StyleSheet.create({
   },
 });
 
-const creditsStyles = StyleSheet.create({
-  creditsContainer: {
+const livesStyles = StyleSheet.create({
+  container: {
     flexDirection: 'column',
     alignItems: 'flex-end',
   },
-  creditsLabel: {
+  label: {
     color: Theme.colors.textSecondary,
     fontFamily: Theme.fonts.mono,
     fontSize: 8,
     letterSpacing: 1,
     opacity: 0.7,
   },
-  creditsValue: {
+  value: {
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
     fontSize: 14,
@@ -172,23 +164,3 @@ const creditsStyles = StyleSheet.create({
   },
 });
 
-const resourcesStyles = StyleSheet.create({
-  resourcesContainer: {
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-  },
-  resourcesLabel: {
-    color: Theme.colors.textSecondary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 8,
-    letterSpacing: 1,
-    opacity: 0.7,
-  },
-  resourcesValue: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-});

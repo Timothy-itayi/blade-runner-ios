@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, View, Text, Pressable } from 'react-native';
 import { styles } from '../../styles/demo-onboard/DemoOnboardModal.styles';
+import { useGameAudioContext } from '../../contexts/AudioContext';
 
 type Slide = {
   title: string;
@@ -9,44 +10,35 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    title: 'WELCOME, OPERATOR',
+    title: 'PERIMETER SECURED',
     lines: [
-      'AMBER CONTROL welcomes you.',
-      'Inspect every subject.',
-      'Verify their story before you decide.',
+      'AMBER DEPOT is under infiltration alert.',
+      'Identify every subject attempting entry.',
+      'Neutralize threats before they breach the core.',
     ],
   },
   {
-    title: 'YOUR TASK',
+    title: 'SECURE THE DEPOT',
     lines: [
-      'Review biometrics and documents.',
-      'Use scans and tapes to confirm details.',
-      'Decide: APPROVE or DENY.',
+      'Each subject claims a valid reason for entry.',
+      'Cross-reference findings with their testimony.',
+      'Decide: ALLOW or REJECT.',
     ],
   },
   {
-    title: 'RESOURCES',
+    title: 'PROTOCOL',
     lines: [
-      'You get 3 resources per subject.',
-      'Each service costs 1 resource.',
-      'Scans + tapes are all optional—choose carefully.',
-      'Resources reset on the next subject.',
+      'Identity scans unlock the personnel database.',
+      'Query transit logs and incident histories.',
+      'Ask up to 3 questions. Do not hesitate.',
     ],
   },
   {
-    title: 'TOOLS',
+    title: 'LIVE BREACH',
     lines: [
-      'ID scan (hold) and Health scan.',
-      'Tapes: Warrant / Transit / Incident.',
-      'You get 3 questions per subject. Ask wisely.',
-    ],
-  },
-  {
-    title: 'DEMO MODE',
-    lines: [
-      'This build is 3 subjects, 1 shift.',
-      'No credits, no economy—focus on accuracy.',
-      'You are being evaluated.',
+      'The facility is in lockdown.',
+      'Your accuracy ensures our survival.',
+      'They are coming. Watch the gates.',
     ],
   },
 ];
@@ -56,6 +48,7 @@ export const DemoOnboardModal = ({ visible, onDismiss }: { visible: boolean; onD
   const slide = useMemo(() => SLIDES[index], [index]);
   const isFirst = index === 0;
   const isLast = index === SLIDES.length - 1;
+  const { playButtonSound, playLoadingSound } = useGameAudioContext();
 
   return (
     <Modal visible={visible} transparent={false} animationType="fade">
@@ -80,7 +73,10 @@ export const DemoOnboardModal = ({ visible, onDismiss }: { visible: boolean; onD
 
           <View style={styles.actions}>
             <Pressable
-              onPress={() => setIndex((prev) => Math.max(0, prev - 1))}
+              onPress={() => {
+                playButtonSound();
+                setIndex((prev) => Math.max(0, prev - 1));
+              }}
               disabled={isFirst}
               style={({ pressed }) => [
                 styles.actionButton,
@@ -93,14 +89,21 @@ export const DemoOnboardModal = ({ visible, onDismiss }: { visible: boolean; onD
 
             {!isLast ? (
               <Pressable
-                onPress={() => setIndex((prev) => Math.min(SLIDES.length - 1, prev + 1))}
+                onPress={() => {
+                  playButtonSound();
+                  setIndex((prev) => Math.min(SLIDES.length - 1, prev + 1));
+                }}
                 style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
               >
                 <Text style={styles.actionText}>NEXT</Text>
               </Pressable>
             ) : (
               <Pressable
-                onPress={onDismiss}
+                onPress={() => {
+                  // "Begin shift" should be audible even if the modal unmounts immediately.
+                  playLoadingSound();
+                  setTimeout(onDismiss, 120);
+                }}
                 style={({ pressed }) => [styles.actionButtonPrimary, pressed && styles.actionButtonPressed]}
               >
                 <Text style={styles.actionTextPrimary}>BEGIN SHIFT</Text>

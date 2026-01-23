@@ -18,7 +18,6 @@ interface VerificationFoldersProps {
   activeFolder: QueryType | null;
   onSelectFolder: (folder: QueryType) => void;
   gatheredInformation: any;
-  resourcesRemaining: number;
 }
 
 const getTimestamp = () => {
@@ -31,7 +30,6 @@ export const VerificationFolders = ({
   activeFolder,
   onSelectFolder,
   gatheredInformation,
-  resourcesRemaining
 }: VerificationFoldersProps) => {
 
   const renderWarrantCheck = () => {
@@ -202,11 +200,6 @@ export const VerificationFolders = ({
                 INTEL TAPE
               </Text>
 
-              {!!resourcesRemaining && (
-                <Text style={styles.tapeMeta} pointerEvents="none">
-                  SLOT 1
-                </Text>
-              )}
             </TouchableOpacity>
           );
         })}

@@ -6,7 +6,6 @@ import { Theme } from '../constants/theme';
 import { useFonts, ShareTechMono_400Regular } from '@expo-google-fonts/share-tech-mono';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { GameAudioProvider } from '../contexts/AudioContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,17 +26,15 @@ export default function Layout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <GameAudioProvider>
-        <View style={{ flex: 1, backgroundColor: Theme.colors.bgDark }}>
-          <StatusBar style="light" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: Theme.colors.bgDark },
-            }}
-          />
-        </View>
-      </GameAudioProvider>
+      <View style={{ flex: 1, backgroundColor: Theme.colors.bgDark }}>
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: Theme.colors.bgDark },
+          }}
+        />
+      </View>
     </GestureHandlerRootView>
   );
 }

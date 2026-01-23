@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, Animated, StyleSheet, Dimensions, Easing } from 'react-native';
+import { View, Text, Animated, StyleSheet, Dimensions, Easing, Pressable } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 
 interface IntroVideoProps {
@@ -29,9 +29,21 @@ export const IntroVideo = ({ onComplete, duration = AUDIO_DURATION }: IntroVideo
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const videoOpacity = useRef(new Animated.Value(0)).current;
   const letterOpacitiesRef = useRef<Animated.Value[]>([]);
+  const hasCompletedRef = useRef(false);
   const videoPlayer = useVideoPlayer(INTRO_VIDEO, (player) => {
     player.loop = false;
   });
+
+  const completeNow = React.useCallback(() => {
+    if (hasCompletedRef.current) return;
+    hasCompletedRef.current = true;
+    try {
+      videoPlayer.pause();
+    } catch {
+      // ignore
+    }
+    onComplete();
+  }, [onComplete, videoPlayer]);
 
   useEffect(() => {
     if (phase !== 'play') return;
@@ -43,12 +55,10 @@ export const IntroVideo = ({ onComplete, duration = AUDIO_DURATION }: IntroVideo
       useNativeDriver: false,
     }).start();
 
-    const completeTimer = setTimeout(() => {
-      onComplete();
-    }, duration + BUFFER_TIME);
+    const completeTimer = setTimeout(completeNow, duration + BUFFER_TIME);
 
     return () => clearTimeout(completeTimer);
-  }, [phase, duration, onComplete, videoPlayer]);
+  }, [phase, duration, completeNow, videoPlayer]);
 
   useEffect(() => {
     if (phase !== 'logo') return;
@@ -126,6 +136,13 @@ export const IntroVideo = ({ onComplete, duration = AUDIO_DURATION }: IntroVideo
 
   return (
     <View style={styles.container}>
+      <Pressable
+        onPress={completeNow}
+        style={({ pressed }) => [styles.skipButton, pressed && styles.skipButtonPressed]}
+        hitSlop={12}
+      >
+        <Text style={styles.skipText}>SKIP</Text>
+      </Pressable>
       <View style={styles.stageWrapper}>
         {phase !== 'play' && (
           <View style={styles.introStage}>
@@ -149,9 +166,6 @@ export const IntroVideo = ({ onComplete, duration = AUDIO_DURATION }: IntroVideo
                 </Animated.Text>
               ))}
             </View>
-          )}
-          {phase === 'buffering' && (
-            <Text style={styles.bufferingText}>BUFFERING...</Text>
           )}
           </View>
         )}
@@ -195,6 +209,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  skipButton: {
+    position: 'absolute',
+    top: 18,
+    right: 18,
+    zIndex: 50,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(217, 199, 176, 0.55)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  skipButtonPressed: {
+    backgroundColor: 'rgba(217, 199, 176, 0.12)',
+    borderColor: 'rgba(217, 199, 176, 0.8)',
+  },
+  skipText: {
+    color: '#d9c7b0',
+    letterSpacing: 2,
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
   stageWrapper: {
     width: Math.min(width, height) * 0.9,
     aspectRatio: 1,
@@ -212,7 +248,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   quoteText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#d9c7b0',
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -222,12 +258,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     paddingHorizontal: 20,
-  },
-  bufferingText: {
-    fontSize: 12,
-    color: '#d9c7b0',
-    letterSpacing: 2,
-    marginTop: 10,
   },
   videoContainer: {
     ...StyleSheet.absoluteFillObject,

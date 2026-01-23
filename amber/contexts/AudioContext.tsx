@@ -1,12 +1,4 @@
-import React, { createContext, useContext, useEffect, useCallback, useRef, useState } from 'react';
-import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
-
-const AUDIO_FILES = {
-  bootSequence: require('../assets/sound-effects/main-menu/boot-sequence.mp3'),
-  uiButton: require('../assets/sound-effects/main-menu/digital-interface.mp3'),
-  uiLoading: require('../assets/sound-effects/main-menu/main-ui-loading.mp3'),
-  gameSoundtrack: require('../assets/sound-effects/main-menu/main-game-soundtrack.mp3'),
-};
+import React, { createContext, useContext, useCallback, useState } from 'react';
 
 interface GameAudioContextType {
   playBootSequence: () => void;
@@ -22,73 +14,34 @@ interface GameAudioContextType {
 const GameAudioContext = createContext<GameAudioContextType | null>(null);
 
 export const GameAudioProvider = ({ children }: { children: React.ReactNode }) => {
-  const isInitialized = useRef(false);
   const [sfxEnabled, setSfxEnabled] = useState(true);
-  
-  // Create audio players
-  const bootSequencePlayer = useAudioPlayer(AUDIO_FILES.bootSequence);
-  const uiButtonPlayer = useAudioPlayer(AUDIO_FILES.uiButton);
-  const uiLoadingPlayer = useAudioPlayer(AUDIO_FILES.uiLoading);
-  const gameSoundtrackPlayer = useAudioPlayer(AUDIO_FILES.gameSoundtrack);
-
-  // Initialize audio mode
-  useEffect(() => {
-    const initAudio = async () => {
-      if (isInitialized.current) return;
-      isInitialized.current = true;
-      
-      try {
-        await setAudioModeAsync({
-          playsInSilentMode: true,
-          shouldRouteThroughEarpiece: false,
-        });
-      } catch (e) {
-        console.warn('Game audio init failed:', e);
-      }
-    };
-    
-    initAudio();
-  }, []);
 
   const playBootSequence = useCallback(() => {
-    if (!bootSequencePlayer || !sfxEnabled) return;
-    bootSequencePlayer.volume = 0.5;
-    bootSequencePlayer.loop = false;
-    bootSequencePlayer.seekTo(0);
-    bootSequencePlayer.play();
-  }, [bootSequencePlayer, sfxEnabled]);
+    // Audio stripped.
+    void sfxEnabled;
+  }, [sfxEnabled]);
 
   const stopBootSequence = useCallback(() => {
-    if (!bootSequencePlayer) return;
-    bootSequencePlayer.pause();
-  }, [bootSequencePlayer]);
+    // Audio stripped.
+  }, []);
 
   const playButtonSound = useCallback(() => {
-    if (!uiButtonPlayer || !sfxEnabled) return;
-    uiButtonPlayer.volume = 1.0; // Max volume
-    uiButtonPlayer.seekTo(0.9);
-    uiButtonPlayer.play();
-  }, [uiButtonPlayer, sfxEnabled]);
+    // Audio stripped.
+    void sfxEnabled;
+  }, [sfxEnabled]);
 
   const playLoadingSound = useCallback(() => {
-    if (!uiLoadingPlayer || !sfxEnabled) return;
-    uiLoadingPlayer.volume = 0.5;
-    uiLoadingPlayer.seekTo(0);
-    uiLoadingPlayer.play();
-  }, [uiLoadingPlayer, sfxEnabled]);
+    // Audio stripped.
+    void sfxEnabled;
+  }, [sfxEnabled]);
 
   const playGameSoundtrack = useCallback(() => {
-    if (!gameSoundtrackPlayer) return;
-    gameSoundtrackPlayer.loop = true;
-    gameSoundtrackPlayer.volume = 0.35;
-    gameSoundtrackPlayer.seekTo(0);
-    gameSoundtrackPlayer.play();
-  }, [gameSoundtrackPlayer]);
+    // Audio stripped.
+  }, []);
 
   const stopGameSoundtrack = useCallback(() => {
-    if (!gameSoundtrackPlayer) return;
-    gameSoundtrackPlayer.pause();
-  }, [gameSoundtrackPlayer]);
+    // Audio stripped.
+  }, []);
 
   return (
     <GameAudioContext.Provider value={{

@@ -15,7 +15,6 @@ export interface QuestionTemplate {
   id: string;
   text: (subject: SubjectData) => string;
   requiresIdentityScan?: boolean; // Phase 5: Eye scan - identity/dossier
-  requiresHealthScan?: boolean; // Phase 5: Body scan - biometrics/diseases
   requiresWarrantCheck?: boolean;
   requiresTransitLog?: boolean;
   requiresIncidentHistory?: boolean;
@@ -183,6 +182,19 @@ export function generateDynamicQuestions(
   // This avoids "spam to win" and keeps interrogation tied to investigation.
   if (!hasSomeInformation(info)) return questions;
 
+  // Verification record: single contradictory file per subject.
+  if (subject.verificationRecord) {
+    const record = subject.verificationRecord;
+    const id = `verification-${record.type.toLowerCase()}`;
+    questions.push({
+      id,
+      text: () =>
+        record.question ||
+        `Verification record shows a discrepancy: ${record.contradiction}`,
+      pressureLevel: 'MEDIUM',
+    });
+  }
+
   // Tier 2: Some information - Questions about specific findings
   if (!hasAllInformation(info)) {
     // Identity scan questions (eye scan - dossier/identity)
@@ -192,56 +204,14 @@ export function generateDynamicQuestions(
       if (dossier) {
         questions.push({
           id: 'identity-occupation',
-          text: () => `The identity scan shows your occupation as ${dossier.occupation}. Can you verify this?`,
+          text: () => `The system flags your role as ${dossier.occupation}. What clearance are you running?`,
           requiresIdentityScan: true,
         });
         
         questions.push({
           id: 'identity-address',
-          text: () => `Your dossier lists your address as ${dossier.address}. Is this current?`,
+          text: () => `Your file lists your origin sector as ${dossier.address}. Confirm this.`,
           requiresIdentityScan: true,
-        });
-      }
-    }
-    
-    // Health scan questions (body scan - biometrics/diseases)
-    if (info.healthScan) {
-      const bioData = subject.bioScanData;
-      
-      if (bioData?.biologicalType === 'REPLICANT') {
-        questions.push({
-          id: 'synthetic',
-          text: () => `The health scan shows synthetic biological markers. Can you explain your biological status?`,
-          requiresHealthScan: true,
-        });
-      }
-      
-      if (bioData?.augmentationLevel && bioData.augmentationLevel !== 'NONE') {
-        questions.push({
-          id: 'cybernetic',
-          text: () => `The health scan detected cybernetic augmentations. What modifications have you undergone?`,
-          requiresHealthScan: true,
-        });
-      }
-      
-      if (bioData?.fingerprintType === 'REPLICANT' || !subject.biometricData.fingerprintMatch) {
-        questions.push({
-          id: 'fingerprint',
-          text: () => {
-            if (bioData?.fingerprintType === 'REPLICANT') {
-              return `The health scan shows your fingerprints don't match standard human patterns. Can you explain?`;
-            }
-            return `The health scan shows your fingerprints have been modified. When and why?`;
-          },
-          requiresHealthScan: true,
-        });
-      }
-      
-      if (bioData?.biologicalType === 'HUMAN_CYBORG') {
-        questions.push({
-          id: 'surgery',
-          text: () => `The health scan detected recent surgical modifications. What was the procedure for?`,
-          requiresHealthScan: true,
         });
       }
     }
@@ -250,7 +220,7 @@ export function generateDynamicQuestions(
     if (info.warrantCheck && subject.warrants !== 'NONE') {
       questions.push({
         id: 'warrant',
-        text: () => `The system shows an active warrant: ${subject.warrants}. Can you explain?`,
+        text: () => `Security alert shows an active warrant: ${subject.warrants}. Explain your presence at the depot.`,
         requiresWarrantCheck: true,
       });
     }
@@ -261,7 +231,7 @@ export function generateDynamicQuestions(
       if (flaggedTrips.length > 0) {
         questions.push({
           id: 'transit',
-          text: () => `Your transit log shows flagged travel patterns. Can you explain these trips?`,
+          text: () => `Transit logs show flagged movement prior to this breach. Explain those routes.`,
           requiresTransitLog: true,
         });
       }
@@ -271,7 +241,7 @@ export function generateDynamicQuestions(
     if (info.incidentHistory && subject.incidents > 0) {
       questions.push({
         id: 'incidents',
-        text: () => `The records show ${subject.incidents} incident(s) on file. What happened?`,
+        text: () => `Records show ${subject.incidents} incident(s) tied to security zones. What happened?`,
         requiresIncidentHistory: true,
       });
     }
@@ -279,21 +249,12 @@ export function generateDynamicQuestions(
 
   // Tier 3: All information - Cross-reference questions
   if (hasAllInformation(info)) {
-    const bioData = subject.bioScanData;
     const dossier = subject.dossier;
     const findings: string[] = [];
     
     // Collect findings from identity scan
     if (info.identityScan && dossier) {
       findings.push(`identity: ${dossier.occupation} from ${dossier.address}`);
-    }
-    
-    // Collect findings from health scan
-    if (info.healthScan && bioData?.biologicalType === 'REPLICANT') {
-      findings.push('synthetic biological markers');
-    }
-    if (info.healthScan && bioData?.augmentationLevel && bioData.augmentationLevel !== 'NONE') {
-      findings.push(`cybernetic augmentations: ${bioData.augmentationLevel}`);
     }
     
     // Collect findings from verification
@@ -312,9 +273,8 @@ export function generateDynamicQuestions(
       const findingsText = findings.slice(0, -1).join(', ') + ', and ' + findings[findings.length - 1];
       questions.push({
         id: 'cross-reference',
-        text: () => `Your identity and health scans show ${findingsText}. Explain these inconsistencies.`,
+        text: () => `Your record shows ${findingsText}. Explain these discrepancies under breach protocol.`,
         requiresIdentityScan: info.identityScan,
-        requiresHealthScan: info.healthScan,
         requiresWarrantCheck: info.warrantCheck,
         requiresTransitLog: info.transitLog,
         requiresIncidentHistory: info.incidentHistory,
@@ -324,12 +284,11 @@ export function generateDynamicQuestions(
         id: 'specific-finding',
         text: () => {
           if (findings[0].includes('warrant')) {
-            return `The system shows ${findings[0]}. Explain.`;
+            return `The system shows ${findings[0]}. Explain yourself.`;
           }
-          return `The scan shows ${findings[0]}. Can you explain this?`;
+          return `The scan shows ${findings[0]}. Why should I allow you through?`;
         },
         requiresIdentityScan: info.identityScan,
-        requiresHealthScan: info.healthScan,
         requiresWarrantCheck: info.warrantCheck,
         requiresTransitLog: info.transitLog,
         requiresIncidentHistory: info.incidentHistory,

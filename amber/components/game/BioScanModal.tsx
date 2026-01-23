@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
-import { useAudioPlayer } from 'expo-audio';
 import { SubjectData } from '../../data/subjects';
 import { HUDBox } from '../ui/HUDBox';
 import { Theme } from '../../constants/theme';
@@ -19,8 +18,6 @@ export const BioScanModal = ({ subject, onClose }: BioScanModalProps) => {
   const progressAnim = useRef(new Animated.Value(0)).current;
   
   const bioData = subject.bioScanData || {};
-  const audioFile = bioData.audioFile;
-  const audioPlayer = useAudioPlayer(audioFile || null);
 
   // Progress sequence: initialising -> compressing -> ready
   useEffect(() => {
@@ -60,18 +57,9 @@ export const BioScanModal = ({ subject, onClose }: BioScanModalProps) => {
 
   const handleViewResults = () => {
     setShowResults(true);
-    if (audioPlayer && audioFile) {
-      audioPlayer.volume = 0.7;
-      audioPlayer.loop = false;
-      audioPlayer.seekTo(0);
-      audioPlayer.play();
-    }
   };
 
   const handleClose = () => {
-    if (audioPlayer && audioPlayer.playing) {
-      audioPlayer.pause();
-    }
     onClose();
   };
 
@@ -124,40 +112,7 @@ export const BioScanModal = ({ subject, onClose }: BioScanModalProps) => {
           </View>
         ) : (
           <View style={styles.resultsContainer}>
-            <Text style={styles.audioLabel}>BIOMETRIC SCAN AUDIO</Text>
-            {audioFile ? (
-              <View style={styles.audioControls}>
-                <TouchableOpacity
-                  style={styles.audioButton}
-                  onPress={() => {
-                    if (audioPlayer) {
-                      if (audioPlayer.playing) {
-                        audioPlayer.pause();
-                      } else {
-                        audioPlayer.play();
-                      }
-                    }
-                  }}
-                >
-                  <Text style={styles.audioButtonText}>
-                    {audioPlayer?.playing ? '[ PAUSE ]' : '[ PLAY ]'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.audioButton}
-                  onPress={() => {
-                    if (audioPlayer) {
-                      audioPlayer.seekTo(0);
-                      audioPlayer.play();
-                    }
-                  }}
-                >
-                  <Text style={styles.audioButtonText}>[ RESTART ]</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={styles.noAudioText}>NO AUDIO FILE AVAILABLE</Text>
-            )}
+            <Text style={styles.noAudioText}>AUDIO DISABLED</Text>
           </View>
         )}
       </HUDBox>

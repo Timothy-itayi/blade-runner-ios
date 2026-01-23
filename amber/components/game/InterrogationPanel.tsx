@@ -68,7 +68,7 @@ export const InterrogationPanel = ({ subject, onClose, onQuestionAsked, onRespon
       return `I need to get to Earth. ${subject.reasonForVisit}`;
     }
     if (questionId === 'purpose') {
-      return subject.reasonForVisit;
+      return subject.reasonForVisit || 'I need clearance to enter the depot.';
     }
     if (questionId === 'duration') {
       return "As long as necessary. I have valid documentation.";
@@ -81,7 +81,7 @@ export const InterrogationPanel = ({ subject, onClose, onQuestionAsked, onRespon
     if (questionId === 'previous') {
       return "Maybe. I don't remember. Why does it matter?";
     }
-    return "I don't have to answer that.";
+    return "I don't have anything to add beyond what's on record.";
   };
 
   return (

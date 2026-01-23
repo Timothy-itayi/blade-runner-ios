@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Animated, StyleSheet } from 'react-native';
-import { useAudioPlayer } from 'expo-audio';
 import { SubjectData } from '../../data/subjects';
 import { HUDBox } from '../ui/HUDBox';
 import { Theme } from '../../constants/theme';
@@ -20,8 +19,6 @@ export const HealthScanModal = ({ subject, onClose }: HealthScanModalProps) => {
   
   // Health scan reveals biometric data, diseases, pathogens
   const bioData = subject.bioScanData || {};
-  const audioFile = bioData.audioFile;
-  const audioPlayer = useAudioPlayer(audioFile || null);
 
   // Progress sequence: initialising -> scanning -> analyzing -> ready
   useEffect(() => {
@@ -71,18 +68,9 @@ export const HealthScanModal = ({ subject, onClose }: HealthScanModalProps) => {
 
   const handleViewResults = () => {
     setShowResults(true);
-    if (audioPlayer && audioFile) {
-      audioPlayer.volume = 0.7;
-      audioPlayer.loop = false;
-      audioPlayer.seekTo(0);
-      audioPlayer.play();
-    }
   };
 
   const handleClose = () => {
-    if (audioPlayer && audioPlayer.playing) {
-      audioPlayer.pause();
-    }
     onClose();
   };
 
@@ -164,35 +152,6 @@ export const HealthScanModal = ({ subject, onClose }: HealthScanModalProps) => {
           <View style={styles.resultsContainer}>
             <Text style={styles.resultsTitle}>HEALTH SCAN RESULTS</Text>
             <Text style={styles.resultsSubtitle}>BIOMETRIC ANALYSIS REPORT</Text>
-            
-            <View style={styles.audioSection}>
-              <Text style={styles.audioLabel}>HEALTH SCAN AUDIO</Text>
-              {audioFile ? (
-                <View style={styles.audioControls}>
-                  <TouchableOpacity
-                    style={styles.audioButton}
-                    onPress={() => {
-                      if (audioPlayer) {
-                        if (audioPlayer.playing) {
-                          audioPlayer.pause();
-                        } else {
-                          audioPlayer.play();
-                        }
-                      }
-                    }}
-                  >
-                    <Text style={styles.audioButtonText}>
-                      {audioPlayer?.playing ? '[ PAUSE ]' : '[ PLAY ]'}
-                    </Text>
-                  </TouchableOpacity>
-                  <Text style={styles.audioNote}>
-                    [ MEMORY FULL - ONE-TIME PLAYBACK ONLY ]
-                  </Text>
-                </View>
-              ) : (
-                <Text style={styles.noAudioText}>NO AUDIO FILE AVAILABLE</Text>
-              )}
-            </View>
 
             <View style={styles.findingsContainer}>
               <Text style={styles.findingsTitle}>BIOMETRIC FINDINGS:</Text>
@@ -210,7 +169,6 @@ export const HealthScanModal = ({ subject, onClose }: HealthScanModalProps) => {
 
             <Text style={styles.noteText}>
               Health scan analyzes biological markers, pathogens, and diseases.
-              Audio report contains detailed medical findings.
             </Text>
           </View>
         )}

@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Pressable } from 'react-native';
 import { Image } from 'expo-image';
-import { useAudioPlayer } from 'expo-audio';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Theme } from '../../constants/theme';
 import { TypewriterText } from '../ui/ScanData';
@@ -37,8 +36,7 @@ export const IntroBroadcast = ({ onComplete }: IntroBroadcastProps) => {
   const [canSkip, setCanSkip] = useState(false);
   const [showSkip, setShowSkip] = useState(false);
 
-  // Audio player
-  const audioPlayer = useAudioPlayer(INTRO_AUDIO.narration);
+  // Audio stripped.
 
   const currentSegment = INTRO_NEWS_SEGMENTS[segmentIndex];
 
@@ -84,15 +82,6 @@ export const IntroBroadcast = ({ onComplete }: IntroBroadcastProps) => {
       }),
     ]).start(() => {
       setIsLive(true);
-      // Start audio
-      try {
-        if (audioPlayer) {
-          audioPlayer.volume = 0.6;
-          audioPlayer.play();
-        }
-      } catch (e) {
-        // Ignore audio errors
-      }
     });
 
     // Start ticker animation
@@ -105,15 +94,7 @@ export const IntroBroadcast = ({ onComplete }: IntroBroadcastProps) => {
       })
     ).start();
 
-    return () => {
-      try {
-        if (audioPlayer && audioPlayer.playing) {
-          audioPlayer.pause();
-        }
-      } catch (e) {
-        // Ignore cleanup errors
-      }
-    };
+    return;
   }, []);
 
   // Auto-advance segments
@@ -171,15 +152,6 @@ export const IntroBroadcast = ({ onComplete }: IntroBroadcastProps) => {
       await AsyncStorage.setItem(STORAGE_KEY, 'true');
     } catch (e) {
       // Ignore storage errors
-    }
-
-    // Stop audio
-    try {
-      if (audioPlayer && audioPlayer.playing) {
-        audioPlayer.pause();
-      }
-    } catch (e) {
-      // Ignore audio errors
     }
 
     onComplete();

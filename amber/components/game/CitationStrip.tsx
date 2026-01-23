@@ -7,7 +7,6 @@ const FACT_LABELS: Record<string, string> = {
   WARRANT: 'ACTIVE WARRANT',
   INCIDENT_HISTORY: 'PRIOR INCIDENT RECORD',
   TRANSIT_LOG: 'FLAGGED TRANSIT',
-  HEALTH_SCAN: 'SYNTHETIC MARKERS',
   IDENTITY_SCAN: 'IDENTITY UNVERIFIED',
   INTERROGATION: 'STATEMENT UNVERIFIED',
 };
@@ -91,7 +90,7 @@ export function CitationStrip({
             {factsLine}
           </Text>
           <Text style={styles.penalty} numberOfLines={1}>
-            PENALTY RECORDED: -{consequence.creditsPenalty} CREDITS • +{consequence.infractionCount} INFRACTION(S)
+            PENALTY RECORDED: -1 HEALTH • +{consequence.infractionCount} INFRACTION(S)
           </Text>
         </View>
 

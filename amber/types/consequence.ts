@@ -17,7 +17,6 @@ export interface MissedInformation {
   type:
     | 'WARRANT'
     | 'IDENTITY_SCAN'
-    | 'HEALTH_SCAN'
     | 'TRANSIT_LOG'
     | 'INCIDENT_HISTORY'
     | 'INTERROGATION';
@@ -31,7 +30,6 @@ export interface Consequence {
   message: string;
   missedInformation: MissedInformation[];
   severity: number; // 0-100, for compounding
-  creditsPenalty: number;
   infractionCount: number; // Cumulative infractions
 }
 
@@ -51,7 +49,6 @@ export const evaluateConsequence = (
 ): Consequence => {
   const missedInfo: MissedInformation[] = [];
   let severity = 0;
-  let creditsPenalty = 0;
   let message = '';
   let consequenceType: ConsequenceType = 'NONE';
 
@@ -72,7 +69,6 @@ export const evaluateConsequence = (
     });
     if (decision === 'APPROVE') {
       severity += 40;
-      creditsPenalty += 2;
     }
   }
   
@@ -82,7 +78,6 @@ export const evaluateConsequence = (
       if (gatheredInfo.warrantCheck) {
         // Warrant was checked but still approved - direct violation
         severity += 60;
-        creditsPenalty += 4;
         if (!message) {
           message = 'Directive violation: Approved subject with active warrant despite directive to deny all warrants.';
         }
@@ -90,23 +85,7 @@ export const evaluateConsequence = (
     }
   }
 
-  // 2. Health Scan (body scan - reveals biometrics/diseases)
-  if (!gatheredInfo.healthScan) {
-    const hasReplicantMarkers = subject.bioScanData?.biologicalType === 'REPLICANT' ||
-                                subject.subjectType === 'REPLICANT';
-    if (hasReplicantMarkers && decision === 'APPROVE') {
-      missedInfo.push({
-        type: 'HEALTH_SCAN',
-        description: 'Health scan not performed',
-        reveal: `Health scan would have revealed: ${subject.bioScanData?.biologicalType || subject.subjectType} markers`,
-        impact: 'Replicant subject approved without health verification. Serious infraction.',
-      });
-      severity += 50;
-      creditsPenalty += 3;
-    }
-  }
-
-  // 2b. Identity Scan (eye scan - reveals dossier/identity)
+  // 2. Identity Scan (eye scan - reveals dossier/identity)
   if (!gatheredInfo.identityScan && subject.dossier) {
     // Identity scan reveals dossier which can be cross-referenced with credentials
     // Missing identity scan means can't verify dossier information
@@ -118,7 +97,6 @@ export const evaluateConsequence = (
         impact: 'Subject approved without identity verification against credentials.',
       });
       severity += 20;
-      creditsPenalty += 1;
     }
   }
 
@@ -133,7 +111,6 @@ export const evaluateConsequence = (
         impact: 'Subject with flagged travel history was approved.',
       });
       severity += 30;
-      creditsPenalty += 1;
     }
   }
 
@@ -147,7 +124,6 @@ export const evaluateConsequence = (
         impact: 'Subject with incident history was approved without review.',
       });
       severity += 25;
-      creditsPenalty += 1;
     }
   }
 
@@ -157,15 +133,10 @@ export const evaluateConsequence = (
                         subject.bioScanData?.biologicalType === 'REPLICANT' ||
                         subject.subjectType === 'ROBOT_CYBORG';
     if (isSynthetic && decision === 'APPROVE') {
-      if (!gatheredInfo.healthScan) {
-        // Already counted in health scan above
-      } else {
-        // Health scan was done but still approved - direct violation
-        severity += 70;
-        creditsPenalty += 5;
-        if (!message) {
-          message = 'Directive violation: Approved synthetic entity despite directive to deny all synthetic entities.';
-        }
+      // With health scan removed, synthetic status is still known to the system (subject record).
+      severity += 70;
+      if (!message) {
+        message = 'Directive violation: Approved synthetic entity despite directive to deny all synthetic entities.';
       }
     }
   }
@@ -210,7 +181,6 @@ export const evaluateConsequence = (
     message,
     missedInformation: missedInfo,
     severity: totalSeverity,
-    creditsPenalty,
     infractionCount: cumulativeInfractions + (severity > 0 ? 1 : 0),
   };
 };

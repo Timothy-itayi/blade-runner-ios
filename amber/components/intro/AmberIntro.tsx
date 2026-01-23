@@ -1,15 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Pressable } from 'react-native';
 import { Image } from 'expo-image';
-import { useAudioPlayer } from 'expo-audio';
 import { Theme } from '../../constants/theme';
-import { useIntroAudio } from '../../hooks/useIntroAudio';
 
 const INTRO_SLIDE = require('../../assets/news/anchor-narration/intro-slide.png');
 const INTRO_SLIDE1 = require('../../assets/news/anchor-narration/intro-slide1.png');
 const INTRO_SLIDE2 = require('../../assets/news/anchor-narration/intro-slide2.png');
 const INTRO_SLIDE3 = require('../../assets/news/anchor-narration/intro-slide3.png');
-const INTRO_NARRATION = require('../../assets/news/anchor-narration/intro-narration.mp3');
 const STATIC_GIF = require('../../assets/videos/static.gif');
 
 const INTRO_SLIDES = [INTRO_SLIDE, INTRO_SLIDE1, INTRO_SLIDE2, INTRO_SLIDE3];
@@ -79,11 +76,7 @@ export const AmberIntro = ({ onComplete }: AmberIntroProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [canSkip, setCanSkip] = useState(false);
 
-  // Narration audio player (voice-over)
-  const narrationPlayer = useAudioPlayer(INTRO_NARRATION);
-
-  // Intro music control (to fade out when done)
-  const { fadeOutMenuSoundtrack } = useIntroAudio({ musicVolume: 1, sfxVolume: 1 });
+  // Audio stripped.
 
   // Progress bar animation - smooth continuous movement
   useEffect(() => {
@@ -110,15 +103,6 @@ export const AmberIntro = ({ onComplete }: AmberIntroProps) => {
       }),
     ]).start(() => {
       setIsPlaying(true);
-      // Start narration audio (voice-over on top of music)
-      try {
-        if (narrationPlayer) {
-          narrationPlayer.volume = 0.9;
-          narrationPlayer.play();
-        }
-      } catch (e) {
-        // Continue without audio
-      }
     });
 
     // Scan line animation loop - cleaner, slower
@@ -143,13 +127,6 @@ export const AmberIntro = ({ onComplete }: AmberIntroProps) => {
 
     return () => {
       clearTimeout(skipTimer);
-      try {
-        if (narrationPlayer && narrationPlayer.playing) {
-          narrationPlayer.pause();
-        }
-      } catch (e) {
-        // Ignore cleanup errors
-      }
     };
   }, []);
 
@@ -226,15 +203,6 @@ export const AmberIntro = ({ onComplete }: AmberIntroProps) => {
   }, [isPlaying]);
 
   const handleComplete = () => {
-    // Stop narration
-    try {
-      if (narrationPlayer && narrationPlayer.playing) {
-        narrationPlayer.pause();
-      }
-    } catch (e) {
-      // Ignore errors
-    }
-
     // Glitch effect at the end
     const glitchSequence = Animated.sequence([
       // Quick glitch bursts
@@ -313,9 +281,6 @@ export const AmberIntro = ({ onComplete }: AmberIntroProps) => {
     ]);
 
     glitchSequence.start(() => {
-      // Fade out intro music before transitioning to boot
-      fadeOutMenuSoundtrack(1000);
-
       // Fade out visuals before completing
       Animated.timing(fadeIn, {
         toValue: 0,

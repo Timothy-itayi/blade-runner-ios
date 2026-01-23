@@ -56,7 +56,7 @@ export const DrawingBorder = ({ active, duration = 1000, delay = 0, color }: { a
   );
 };
 
-export const HUDBox = ({ children, hudStage, style, buildDelay = 0 }: { children: React.ReactNode, hudStage: 'none' | 'wireframe' | 'outline' | 'full', style?: any, buildDelay?: number }) => {
+export const HUDBox = ({ children, hudStage, style, buildDelay = 0, mechanical = false }: { children: React.ReactNode, hudStage: 'none' | 'wireframe' | 'outline' | 'full', style?: any, buildDelay?: number, mechanical?: boolean }) => {
   const contentOpacity = useRef(new Animated.Value(hudStage === 'full' ? 1 : 0)).current;
 
   useEffect(() => {
@@ -93,15 +93,32 @@ export const HUDBox = ({ children, hudStage, style, buildDelay = 0 }: { children
     ...containerStyle
   } = flatStyle;
 
+  // Respect caller-provided background color.
+  const { backgroundColor, ...outerContainerStyle } = containerStyle as { backgroundColor?: string };
+
   return (
     <View style={[
-      containerStyle,
+      outerContainerStyle,
       flex ? { flex } : {},
       height ? { height } : {},
       width ? { width } : {},
-      { backgroundColor: 'transparent' }
+      { backgroundColor: backgroundColor ?? (mechanical ? Theme.colors.bgMechanical : 'transparent') },
+      mechanical && {
+        borderWidth: 2,
+        borderColor: Theme.colors.industrialGray,
+        borderTopColor: '#4e5563',
+        borderLeftColor: '#4e5563',
+        borderBottomColor: '#1a1d23',
+        borderRightColor: '#1a1d23',
+        ...Theme.effects.bezel,
+      }
     ]}>
-      <DrawingBorder active={hudStage !== 'none'} delay={buildDelay} />
+      {mechanical && (
+        <View style={[StyleSheet.absoluteFill, { opacity: 0.05, backgroundColor: '#000' }]}>
+          {/* Subtle noise/texture would go here if we had an asset, using a dark overlay for now */}
+        </View>
+      )}
+      <DrawingBorder active={hudStage !== 'none'} delay={buildDelay} color={mechanical ? 'rgba(255,255,255,0.1)' : undefined} />
       
       <Animated.View style={[
         { opacity: contentOpacity },

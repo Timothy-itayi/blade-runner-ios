@@ -4,6 +4,7 @@ import { Theme } from '../../constants/theme';
 import { ShiftData } from '../../constants/shifts';
 import { TypewriterText } from '../ui/ScanData';
 import { SubjectData, IncidentReport, PersonalMessage } from '../../data/subjects';
+import { ShiftNewsReport } from './ShiftNewsReport';
 
 // Decision record for a single subject
 export interface ShiftDecision {
@@ -21,106 +22,23 @@ interface ShiftTransitionProps {
   totalAccuracy: number;
   messageHistory: string[];
   shiftDecisions: ShiftDecision[]; // NEW: Decisions made this shift
-  credits?: number;
-  familyNeeds: { food: number; medicine: number; housing: number };
   onContinue: () => void;
-  onCreditsChange?: (newCredits: number) => void;
-  onFamilyNeedsChange?: (needs: { food: number; medicine: number; housing: number }) => void;
 }
 
-export const ShiftTransition = ({ 
-  previousShift, 
-  nextShift, 
-  approvedCount, 
-  deniedCount, 
+export const ShiftTransition = ({
+  previousShift,
+  nextShift,
+  approvedCount,
+  deniedCount,
   totalAccuracy,
   messageHistory,
   shiftDecisions,
-  credits,
-  familyNeeds,
   onContinue,
-  onCreditsChange,
-  onFamilyNeedsChange,
 }: ShiftTransitionProps) => {
-  const [phase, setPhase] = useState<'summary' | 'reports' | 'menu' | 'profile' | 'briefing'>('profile');
+  // Start with 'news' phase to show news reports first
+  const [phase, setPhase] = useState<'news' | 'summary' | 'reports' | 'menu' | 'profile' | 'briefing'>('news');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const briefingOpacity = useRef(new Animated.Value(0)).current;
-  const creditsEnabled = typeof credits === 'number';
-  const safeCredits = creditsEnabled ? credits : 0;
-  
-  // Local state for family needs payment choices
-  const [paidFor, setPaidFor] = useState<{ food: boolean; medicine: boolean; housing: boolean }>({
-    food: false,
-    medicine: false,
-    housing: false,
-  });
-  const [shiftPayApplied, setShiftPayApplied] = useState(false);
-  
-  // Calculate shift pay (some shifts pay less or nothing)
-  const getShiftPay = (): number => {
-    // Base pay: 100 credits per shift
-    let basePay = 100;
-    
-    // Some shifts don't pay full amount (random chance, or based on performance)
-    if (totalAccuracy < 0.5) {
-      // Poor performance = reduced pay
-      basePay = Math.floor(basePay * 0.5);
-    } else if (Math.random() < 0.15) {
-      // 15% chance of "system delay" - reduced pay
-      basePay = Math.floor(basePay * 0.7);
-    }
-    
-    return basePay;
-  };
-  
-  // Apply shift pay when entering profile (once per shift)
-  useEffect(() => {
-    if (!creditsEnabled) return;
-    if (phase === 'profile' && !shiftPayApplied && onCreditsChange) {
-      const shiftPay = getShiftPay();
-      if (shiftPay > 0) {
-        // Add shift pay to current credits
-        onCreditsChange(safeCredits + shiftPay);
-        setShiftPayApplied(true);
-      }
-    }
-  }, [phase, shiftPayApplied, safeCredits, onCreditsChange, creditsEnabled]);
-  
-  // Reset payment state when phase changes away from profile
-  useEffect(() => {
-    if (phase !== 'profile') {
-      setPaidFor({ food: false, medicine: false, housing: false });
-    }
-  }, [phase]);
-  
-  // Calculate what player can afford
-  const canAfford = (cost: number) => (creditsEnabled ? safeCredits >= cost : false);
-  
-  // Handle paying for family needs
-  const handlePayFor = (need: 'food' | 'medicine' | 'housing') => {
-    const costs = {
-      food: familyNeeds.food,
-      medicine: familyNeeds.medicine,
-      housing: familyNeeds.housing,
-    };
-    
-    if (!creditsEnabled) return;
-    if (!paidFor[need] && canAfford(costs[need])) {
-      const newPaidFor = { ...paidFor, [need]: true };
-      setPaidFor(newPaidFor);
-      
-      // Deduct credits
-      const newCredits = safeCredits - costs[need];
-      onCreditsChange?.(newCredits);
-      
-      // Update family needs (reduce urgency - they're paid for this cycle)
-      const newNeeds = { ...familyNeeds };
-      if (need === 'food') newNeeds.food = Math.max(0, newNeeds.food - 50);
-      if (need === 'medicine') newNeeds.medicine = Math.max(0, newNeeds.medicine - 200);
-      if (need === 'housing') newNeeds.housing = Math.max(0, newNeeds.housing - 500);
-      onFamilyNeedsChange?.(newNeeds);
-    }
-  };
 
 
   useEffect(() => {
@@ -132,6 +50,11 @@ export const ShiftTransition = ({
     }).start();
   }, []);
 
+  // Called when news broadcast ends
+  const handleNewsComplete = () => {
+    setPhase('profile');
+  };
+
   const handleStartBriefing = () => {
     setPhase('briefing');
     Animated.timing(briefingOpacity, {
@@ -142,14 +65,17 @@ export const ShiftTransition = ({
   };
 
   const renderContent = () => {
+    // News phase - show news reports based on decisions
+    if (phase === 'news') {
+      return (
+        <ShiftNewsReport
+          shiftDecisions={shiftDecisions}
+          onComplete={handleNewsComplete}
+        />
+      );
+    }
+
     if (phase === 'profile') {
-      const shiftPay = getShiftPay();
-      const costs = {
-        food: familyNeeds.food,
-        medicine: familyNeeds.medicine,
-        housing: familyNeeds.housing,
-      };
-      
       return (
         <View style={styles.profileContainer}>
           <ScrollView 
@@ -158,16 +84,6 @@ export const ShiftTransition = ({
             showsVerticalScrollIndicator={false}
           >
             <Text style={styles.profileTitle}>OPERATOR LOG // PERSONAL</Text>
-            
-            {creditsEnabled && (
-              <View style={styles.creditsSection}>
-                <Text style={styles.sectionLabel}>AVAILABLE CREDITS</Text>
-                <Text style={styles.creditsValue}>{safeCredits}</Text>
-                {shiftPayApplied && shiftPay > 0 && (
-                  <Text style={styles.shiftPayText}>+{shiftPay} (SHIFT PAY)</Text>
-                )}
-              </View>
-            )}
 
             <View style={styles.profileContent}>
               <View style={styles.profilePhotoSection}>
@@ -200,96 +116,6 @@ export const ShiftTransition = ({
               </View>
             </View>
 
-            {creditsEnabled && (
-              <View style={styles.familyNeedsSection}>
-                <Text style={styles.sectionLabel}>FAMILY NEEDS</Text>
-                <Text style={styles.sectionSubtext}>Choose what to provide this cycle</Text>
-              
-                {/* Food */}
-                <Pressable
-                  onPress={() => handlePayFor('food')}
-                  disabled={paidFor.food || !canAfford(costs.food)}
-                  style={({ pressed }) => [
-                    styles.needButton,
-                    paidFor.food && styles.needButtonPaid,
-                    !canAfford(costs.food) && styles.needButtonDisabled,
-                    pressed && !paidFor.food && canAfford(costs.food) && styles.needButtonPressed,
-                  ]}
-                >
-                  <View style={styles.needButtonContent}>
-                    <View style={styles.needButtonLeft}>
-                      <Text style={[styles.needLabel, paidFor.food && styles.needLabelPaid]}>FOOD</Text>
-                      <Text style={[styles.needCost, paidFor.food && styles.needCostPaid]}>
-                        {costs.food} CREDITS
-                      </Text>
-                    </View>
-                    {paidFor.food ? (
-                      <Text style={styles.needStatusPaid}>✓ PAID</Text>
-                    ) : canAfford(costs.food) ? (
-                      <Text style={styles.needStatusAvailable}>[ PAY ]</Text>
-                    ) : (
-                      <Text style={styles.needStatusUnavailable}>INSUFFICIENT</Text>
-                    )}
-                  </View>
-                </Pressable>
-
-                {/* Medicine */}
-                <Pressable
-                  onPress={() => handlePayFor('medicine')}
-                  disabled={paidFor.medicine || !canAfford(costs.medicine)}
-                  style={({ pressed }) => [
-                    styles.needButton,
-                    paidFor.medicine && styles.needButtonPaid,
-                    !canAfford(costs.medicine) && styles.needButtonDisabled,
-                    pressed && !paidFor.medicine && canAfford(costs.medicine) && styles.needButtonPressed,
-                  ]}
-                >
-                  <View style={styles.needButtonContent}>
-                    <View style={styles.needButtonLeft}>
-                      <Text style={[styles.needLabel, paidFor.medicine && styles.needLabelPaid]}>MEDICINE</Text>
-                      <Text style={[styles.needCost, paidFor.medicine && styles.needCostPaid]}>
-                        {costs.medicine} CREDITS
-                      </Text>
-                    </View>
-                    {paidFor.medicine ? (
-                      <Text style={styles.needStatusPaid}>✓ PAID</Text>
-                    ) : canAfford(costs.medicine) ? (
-                      <Text style={styles.needStatusAvailable}>[ PAY ]</Text>
-                    ) : (
-                      <Text style={styles.needStatusUnavailable}>INSUFFICIENT</Text>
-                    )}
-                  </View>
-                </Pressable>
-
-                {/* Housing */}
-                <Pressable
-                  onPress={() => handlePayFor('housing')}
-                  disabled={paidFor.housing || !canAfford(costs.housing)}
-                  style={({ pressed }) => [
-                    styles.needButton,
-                    paidFor.housing && styles.needButtonPaid,
-                    !canAfford(costs.housing) && styles.needButtonDisabled,
-                    pressed && !paidFor.housing && canAfford(costs.housing) && styles.needButtonPressed,
-                  ]}
-                >
-                  <View style={styles.needButtonContent}>
-                    <View style={styles.needButtonLeft}>
-                      <Text style={[styles.needLabel, paidFor.housing && styles.needLabelPaid]}>HOUSING</Text>
-                      <Text style={[styles.needCost, paidFor.housing && styles.needCostPaid]}>
-                        {costs.housing} CREDITS
-                      </Text>
-                    </View>
-                    {paidFor.housing ? (
-                      <Text style={styles.needStatusPaid}>✓ PAID</Text>
-                    ) : canAfford(costs.housing) ? (
-                      <Text style={styles.needStatusAvailable}>[ PAY ]</Text>
-                    ) : (
-                      <Text style={styles.needStatusUnavailable}>INSUFFICIENT</Text>
-                    )}
-                  </View>
-                </Pressable>
-              </View>
-            )}
           </ScrollView>
 
           {/* Continue Button - Always visible at bottom */}
@@ -829,117 +655,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     alignItems: 'center',
   },
-  // Credits section
-  creditsSection: {
-    width: '100%',
-    alignItems: 'center',
-    marginBottom: 30,
-    paddingVertical: 15,
-    borderWidth: 1,
-    borderColor: Theme.colors.textSecondary,
-    backgroundColor: 'rgba(74, 106, 122, 0.1)',
-  },
   sectionLabel: {
     color: Theme.colors.textSecondary,
     fontFamily: Theme.fonts.mono,
     fontSize: 10,
     letterSpacing: 2,
     marginBottom: 8,
-  },
-  creditsValue: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 32,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  shiftPayText: {
-    color: Theme.colors.accentApprove,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 11,
-    marginTop: 4,
-    letterSpacing: 1,
-  },
-  // Family needs section
-  familyNeedsSection: {
-    width: '100%',
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  sectionSubtext: {
-    color: Theme.colors.textDim,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    textAlign: 'center',
-    marginBottom: 15,
-    fontStyle: 'italic',
-  },
-  needButton: {
-    width: '100%',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: Theme.colors.textPrimary,
-    marginBottom: 12,
-    backgroundColor: 'rgba(26, 42, 58, 0.2)',
-  },
-  needButtonPressed: {
-    backgroundColor: 'rgba(127, 184, 216, 0.2)',
-  },
-  needButtonPaid: {
-    borderColor: Theme.colors.accentApprove,
-    backgroundColor: 'rgba(74, 138, 90, 0.1)',
-  },
-  needButtonDisabled: {
-    borderColor: Theme.colors.textDim,
-    opacity: 0.5,
-  },
-  needButtonContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  needButtonLeft: {
-    flex: 1,
-  },
-  needLabel: {
-    color: Theme.colors.textPrimary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  needLabelPaid: {
-    color: Theme.colors.accentApprove,
-  },
-  needCost: {
-    color: Theme.colors.textSecondary,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 11,
-  },
-  needCostPaid: {
-    color: Theme.colors.accentApprove,
-    opacity: 0.8,
-  },
-  needStatusAvailable: {
-    color: Theme.colors.accentWarn,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  needStatusPaid: {
-    color: Theme.colors.accentApprove,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  needStatusUnavailable: {
-    color: Theme.colors.accentDeny,
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    opacity: 0.7,
   },
 });

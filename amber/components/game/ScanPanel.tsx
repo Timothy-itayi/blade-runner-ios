@@ -6,7 +6,6 @@ import { SubjectData } from '../../data/subjects';
 import { Theme } from '../../constants/theme';
 import { BUILD_SEQUENCE } from '../../constants/animations';
 
-const FINGERPRINT_IMG = require('../../assets/finger-print.png');
 const HAND_PRINT_0 = require('../../assets/handprints/hand-print0.png');
 const REPLICANT_HAND = require('../../assets/handprints/replicant-hand.png');
 const CYBORG_HAND = require('../../assets/handprints/cyborg-hand.png');
@@ -30,7 +29,6 @@ const getHandprintImage = (subject: SubjectData): any => {
 
 const FingerprintSlot = ({ active, flipped = false, delay = 0, statusText, subjectIndex = 0, scanningHands = false, subject, biometricsRevealed = true }: { active: boolean, flipped?: boolean, delay?: number, statusText: string, subjectIndex?: number, scanningHands?: boolean, subject?: SubjectData, biometricsRevealed?: boolean }) => {
   const subjectData = subject || ({} as SubjectData);
-  const anomalyType = subjectData.biometricData?.anomalyType;
   const isMissingHand = subjectData.id === 'S3-03' && flipped;
 
   // Get the appropriate handprint image based on subject type (always subject-specific)
@@ -233,12 +231,13 @@ const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim, dataRevealed = true }: 
 
   // Format BPM display with ambiguity
   const getBpmDisplay = () => {
-    if (!isLive || !dataRevealed) return '-- BPM';
-    if (!biometrics) return '-- BPM';
-    if (biometrics.isError || isEquipmentError) return 'ERROR';
+    if (!isLive || !dataRevealed) return '--';
+    if (!biometrics) return '--';
+    if (biometrics.isError || isEquipmentError) return 'ERR';
 
-    const { bpmRange, stability } = biometrics;
-    return `${bpmRange.min}-${bpmRange.max} BPM`;
+    const { bpmRange } = biometrics;
+    const midpoint = Math.round((bpmRange.min + bpmRange.max) / 2);
+    return `${midpoint}`;
   };
 
   const getStabilityColor = () => {
@@ -251,91 +250,30 @@ const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim, dataRevealed = true }: 
     }
   };
 
-  const getConfidenceDisplay = () => {
-    if (!biometrics || biometrics.isError || !dataRevealed) return '';
-    return `${biometrics.confidence}%`;
-  };
-
   return (
     <Animated.View style={[styles.bpmColumn, { opacity }]}>
-      <Text style={styles.label}>BIOMETRICS</Text>
-      <View style={styles.bpmRow}>
-        <Animated.View
-          style={[
-            styles.pulseDot,
-            {
-              backgroundColor: isLive && dataRevealed ? getStabilityColor() : Theme.colors.textDim,
-              transform: [{ scale: isLive ? pulseAnim : 1 }]
-            }
-          ]}
-        />
-        <Text style={[styles.bpmText, (!isLive || !dataRevealed) && { color: Theme.colors.textDim }]}>
-          {getBpmDisplay()}
-        </Text>
+      <View style={styles.tapeLabel}>
+        <Text style={styles.tapeLabelText}>BPM</Text>
       </View>
-      {dataRevealed && biometrics && !biometrics.isError && (
-        <View style={styles.bpmRow}>
-          <Text style={[styles.stabilityText, { color: getStabilityColor() }]}>
-            {biometrics.stability}
-          </Text>
-          <Text style={styles.confidenceText}>
-            {getConfidenceDisplay()}
-          </Text>
-        </View>
-      )}
-      {dataRevealed && (biometrics?.isError || isEquipmentError) && (
-        <Text style={[styles.stabilityText, { color: Theme.colors.accentDeny }]}>
-          ERROR SENSOR MALFUNCTION
-        </Text>
-      )}
-    </Animated.View>
-  );
-};
-
-const BlinkingBars = () => {
-  return (
-    <View style={styles.barsContainer}>
-      {[...Array(24)].map((_, i) => {
-        const barAnim = useRef(new Animated.Value(Math.random())).current;
-        useEffect(() => {
-          Animated.loop(
-            Animated.sequence([
-              Animated.timing(barAnim, {
-                toValue: Math.random(),
-                duration: 400 + Math.random() * 800,
-                easing: Easing.inOut(Easing.quad),
-                useNativeDriver: false,
-              }),
-              Animated.timing(barAnim, {
-                toValue: Math.random(),
-                duration: 400 + Math.random() * 800,
-                easing: Easing.inOut(Easing.quad),
-                useNativeDriver: false,
-              }),
-            ])
-          ).start();
-        }, []);
-
-        return (
-          <Animated.View 
-            key={i} 
+      <View style={styles.bpmScreen}>
+        <View style={styles.screenStatic} />
+        <View style={styles.bpmScreenInner}>
+          <Animated.View
             style={[
-              styles.bar, 
-              { 
-                height: barAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [6, 36]
-                }),
-                opacity: barAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.2, 0.7]
-                })
+              styles.pulseDot,
+              {
+                backgroundColor: isLive && dataRevealed ? getStabilityColor() : Theme.colors.textDim,
+                transform: [{ scale: isLive ? pulseAnim : 1 }]
               }
-            ]} 
+            ]}
           />
-        );
-      })}
-    </View>
+          <Text style={[styles.bpmScreenValue, (!isLive || !dataRevealed) && { color: Theme.colors.textDim }]}>
+            {getBpmDisplay()}
+          </Text>
+          <Text style={styles.bpmScreenUnit}>BPM</Text>
+        </View>
+      </View>
+    </Animated.View>
   );
 };
 
@@ -556,31 +494,9 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
     }
   }, [isInterrogationActive, interrogationBPM, baselineBPM]);
 
-  useEffect(() => {
-    if (hudStage !== 'full') {
-      setStatusText('INITIALIZING...');
-      return;
-    }
 
-    if (!isScanning) {
-      setStatusText('READY');
-      return;
-    }
 
-    const listener = scanProgress.addListener(({ value }) => {
-      // Status text
-      if (value < 0.4) {
-        setStatusText('SCANNING');
-      } else if (value < 0.9) {
-        setStatusText('PROCESSING');
-      } else {
-        setStatusText('COMPLETE');
-      }
-    });
-
-    return () => scanProgress.removeListener(listener);
-  }, [isScanning, scanProgress, hudStage]);
-
+ 
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -600,7 +516,7 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
 
   return (
     <Animated.View style={{ opacity: panelOpacity }}>
-      <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.scanPanelBorder}>
+      <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.scanPanelBorder} mechanical>
       <View style={styles.fingerprintSection}>
         <View style={styles.fingerprintSlots}>
           <FingerprintSlot 
@@ -631,35 +547,35 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
 
       <View style={styles.matchSection}>
         <Animated.View style={[styles.sexColumn, { opacity: matchSectionOpacity }]}>
-          <Text style={styles.label}>SEX</Text>
-          <View style={styles.matchIndicators}>
-            <View style={[styles.indicator, subject.sex === 'F' && styles.activeIndicator]}>
-              <Text style={[styles.indicatorText, subject.sex === 'F' && styles.activeIndicatorText]}>F</Text>
+          <View style={styles.tapeLabel}>
+            <Text style={styles.tapeLabelText}>SEX</Text>
+          </View>
+          <View style={styles.sexLightsRow}>
+            <View style={[styles.sexLight, subject.sex === 'F' && styles.sexLightActive]}>
+              <Text style={[styles.sexLightText, subject.sex === 'F' && styles.sexLightTextActive]}>F</Text>
             </View>
-            <View style={[styles.indicator, subject.sex === 'M' && styles.activeIndicator]}>
-              <Text style={[styles.indicatorText, subject.sex === 'M' && styles.activeIndicatorText]}>M</Text>
+            <View style={[styles.sexLight, subject.sex === 'M' && styles.sexLightActive]}>
+              <Text style={[styles.sexLightText, subject.sex === 'M' && styles.sexLightTextActive]}>M</Text>
             </View>
           </View>
         </Animated.View>
-
-        <BPMMonitor
-          active={true}
-          delay={BUILD_SEQUENCE.bpmMonitor}
-          bpm={bpmDataAvailable ? bpm : 'ERROR'}
-          pulseAnim={pulseAnim}
-          dataRevealed={biometricsRevealed && bpmDataAvailable}
-        />
       </View>
 
       <Animated.View style={[styles.monitorSection, { opacity: monitorsOpacity }]}>
         <View style={styles.monitorGroup}>
-          <BlinkingBars />
+          <BPMMonitor
+            active={true}
+            delay={BUILD_SEQUENCE.bpmMonitor}
+            bpm={bpmDataAvailable ? bpm : 'ERROR'}
+            pulseAnim={pulseAnim}
+            dataRevealed={biometricsRevealed && bpmDataAvailable}
+          />
         </View>
       </Animated.View>
 
-      <View style={styles.visualizer}>
-        <Text style={styles.visualizerText}>░░▪▪░ {statusText}</Text>
-      </View>
+
+
+    
     </HUDBox>
     </Animated.View>
   );

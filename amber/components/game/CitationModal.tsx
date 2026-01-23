@@ -90,7 +90,7 @@ export const CitationModal = ({ visible, consequence, onClose }: CitationModalPr
             <Text style={styles.sectionTitle}>PENALTY</Text>
             <View style={styles.penaltyBox}>
               <Text style={styles.penaltyText}>
-                Credits deducted: {consequence.creditsPenalty}
+                Health lost: 1
               </Text>
               <Text style={styles.penaltyText}>
                 Cumulative infractions: {consequence.infractionCount}

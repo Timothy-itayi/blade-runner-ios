@@ -12,7 +12,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Theme } from '@/constants/theme';
 import type { SubjectData } from '../../../data/subjects';
-import { useGameStore } from '../../../store/gameStore';
 import { styles } from './IntelPanel.styles';
 import { VerificationFolderStack3D } from './VerificationFolderStack3D';
 import { MEMORY_SLOT_CAPACITY, type LastExtractSnapshot, type ServiceType } from '../../../types/information';
@@ -109,13 +108,11 @@ function applyResistance(t: number) {
 export function VerificationDrawer({
   subject,
   gatheredInformation,
-  resourcesRemaining,
   onQueryPerformed,
   onInformationUpdate,
 }: {
   subject: SubjectData;
   gatheredInformation: any;
-  resourcesRemaining: number;
   onQueryPerformed?: (queryType: QueryType) => void;
   onInformationUpdate?: (info: Partial<any>) => void;
 }) {
@@ -169,7 +166,6 @@ export function VerificationDrawer({
   const isInProgressService = (svc: ServiceType) => {
     // Scans
     if (svc === 'IDENTITY_SCAN') return !gatheredInformation?.identityScan;
-    if (svc === 'HEALTH_SCAN') return !gatheredInformation?.healthScan;
 
     // Tapes: in-progress means playing/buffered and not yet complete.
     if (svc === 'WARRANT') {
@@ -275,8 +271,6 @@ export function VerificationDrawer({
       return;
     }
 
-    const store = useGameStore.getState();
-    if (!store.useSubjectResource()) return;
     if (!startService(service)) return;
 
     // Audio focus rule: one plays; others buffer.
@@ -495,7 +489,6 @@ export function VerificationDrawer({
                 <VerificationFolderStack3D
                   activeFolder={activeFolder}
                   gatheredInformation={gatheredInformation}
-                  resourcesRemaining={resourcesRemaining}
                   scrollX={stackScrollSV}
                   onPressFolder={(folder) => {
                     // Only allow selecting once it’s meaningfully open; otherwise it feels like a UI bug.

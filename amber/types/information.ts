@@ -11,7 +11,6 @@ export type EquipmentType = 'BIOMETRIC_SCANNER' | 'BPM_MONITOR';
 // This is per-subject state (resets when the next subject loads).
 export type ServiceType =
   | 'IDENTITY_SCAN'
-  | 'HEALTH_SCAN'
   | 'WARRANT'
   | 'TRANSIT'
   | 'INCIDENT'
@@ -34,10 +33,9 @@ export interface GatheredInformation {
   // Basic scan (free, always available)
   basicScan: boolean;
   
-  // Resource-costing information gathering
+  // Investigation findings
   identityScan: boolean; // Eye scan - identity matching credentials
   identityScanQuality?: ScanQuality; // Quality of identity scan (based on hold duration)
-  healthScan: boolean;  // Body scan - biometrics, diseases, pathogens
   warrantCheck: boolean;
   transitLog: boolean;
   incidentHistory: boolean;
@@ -62,7 +60,6 @@ export interface GatheredInformation {
   timestamps: {
     basicScan?: number;
     identityScan?: number;
-    healthScan?: number;
     warrantCheck?: number;
     transitLog?: number;
     incidentHistory?: number;
@@ -78,7 +75,6 @@ export const createEmptyInformation = (equipmentFailures: EquipmentType[] = []):
   basicScan: false,
   identityScan: false,
   identityScanQuality: undefined,
-  healthScan: false,
   warrantCheck: false,
   transitLog: false,
   incidentHistory: false,
@@ -102,7 +98,6 @@ export const hasAllInformation = (info: GatheredInformation): boolean => {
   return (
     info.basicScan &&
     info.identityScan &&
-    info.healthScan &&
     info.warrantCheck &&
     info.transitLog &&
     info.incidentHistory
@@ -114,8 +109,8 @@ export const hasAllInformation = (info: GatheredInformation): boolean => {
  */
 export const hasSomeInformation = (info: GatheredInformation): boolean => {
   return (
+    info.basicScan ||
     info.identityScan ||
-    info.healthScan ||
     info.warrantCheck ||
     info.transitLog ||
     info.incidentHistory

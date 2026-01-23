@@ -239,13 +239,11 @@ function FolderStackFallback2D({
 export function VerificationFolderStack3D({
   activeFolder,
   gatheredInformation,
-  resourcesRemaining,
   scrollX,
   onPressFolder,
 }: {
   activeFolder: QueryType | null;
   gatheredInformation: any;
-  resourcesRemaining: number;
   scrollX: SharedValue<number>;
   onPressFolder: (id: QueryType) => void;
 }) {
@@ -284,7 +282,7 @@ export function VerificationFolderStack3D({
         active: activeFolder === 'INCIDENT',
       },
     ];
-  }, [gatheredInformation, resourcesRemaining, activeFolder]);
+  }, [gatheredInformation, activeFolder]);
 
   // Hard stop: if the native module isn’t in this build, do NOT import fiber/native.
   // That import crashes immediately (your screenshot).

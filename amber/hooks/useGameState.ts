@@ -41,13 +41,8 @@ export interface GameState {
   messageHistory: string[];
   shiftDecisions: ShiftDecision[];
   
-  // Credits
-  credits: number;
-  familyNeeds: { food: number; medicine: number; housing: number };
-  daysPassed: number;
   
   // UI state
-  showDossier: boolean;
   showInterrogate: boolean;
   showBioScan: boolean;
   bioScanRevealed: boolean;
@@ -59,7 +54,7 @@ export interface GameState {
   gatheredInformation: GatheredInformation;
 }
 
-export const useGameState = (initialCredits: number = 100) => {
+export const useGameState = () => {
   const [currentSubjectIndex, setCurrentSubjectIndex] = useState(0);
   const [isScanning, setIsScanning] = useState(false);
   const [hasDecision, setHasDecision] = useState(false);
@@ -90,15 +85,7 @@ export const useGameState = (initialCredits: number = 100) => {
   const [messageHistory, setMessageHistory] = useState<string[]>([]);
   const [shiftDecisions, setShiftDecisions] = useState<ShiftDecision[]>([]);
   
-  const [credits, setCredits] = useState(initialCredits);
-  const [familyNeeds, setFamilyNeeds] = useState({
-    food: 50,
-    medicine: 200,
-    housing: 500,
-  });
-  const [daysPassed, setDaysPassed] = useState(0);
   
-  const [showDossier, setShowDossier] = useState(false);
   const [showInterrogate, setShowInterrogate] = useState(false);
   const [showBioScan, setShowBioScan] = useState(false);
   const [bioScanRevealed, setBioScanRevealed] = useState(false);
@@ -165,14 +152,6 @@ export const useGameState = (initialCredits: number = 100) => {
     setMessageHistory,
     shiftDecisions,
     setShiftDecisions,
-    credits,
-    setCredits,
-    familyNeeds,
-    setFamilyNeeds,
-    daysPassed,
-    setDaysPassed,
-    showDossier,
-    setShowDossier,
     showInterrogate,
     setShowInterrogate,
     showBioScan,

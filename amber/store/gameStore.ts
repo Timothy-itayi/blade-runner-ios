@@ -19,22 +19,17 @@ export interface Citation {
 }
 
 interface GameStore {
-  // Credits system
-  credits: number;
-  addCredits: (amount: number) => void;
-  spendCredits: (amount: number) => void;
-  
-  // Resources per subject (per-shift budget)
-  resourcesRemaining: number;
-  resourcesPerShift: number;
-  useResource: () => boolean; // Returns true if resource was used, false if none left
-  resetResourcesForShift: (count: number) => void;
+  // Lives system
+  lives: number;
+  setLives: (count: number) => void;
+  loseLife: (amount?: number) => void;
+  resetLives: () => void;
   
   // Equipment system
   equipment: Record<EquipmentType, Equipment>;
   glitchEquipment: (type: EquipmentType) => void;
   breakEquipment: (type: EquipmentType) => void;
-  repairEquipment: (type: EquipmentType, cost: number) => boolean; // Returns true if repaired
+  repairEquipment: (type: EquipmentType) => void;
   checkEquipmentStatus: (type: EquipmentType) => EquipmentStatus;
   isEquipmentGlitching: (type: EquipmentType) => boolean;
   
@@ -44,10 +39,6 @@ interface GameStore {
   clearCitations: () => void;
   getCitationCount: () => number;
   
-  // Subject processing
-  currentSubjectResources: number; // Resources used for current subject
-  resetSubjectResources: () => void;
-  useSubjectResource: () => boolean;
 }
 
 const INITIAL_EQUIPMENT: Record<EquipmentType, Equipment> = {
@@ -59,28 +50,11 @@ const INITIAL_EQUIPMENT: Record<EquipmentType, Equipment> = {
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
-  // Credits
-  credits: 0, // Start with 0 credits
-  addCredits: (amount) => set((state) => ({ credits: state.credits + amount })),
-  spendCredits: (amount) => set((state) => ({ 
-    credits: Math.max(0, state.credits - amount) 
-  })),
-  
-  // Resources
-  resourcesRemaining: 3, // Per shift - start with 3
-  resourcesPerShift: 3,
-  useResource: () => {
-    const state = get();
-    if (state.resourcesRemaining > 0) {
-      set({ resourcesRemaining: state.resourcesRemaining - 1 });
-      return true;
-    }
-    return false;
-  },
-  resetResourcesForShift: (count = 3) => set({ 
-    resourcesRemaining: count, 
-    resourcesPerShift: count 
-  }),
+  // Lives
+  lives: 3, // Start with 3 lives
+  setLives: (count) => set({ lives: Math.max(0, count) }),
+  loseLife: (amount = 1) => set((state) => ({ lives: Math.max(0, state.lives - amount) })),
+  resetLives: () => set({ lives: 3 }),
   
   // Equipment
   equipment: INITIAL_EQUIPMENT,
@@ -96,19 +70,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       [type]: { ...state.equipment[type], status: 'BROKEN' }
     }
   })),
-  repairEquipment: (type, cost) => {
-    const state = get();
-    if (state.credits >= cost) {
-      set({
-        credits: state.credits - cost,
-        equipment: {
-          ...state.equipment,
-          [type]: { ...state.equipment[type], status: 'OPERATIONAL' }
-        }
-      });
-      return true;
-    }
-    return false;
+  repairEquipment: (type) => {
+    set((state) => ({
+      equipment: {
+        ...state.equipment,
+        [type]: { ...state.equipment[type], status: 'OPERATIONAL' }
+      }
+    }));
   },
   checkEquipmentStatus: (type) => {
     return get().equipment[type].status;
@@ -133,16 +101,4 @@ export const useGameStore = create<GameStore>((set, get) => ({
   })),
   clearCitations: () => set({ citations: [] }),
   getCitationCount: () => get().citations.length,
-  
-  // Subject resources
-  currentSubjectResources: 0,
-  resetSubjectResources: () => set({ currentSubjectResources: 0 }),
-  useSubjectResource: () => {
-    const state = get();
-    if (state.useResource()) {
-      set({ currentSubjectResources: state.currentSubjectResources + 1 });
-      return true;
-    }
-    return false;
-  },
 }));

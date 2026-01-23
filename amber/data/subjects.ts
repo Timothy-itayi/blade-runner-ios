@@ -1,36 +1,31 @@
 // =============================================================================
 // SUBJECT DATA - 12 Subjects across 3 Shifts
-// Year 3184 - Interplanetary Border Control
-// AMBER Security - Earth Entry Processing
+// Year 3184 - Depot Security Lockdown
+// AMBER Security - Infiltration Prevention
 // =============================================================================
 
 // Eye image arrays for cycling through
 const FEMALE_EYES = [
-  require('../assets/female-eyes/female02.jpg'),
-  require('../assets/female-eyes/female03.jpg'),
-  require('../assets/female-eyes/female04.jpg'),
-  require('../assets/female-eyes/female05.jpg'),
-  require('../assets/female-eyes/female06.jpg'),
-  require('../assets/female-eyes/female07.jpg'),
-  require('../assets/female-eyes/female08.jpg'),
-  require('../assets/female-eyes/female09.jpg'),
-  require('../assets/female-eyes/female10.jpg'),
-  require('../assets/female-eyes/female11.jpg'),
-  require('../assets/female-eyes/female12.jpg'),
-  require('../assets/female-eyes/female13.jpg'),
+  require('../assets/female-eyes/female1.mp4'),
+  require('../assets/female-eyes/female2.mp4'),
+  // Fill out indices used by SUBJECTS below (avoid undefined lookups)
+  require('../assets/female-eyes/female1.mp4'),
+  require('../assets/female-eyes/female2.mp4'),
+  require('../assets/female-eyes/female1.mp4'),
+  require('../assets/female-eyes/female2.mp4'),
 ];
 
 const MALE_EYES = [
-  require('../assets/male-eyes/male00.jpg'),
-  require('../assets/male-eyes/male01.jpg'),
-  require('../assets/male-eyes/male02.jpg'),
-  require('../assets/male-eyes/male03.jpg'),
-  require('../assets/male-eyes/male04.jpg'),
-  require('../assets/male-eyes/male05.jpg'),
-  require('../assets/male-eyes/male06.jpg'),
+  require('../assets/male-eyes/male1.mp4'),
+  // Fill out indices used by SUBJECTS below (avoid undefined lookups)
+  require('../assets/male-eyes/male1.mp4'),
+  require('../assets/male-eyes/male1.mp4'),
+  require('../assets/male-eyes/male1.mp4'),
+  require('../assets/male-eyes/male1.mp4'),
+  require('../assets/male-eyes/male1.mp4'),
 ];
 
-// =============================================================================
+// ==========s===================================================================
 // INTERFACES
 // =============================================================================
 
@@ -48,11 +43,22 @@ export interface PersonalMessage {
   intercepted?: boolean;
 }
 
+// News report shown at end of shift based on player decisions
+export interface NewsReport {
+  headline: string;
+  subheadline?: string;
+  body: string;
+  source: string; // e.g., "AMBER NEWS NETWORK", "SECTOR ALERT"
+  tone: 'NEUTRAL' | 'ALARMING' | 'POSITIVE' | 'OMINOUS' | 'TRAGIC';
+  audioFile?: any; // Optional audio narration
+}
+
 export interface Outcome {
   feedback: string;
   consequence: string;
   incidentReport?: IncidentReport;
   personalMessage?: PersonalMessage;
+  newsReport?: NewsReport; // News story that plays if this outcome occurs
   flagWeight?: number;
 }
 
@@ -84,6 +90,16 @@ export interface PersonalityTraits {
   cooperativeness: number; // 0-100, affects investigation ease
   emotionalStability: number; // 0-100, affects response consistency
 }
+
+export type VerificationRecord = {
+  type: 'INCIDENT' | 'WARRANT' | 'TRANSIT';
+  date: string;
+  referenceId: string;
+  source: string;
+  summary: string;
+  contradiction: string;
+  question?: string;
+};
 
 export interface SubjectData {
   // Core Identity
@@ -161,6 +177,9 @@ export interface SubjectData {
     explanation?: string; // What subject says about it
     suspicious?: boolean; // Whether explanation is shady
   };
+
+  // Verification record (single contradictory file)
+  verificationRecord?: VerificationRecord;
   
   // Bio scan data (revealed by bio scan) - audio file for playback
   bioScanData?: {
@@ -192,7 +211,7 @@ export interface SubjectData {
     status: 'ACTIVE' | 'PROVISIONAL' | 'RESTRICTED';
   };
   
-  // Resource-requiring data (costs resources to reveal)
+  // Investigation data revealed by scans/queries
   databaseQuery?: {
     travelHistory: Array<{
       from: string; // Planet name
@@ -235,6 +254,8 @@ export interface SubjectData {
 
 export const SUBJECTS: SubjectData[] = [
   // S1-01: Female replicant with false memories - DENY
+  // BREADCRUMBS: Employment overlap, address mismatch, age doesn't fit timeline
+  // ELEVATION BEHAVIOR: Memories fragment more under stress - reveals contradictions
   {
     name: 'EVA PROM',
     id: 'S1-01',
@@ -246,19 +267,20 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Meeting Jacob Price - personal visit',
+    reasonForVisit: 'Cleared to enter the depot for a personal contact extraction.',
     destinationPlanet: 'EARTH',
     // Subject 1 assets: passport photo, face video, eye video
     profilePic: require('../assets/videos/subjects/subject-1/subject-1-passport.png'),
     videoSource: require('../assets/videos/subjects/subject-1/subject-1-vid.mp4'),
-    eyeVideo: require('../assets/videos/subjects/subject-1/subject1.mp4'), // Eye video (if different from face)
+    // Use the canonical female eye asset for S1-01
+    eyeVideo: require('../assets/female-eyes/female1.mp4'),
     eyeImage: FEMALE_EYES[0], // Fallback
     videoStartTime: 0, // Start from beginning
     videoEndTime: 3, // Loop back at 3 seconds
-    dialogue: "I'm here to meet Jacob. Jacob Price. We've been... we've been planning this.",
+    dialogue: "I'm here to meet my fiancé. Jacob Price. He's waiting for me.",
     biometricData: {
       fingerprintMatch: false, // Replicant fingerprints don't match standard patterns
-      retinalMatch: false,
+      retinalMatch: true,
       warrantStatus: 'CLEAR',
       criminalHistory: [],
       anomalyDetected: true, // Replicant detected
@@ -267,72 +289,149 @@ export const SUBJECTS: SubjectData[] = [
       name: 'EVA PROM',
       idCode: 'TP-2291-47',
       originPlanet: 'TITAN',
-      statedPurpose: 'Personal visit',
+      statedPurpose: 'Meeting fiancé',
       status: 'ACTIVE',
     },
     outcomes: {
       APPROVE: {
         feedback: 'SUBJECT PROCESSED',
-        consequence: 'Replicant entered Earth. Security breach logged.',
-        flagWeight: 3
+        consequence: 'Replicant with false memories entered Earth seeking non-existent person. Security breach logged.',
+        flagWeight: 3,
+        newsReport: {
+          headline: 'WOMAN FOUND WANDERING TRANSIT HUB, CALLING FOR "JACOB"',
+          subheadline: 'Security footage shows subject searching for hours before breakdown',
+          body: 'A woman identified as EVA PROM was found in a dissociative state at Central Transit Hub, repeatedly asking passersby for directions to an address that does not exist. When confronted about "Jacob Price," she became increasingly agitated. Medical teams have confirmed synthetic markers in her bloodwork. Authorities are questioning how she passed border screening.',
+          source: 'AMBER NEWS NETWORK',
+          tone: 'TRAGIC',
+        },
       },
       DENY: {
         feedback: 'ENTRY DENIED',
-        consequence: 'Replicant detained. False memory protocol initiated.',
-        flagWeight: 0
+        consequence: 'Replicant detained. False memory syndrome confirmed. No record of "Jacob Price" exists.',
+        flagWeight: 0,
+        newsReport: {
+          headline: 'REPLICANT DETAINED AT BORDER - FALSE MEMORY SYNDROME CONFIRMED',
+          subheadline: 'Subject believed she was meeting a fiancé who never existed',
+          body: 'AMBER Security successfully identified and detained a Nexus-series replicant attempting entry under false pretenses. The subject, designated EVA PROM, exhibited classic signs of implanted memory syndrome, insisting on the existence of a romantic partner with no corresponding records. "This is exactly the kind of threat our screening process is designed to catch," stated border officials.',
+          source: 'SECTOR SECURITY BULLETIN',
+          tone: 'POSITIVE',
+        },
       }
     },
+    // DOSSIER WITH CONTRADICTIONS:
+    // 1. Birth year 3172 but claims 12 years at archive (would've started at age 0)
+    // 2. Address says "Mars Colony" but origin is TITAN
+    // 3. Occupation "Data Archivist" but employment record shows "Maintenance Tech"
     dossier: {
       name: 'EVA PROM',
-      dateOfBirth: '3172-08-22',
-      address: 'Titan Station, Residential Block 9, Unit 127',
-      occupation: 'Data Archivist',
+      dateOfBirth: '3172-08-22', // Only 12 years old in 3184? Suspicious.
+      address: 'Mars Colony, Sector 7, Hab 42', // CONTRADICTION: Claims she lived on Titan
+      occupation: 'Maintenance Technician', // CONTRADICTION: She says "Data Archivist"
       sex: 'FEMALE',
     },
     dossierAnomaly: {
       type: 'MISMATCH',
-      explanation: "The dossier says I'm a data archivist, but... I don't remember working there. I work at... I work with Jacob. He's a... he's in communications.",
+      explanation: "I... I worked at the archive. I'm sure I did. The records must be wrong.",
       suspicious: true,
     },
-    characterBrief: {
-      personality: 'Nervous, uncertain. Believes her own false memories. Gets confused when details don\'t add up.',
-      background: 'Replicant with implanted false memories. Believes she knows Jacob Price and is coming to meet him.',
-      motivation: 'Desperately wants to believe her memories are real. Becomes defensive when questioned.',
-      tells: ['Hesitation when asked about details', 'Contradicts herself about Jacob', 'Can\'t explain how they met', 'Gets flustered when pressed'],
+    verificationRecord: {
+      type: 'TRANSIT',
+      date: '3184-01-13',
+      referenceId: 'TR-2041',
+      source: 'AMBER TRANSIT HUB',
+      summary: 'Transit log includes an undeclared Mars Relay hop under maintenance routing.',
+      contradiction: 'Intake states direct Titan-to-Earth travel with no intermediate stop.',
+      question: 'Your transit file shows a Mars Relay hop you did not declare. Explain.',
     },
-    // Phase 4: Personality Traits
+    characterBrief: {
+      personality: 'Nervous, uncertain. Believes her own false memories completely. Gets confused and defensive when details don\'t add up.',
+      background: 'Replicant with implanted false memories of a relationship with "Jacob Price" that never existed. No record of Jacob Price exists in any Earth database.',
+      motivation: 'Desperately wants to reunite with fiancé she believes is real. Becomes distressed when memories contradict each other.',
+      tells: ['Changes story about how they met', 'Can\'t remember wedding date or proposal details', 'Contradicts herself about Jacob\'s job', 'Gets emotional when pressed on specifics'],
+    },
     personalityTraits: {
       primaryType: 'CONFUSED',
       secondaryType: 'NERVOUS',
-      trustworthiness: 30, // She believes she's telling truth but isn't
-      cooperativeness: 75, // Tries to help but can't
-      emotionalStability: 35, // Unstable, gets flustered
+      trustworthiness: 30,
+      cooperativeness: 75,
+      emotionalStability: 35,
     },
-    // Phase 3: BPM tells - Contradiction (claims calm but BPM elevated)
     bpmTells: {
       type: 'CONTRADICTION',
       description: 'Subject claims to be calm, but BPM shows significant elevation during questioning',
       baseElevation: 25,
     },
+    // TONE-TIERED RESPONSES: Under pressure, memories FRAGMENT more
     interrogationResponses: {
       responses: {
         origin: {
-          soft: "I'm coming from Titan... to meet Jacob. Jacob Price. We've been talking. For months.",
-          firm: "Titan. I'm here to meet Jacob Price. We've been talking for months.",
-          harsh: "Titan. To meet Jacob Price. I already said that. Why are you circling it?",
+          soft: "Titan. I lived on Titan Station. Block 9. I worked as an archivist there... before Jacob. He's waiting for me here.",
+          firm: "Titan... or was it Mars? No, Titan. Block 9. I remember the view from the window. Jacob used to visit me at work. At the archive.",
+          harsh: "I don't... why are you asking like that? I lived on Titan. Or Mars? The records say Mars but I remember Titan. I remember the cold. Why don't I remember which one?"
         },
         purpose: {
-          soft: "Jacob. I'm here to see Jacob Price. He works in... communications? No, wait... engineering. We met through... through work?",
-          firm: "To see Jacob Price. We met through work. He said he'd help me get settled.",
-          harsh: "To see Jacob Price. The details don't matter. I'm not here to entertain you.",
+          soft: "I'm meeting my fiancé. Jacob Price. He works in communications. We met at the archive.",
+          firm: "Meeting Jacob. He's in... engineering? No, communications. We met at... it was either the archive or a transit hub. I remember his face clearly.",
+          harsh: "Jacob! I'm here for Jacob! He works in... I can't... why can't I remember what he does? I know his face. I know I love him. Why can't I remember how we met?"
         },
-        duration: "I don't know. A few days? Maybe a week? Jacob said... he said he'd help me find a place. But I'm not sure where.",
-        background: "I'm a data archivist. On Titan. But I... I don't really remember much about the work. I remember Jacob though. We've been planning this visit.",
-        previous: "No. No, this is my first time. Jacob said... he said Earth is beautiful. But I'm not sure if he's been here either. We talked about it, but...",
+        duration: {
+          soft: "Permanently. Jacob and I are getting married. He has an apartment ready for us.",
+          firm: "Forever. We're getting married. He sent me the address... somewhere in the city. I wrote it down. I must have written it down.",
+          harsh: "I'm staying! We're getting married! The wedding is... when is the wedding? He told me the date. I know he told me. Why can't I remember the date?"
+        },
+        background: {
+          soft: "I'm a data archivist. That's where I met Jacob. He was doing research there.",
+          firm: "I'm an archivist. Or... the records say maintenance? That's wrong. I worked with data. Jacob was a researcher. Or a contractor. The proposal was at a restaurant.",
+          harsh: "I don't understand these questions! I worked at the archive! I know I did! The records are wrong. Jacob proposed at... at... somewhere beautiful. I remember being happy. I remember saying yes. I REMEMBER."
+        },
+        previous: {
+          soft: "No, first time. Jacob always said Earth was beautiful. He promised to show me everything.",
+          firm: "Never been. Jacob described it to me. The oceans, the trees. We've been planning this for months.",
+          harsh: "No! I've never... have I? No. Jacob would have told me if I'd been here before. He tells me everything. He loves me. He's real. He has to be real."
+        },
+        // New question: directly challenge the dossier contradiction
+        occupation: {
+          soft: "I'm a data archivist. I've worked there for years.",
+          firm: "An archivist. The dossier says maintenance? That's... that must be an error. I remember the data terminals. The files.",
+          harsh: "I'M AN ARCHIVIST! I remember cataloging data! I remember... do I? The terminals were... what color were the terminals? Why can't I see them clearly anymore?"
+        },
+        address: {
+          soft: "I lived on Titan Station. Block 9, Unit 127.",
+          firm: "Titan. The dossier says Mars? No, I... I remember Titan. The ice outside the windows. But I also remember... red dust?",
+          harsh: "I lived on TITAN! I know I did! But... there's another place too. Somewhere red. Somewhere different. Two places. How did I live in two places?"
+        },
       },
     },
+    databaseQuery: {
+      travelHistory: [
+        {
+          from: 'TITAN STATION',
+          to: 'JUPITER TRANSFER',
+          date: '3184-01-12 03:40',
+        },
+        {
+          from: 'JUPITER TRANSFER',
+          to: 'MARS RELAY',
+          date: '3184-01-13 19:05',
+        },
+        {
+          from: 'MARS RELAY',
+          to: 'EARTH ORBITAL',
+          date: '3184-01-16 08:22',
+        },
+      ],
+      lastSeenLocation: 'Titan Station — Residential Block 9, Unit 127',
+      lastSeenDate: '3184-01-11 19:45',
+      discrepancies: [
+        'NO RECORD of "Jacob Price" exists in any Earth, Mars, or Outer Colony database.',
+        'Subject claims engagement but no marriage license application found in any jurisdiction.',
+        'Archive work records show subject worked alone; no contractors or researchers visited during stated period.',
+        'Subject\'s described memories contain temporal inconsistencies consistent with implanted memory syndrome.',
+        'Dossier address (Mars) conflicts with stated origin (Titan) and travel records.',
+        'Listed occupation (Maintenance) conflicts with subject\'s stated profession (Archivist).',
+      ],
+    },
     bioScanData: {
-      // audioFile: require('../assets/audio/bio-scans/subject-1-bioscan.mp3'),
       biologicalType: 'REPLICANT',
       race: 'Titan Station Gen 4',
       fingerprintType: 'REPLICANT',
@@ -343,6 +442,8 @@ export const SUBJECTS: SubjectData[] = [
   },
   
   // S1-02: Human with active warrant - DENY per directive
+  // BREADCRUMBS: Recent Earth travel (contradicts "years"), Earth address exists, occupation mismatch
+  // ELEVATION BEHAVIOR: Desperate personality CRACKS - reveals truth under pressure
   {
     name: 'MARA VOLKOV',
     id: 'S1-02',
@@ -354,7 +455,7 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 1,
     warrants: 'WARRANT NO 88412',
-    reasonForVisit: 'Visiting family on Earth',
+    reasonForVisit: 'Family already inside the depot—requesting entry.',
     destinationPlanet: 'EARTH',
     videoSource: require('../assets/videos/subjects/subject02.mp4'),
     eyeImage: FEMALE_EYES[1],
@@ -377,53 +478,143 @@ export const SUBJECTS: SubjectData[] = [
       APPROVE: {
         feedback: 'SUBJECT PROCESSED',
         consequence: 'Subject with active warrant allowed entry. Citation issued.',
-        flagWeight: 2
+        flagWeight: 2,
+        newsReport: {
+          headline: 'FUGITIVE EVADES CAPTURE - SAFE HOUSE RAIDED, SUSPECT GONE',
+          subheadline: 'Authorities confirm subject entered sector despite active warrant',
+          body: 'A coordinated raid on a suspected safe house in District 7 came up empty after MARA VOLKOV, wanted in connection with restricted cargo theft on Europa, successfully evaded detention. Security officials are reviewing border screening procedures after the suspect apparently passed through AMBER checkpoints despite flagged warrant status. Her brother, DMITRI VOLKOV, is now being sought for questioning.',
+          source: 'SECTOR CRIME WATCH',
+          tone: 'ALARMING',
+        },
       },
       DENY: {
         feedback: 'ENTRY DENIED',
         consequence: 'Subject detained per active warrant.',
-        flagWeight: 0
+        flagWeight: 0,
+        newsReport: {
+          headline: 'WANTED CARGO THIEF APPREHENDED AT BORDER',
+          subheadline: 'Subject attempted entry with active warrant - detained without incident',
+          body: 'AMBER Security detained MARA VOLKOV at the border checkpoint today, ending a months-long manhunt. The subject, wanted in connection with the theft of restricted cargo from Europa Station docks, attempted to enter under the pretense of a family visit. "The warrant system worked exactly as intended," officials stated. The subject is being held pending extradition proceedings.',
+          source: 'AMBER NEWS NETWORK',
+          tone: 'POSITIVE',
+        },
       }
     },
+    // DOSSIER WITH CONTRADICTIONS:
+    // 1. Occupation says "Cargo Handler" but she claims "Data Analyst"
+    // 2. Secondary address on EARTH - contradicts "visiting family"
+    // 3. Recent travel to Earth 3 months ago - contradicts "it's been so long"
     dossier: {
       name: 'MARA VOLKOV',
       dateOfBirth: '3158-07-22',
-      address: 'Europa Station, Residential Block 3, Apt 89',
-      occupation: 'Data Analyst',
+      address: 'Earth - New Angeles, District 7, Unit 445', // CONTRADICTION: She says she lives on Europa
+      occupation: 'Cargo Handler - Restricted Goods', // CONTRADICTION: She claims "Data Analyst"
       sex: 'FEMALE',
     },
     dossierAnomaly: {
       type: 'MISMATCH',
-      explanation: 'The warrant is from a misunderstanding. I\'m just trying to see my family.',
+      explanation: 'The records are outdated. I moved back to Europa. The occupation is... from a previous job.',
       suspicious: true,
     },
-    characterBrief: {
-      personality: 'Nervous, emotional, desperate. Trying to hide something but not very good at it.',
-      background: 'Data analyst with active warrant. Claims misunderstanding.',
-      motivation: 'Wants to see family on Earth despite warrant. Willing to lie.',
-      tells: ['Nervous pauses', 'Emotional appeals', 'Vague about warrant details'],
+    verificationRecord: {
+      type: 'WARRANT',
+      date: '3183-11-02',
+      referenceId: 'WR-88412',
+      source: 'EUROPA SECURITY DOCKET',
+      summary: 'Active warrant for restricted cargo theft at Europa docks.',
+      contradiction: 'Declared family visit with no legal issues on file.',
+      question: 'Active warrant WR-88412 is attached to your record. Why are you attempting entry?',
     },
-    // Phase 4: Personality Traits
+    characterBrief: {
+      personality: 'Nervous, emotional, desperate. Trying to hide something but not very good at it. Will crack under sustained pressure.',
+      background: 'Cargo handler with active warrant for theft of restricted goods. Claims misunderstanding but is fleeing prosecution.',
+      motivation: 'Running from the warrant, not visiting family. Brother lives on Earth and can hide her.',
+      tells: ['Nervous pauses', 'Emotional appeals', 'Vague about warrant details', 'Story falls apart under pressure'],
+    },
     personalityTraits: {
       primaryType: 'DESPERATE',
       secondaryType: 'DECEPTIVE',
-      trustworthiness: 40, // Lying about warrant
-      cooperativeness: 60, // Will cooperate to get through
-      emotionalStability: 25, // Highly emotional
+      trustworthiness: 40,
+      cooperativeness: 60,
+      emotionalStability: 25,
     },
+    // TONE-TIERED RESPONSES: Under pressure, she CRACKS and reveals truth
     interrogationResponses: {
       responses: {
-        origin: "Please. My family is on Earth. The warrant... it's a misunderstanding.",
-        purpose: "I need to see them. It's been so long. Please understand.",
-        duration: "Just a few days. I'll be careful. I won't cause trouble.",
-        background: "I'm a data analyst. I work with numbers. That's all.",
-        previous: "Yes, but... that was before the warrant. Things are different now.",
-        surgery: "The scar? That's... that's from an old accident. Nothing important. Why are you asking about that?",
-        hairDye: "I dyed my hair. So what? Lots of people do. It doesn't mean anything.",
+        origin: {
+          soft: "Europa. I live on Europa Station. My family is here on Earth. Please, I just want to see them.",
+          firm: "I'm from Europa. I moved there after... after some trouble. But my family is here. I need to be with them.",
+          harsh: "I... I used to live on Earth. The dossier is right. I fled to Europa after... after the incident. I'm trying to come back. Please."
+        },
+        purpose: {
+          soft: "I need to see my family. It's been so long. Please understand.",
+          firm: "Family. I'm visiting family. My brother is here. I haven't seen him in... a while.",
+          harsh: "I can't go back to Europa! They're looking for me there too! My brother said he'd help me disappear. I'm sorry. I'm so sorry. I just need to get through."
+        },
+        duration: {
+          soft: "Just a few days. I'll be careful. I won't cause trouble.",
+          firm: "A week. Maybe two. However long the visit takes.",
+          harsh: "I don't know! I can't go back! Don't you understand? If you send me back, they'll find me. Please. I'm begging you."
+        },
+        background: {
+          soft: "I'm a data analyst. I work with numbers. That's all.",
+          firm: "I worked in logistics. Data work. The cargo handling was... temporary. It's not what I do.",
+          harsh: "I moved cargo. Restricted cargo. I didn't know what was in the containers at first. By the time I figured it out, I was already in too deep. The warrant is for theft but I was just trying to get out."
+        },
+        previous: {
+          soft: "Yes, but that was before the warrant. Things are different now.",
+          firm: "I've been here before. Recently. Three months ago. I was... scoping things out.",
+          harsh: "I came three months ago to set things up with my brother. He has a place for me. Off the grid. I just need to get there."
+        },
+        warrant: {
+          soft: "It's a misunderstanding. I didn't steal anything. They have the wrong person.",
+          firm: "The warrant... it's complicated. I was involved with the wrong people. But I'm not a thief.",
+          harsh: "I took the cargo manifest. They were shipping weapons to the outer colonies. I tried to expose them and they framed me. Now I'm running from everyone. Earth is my only chance."
+        },
+        occupation: {
+          soft: "I'm a data analyst. The records must be outdated.",
+          firm: "I did cargo work for a while. It paid better. The dossier hasn't been updated.",
+          harsh: "I handled restricted cargo. I know what that sounds like. But I was trying to do the right thing. The warrant makes me look guilty but I was trying to blow the whistle."
+        },
+        address: {
+          soft: "I live on Europa now. I moved years ago.",
+          firm: "I had an apartment on Earth. I left it when things got complicated.",
+          harsh: "My brother has a safe house at that address. He set it up for me. That's why it's in my records. I was going to disappear there."
+        },
       },
     },
+    databaseQuery: {
+      travelHistory: [
+        {
+          from: 'EUROPA STATION',
+          to: 'EARTH ORBITAL',
+          date: '3183-10-05 14:20', // 3 months ago - contradicts "it's been so long"
+          flagged: true,
+          flagNote: 'Subject entered Earth under different credentials. Left within 48 hours.',
+        },
+        {
+          from: 'EARTH ORBITAL',
+          to: 'EUROPA STATION',
+          date: '3183-10-07 09:15',
+          flagged: true,
+          flagNote: 'Rapid departure. Possible reconnaissance.',
+        },
+        {
+          from: 'EUROPA STATION',
+          to: 'EARTH ORBITAL',
+          date: '3184-01-15 11:30',
+        },
+      ],
+      lastSeenLocation: 'Europa Station — Cargo Bay 7',
+      lastSeenDate: '3184-01-14 23:55',
+      discrepancies: [
+        'Subject claims "years" since seeing family but visited Earth 3 months ago.',
+        'Dossier shows current Earth address despite claiming Europa residence.',
+        'Occupation mismatch: Subject claims data analyst but records show cargo handler.',
+        'Active warrant relates to theft of restricted cargo from Europa docks.',
+      ],
+    },
     bioScanData: {
-      // audioFile: require('../assets/audio/bio-scans/subject-2-bioscan.mp3'),
       biologicalType: 'HUMAN',
       race: 'Europa Native',
       fingerprintType: 'HUMAN',
@@ -431,16 +622,17 @@ export const SUBJECTS: SubjectData[] = [
       geneticPurity: 94,
       augmentationLevel: 'NONE',
     },
-    // Phase 3: BPM tells - False positive (elevated BPM but truthful - genuine stress about family)
     bpmTells: {
       type: 'FALSE_POSITIVE',
-      description: 'Elevated BPM likely due to genuine stress about family situation, not deception',
+      description: 'Elevated BPM likely due to genuine stress about situation, not pure deception - she is scared',
       baseElevation: 15,
       isGenuinelyStressed: true,
     },
   },
   
-  // S1-03: Human cyborg with recent surgery - APPROVE (no warrant)
+  // S1-03: Human cyborg with recent surgery - APPROVE (no warrant, but suspicious)
+  // BREADCRUMBS: Occupation mismatch (military vs engineer), previous flagged visit, classified augmentation
+  // ELEVATION BEHAVIOR: Deflects with jargon under firm pressure, STONEWALLS under harsh pressure
   {
     name: 'JAMES CHEN',
     id: 'S1-03',
@@ -452,7 +644,7 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Medical consultation on Earth',
+    reasonForVisit: 'Medical intake required at depot triage.',
     destinationPlanet: 'EARTH',
     videoSource: require('../assets/videos/subjects/subject03.mp4'),
     eyeImage: MALE_EYES[0],
@@ -475,55 +667,159 @@ export const SUBJECTS: SubjectData[] = [
     outcomes: {
       APPROVE: {
         feedback: 'SUBJECT PROCESSED',
-        consequence: 'Subject processed. Medical consultation authorized.',
-        flagWeight: 0
+        consequence: 'Subject processed. Medical consultation authorized. Note: Augmentation classification flagged for monitoring.',
+        flagWeight: 0,
+        newsReport: {
+          headline: 'CLASSIFIED MILITARY FACILITY REPORTS DATA BREACH',
+          subheadline: 'Investigation ongoing - connection to recent border crossing unclear',
+          body: 'Security officials at a restricted medical facility are investigating unauthorized data access following a routine calibration appointment. A source familiar with the matter indicated the breach involved classified neural interface specifications. The subject of the appointment, a military contractor from Mars Colony, has not been charged. Officials declined to comment on whether border screening protocols were followed.',
+          source: 'SECTOR INTELLIGENCE BRIEF',
+          tone: 'OMINOUS',
+        },
       },
       DENY: {
         feedback: 'ENTRY DENIED',
-        consequence: 'Subject denied entry. Medical consultation cancelled.',
-        flagWeight: 1
+        consequence: 'Subject denied entry. Medical consultation cancelled. Subject flagged for military contractor scrutiny.',
+        flagWeight: 1,
+        newsReport: {
+          headline: 'MILITARY CONTRACTOR DENIED ENTRY - CORPORATE TENSIONS RISE',
+          subheadline: 'Mars Colony defense firms file formal complaint over border decision',
+          body: 'A routine border denial has escalated into a diplomatic incident after JAMES CHEN, a Level 4 military contractor, was refused entry for medical consultation. His employer has filed a formal complaint alleging "overzealous screening procedures." AMBER officials defended the decision, citing "unresolved questions regarding previous visits." The contractor has returned to Mars Colony pending review.',
+          source: 'AMBER NEWS NETWORK',
+          tone: 'NEUTRAL',
+        },
       }
     },
+    // DOSSIER WITH CONTRADICTIONS:
+    // 1. Occupation "Military Contractor - CLASSIFIED" but he says "Engineer"
+    // 2. Previous visit to Earth was flagged for data access
+    // 3. Employment gap during augmentation period
     dossier: {
       name: 'JAMES CHEN',
       dateOfBirth: '3150-03-15',
       address: 'Mars Colony, Sector 7, Unit 234',
-      occupation: 'Engineer',
+      occupation: 'Military Contractor - CLEARANCE LEVEL 4', // CONTRADICTION: He claims "Engineer"
       sex: 'MALE',
     },
-    characterBrief: {
-      personality: 'Calm, professional, slightly defensive. Hiding something about recent surgery.',
-      background: 'Engineer with recent cybernetic augmentation. Nervous about scrutiny.',
-      motivation: 'Needs medical consultation but doesn\'t want to discuss augmentation details.',
-      tells: ['Deflects questions about surgery', 'Overly technical explanations', 'Nervous when pressed about modifications'],
+    dossierAnomaly: {
+      type: 'MISMATCH',
+      explanation: 'Infrastructure engineering for military installations. It\'s technically contractor work.',
+      suspicious: true,
     },
-    // Phase 4: Personality Traits
+    verificationRecord: {
+      type: 'INCIDENT',
+      date: '3182-06-16',
+      referenceId: 'INC-7721',
+      source: 'EARTH MEDICAL FACILITY',
+      summary: 'Incident report flags unauthorized data access during prior consultation.',
+      contradiction: 'Claims routine medical visit with no prior issues.',
+      question: 'Your file lists a prior access incident at a restricted facility. Explain that.',
+    },
+    characterBrief: {
+      personality: 'Calm, professional, trained to deflect. Will use complexity and classification to avoid direct answers. Stonewalls completely if pushed too hard.',
+      background: 'Military contractor with classified neural augmentation. "Medical consultation" is cover for implant recalibration at restricted Earth facility.',
+      motivation: 'Needs specific recalibration only available on Earth. Cannot reveal true nature of augmentation without violating security clearance.',
+      tells: ['Deflects with technical jargon', 'Overuses "classified"', 'Goes completely silent under harsh pressure', 'Too calm - trained response'],
+    },
     personalityTraits: {
       primaryType: 'PROFESSIONAL',
       secondaryType: 'DECEPTIVE',
-      trustworthiness: 65, // Mostly honest, hiding minor details
-      cooperativeness: 80, // Will cooperate
-      emotionalStability: 70, // Fairly stable
+      trustworthiness: 65,
+      cooperativeness: 80,
+      emotionalStability: 70,
     },
+    // TONE-TIERED RESPONSES: Firm = technical deflection, Harsh = complete stonewall
     interrogationResponses: {
       responses: {
-        origin: "Mars Colony. I'm here for a medical consultation. Standard procedure.",
-        purpose: "Medical consultation. My doctor recommended Earth specialists. It's routine.",
-        duration: "A week, maybe two. Depends on the consultation results.",
-        background: "I'm an engineer. Infrastructure maintenance. Nothing special.",
-        previous: "No, this is my first time. I've heard good things about Earth medical facilities.",
-        surgery: "The augmentation? That's... that's work-related. My employer required it. I don't see why that matters for entry.",
-        cybernetic: "The neural implant? That's classified. Work security. I can't discuss it. It's standard for my position.",
+        origin: {
+          soft: "Mars Colony. I'm here for a medical consultation. Standard procedure.",
+          firm: "Mars Colony, Sector 7. I work in specialized infrastructure. The consultation relates to compatibility with certain... work environments.",
+          harsh: "I've already answered that. Mars. Medical consultation. That's all I'm authorized to disclose."
+        },
+        purpose: {
+          soft: "Medical consultation. My doctor recommended Earth specialists. It's routine.",
+          firm: "Neuro-cybernetic calibration consultation. The specialists on Mars lack certain proprietary equipment. It's a technical necessity.",
+          harsh: "Medical. That's the extent of what I can tell you. Any further details are above your clearance level."
+        },
+        duration: {
+          soft: "A week, maybe two. Depends on the consultation results.",
+          firm: "The calibration process requires 8-14 days depending on system integration metrics. It's a precise procedure.",
+          harsh: "As long as medically necessary. I'm not at liberty to discuss operational timelines."
+        },
+        background: {
+          soft: "I'm an engineer. Infrastructure maintenance. Nothing special.",
+          firm: "Systems engineering for specialized infrastructure. My work involves classified installations. I can't be more specific without violating my clearance.",
+          harsh: "My background is classified. I've told you what I can. Further questions in this direction are pointless."
+        },
+        previous: {
+          soft: "No, this is my first time. I've heard good things about Earth medical facilities.",
+          firm: "I've been to Earth before. For similar consultations. The flagged visit was a... administrative error that has been resolved.",
+          harsh: "Previous travel is not relevant to this entry request. I have valid documentation. That should be sufficient."
+        },
+        surgery: {
+          soft: "The augmentation? That's work-related. My employer required it.",
+          firm: "The neural interface is a Type-7 cognitive enhancement suite. Required for my work environment. The specifics are proprietary to my employer.",
+          harsh: "The augmentation is classified. I will not discuss it further. My documentation is in order."
+        },
+        cybernetic: {
+          soft: "The neural implant? That's classified. Work security. I can't discuss it.",
+          firm: "It's a military-grade cognitive interface. Standard issue for Level 4 contractors. Beyond that, I'm contractually and legally prohibited from disclosure.",
+          harsh: "[Subject remains silent and maintains eye contact. He does not respond to the question.]"
+        },
+        occupation: {
+          soft: "Engineer. I work on infrastructure systems.",
+          firm: "The dossier is technically accurate. I'm contracted for military infrastructure projects. 'Engineer' is the civilian-friendly designation.",
+          harsh: "My employment status is not subject to border interrogation. I have valid entry documentation. Process it or escalate to someone with appropriate clearance."
+        },
+        flagged: {
+          soft: "The previous visit? There was a misunderstanding with facility access.",
+          firm: "The flag relates to a routine security audit. My access credentials triggered an automated alert. It was resolved internally.",
+          harsh: "That incident is sealed. I cannot and will not discuss it. You don't have clearance to access those records anyway."
+        },
       },
     },
+    databaseQuery: {
+      travelHistory: [
+        {
+          from: 'MARS COLONY',
+          to: 'EARTH ORBITAL',
+          date: '3182-06-15 08:00',
+          flagged: true,
+          flagNote: 'Unauthorized access to restricted medical facility data systems. Investigation closed - CLASSIFIED.',
+        },
+        {
+          from: 'EARTH ORBITAL',
+          to: 'MARS COLONY',
+          date: '3182-06-22 14:30',
+        },
+        {
+          from: 'MARS COLONY',
+          to: 'EARTH ORBITAL',
+          date: '3184-01-16 09:45',
+        },
+      ],
+      lastSeenLocation: 'Mars Colony — Military Sector, Facility Unknown',
+      lastSeenDate: '3184-01-15 22:00',
+      discrepancies: [
+        'Occupation mismatch: Subject claims "Engineer" but dossier shows "Military Contractor - CLEARANCE LEVEL 4".',
+        'Previous Earth visit flagged for unauthorized data access at restricted facility.',
+        'Employment records show 6-month gap corresponding to augmentation implantation period.',
+        'Current "medical consultation" destination is same restricted facility from flagged 3182 visit.',
+      ],
+    },
     bioScanData: {
-      // audioFile: require('../assets/audio/bio-scans/subject-3-bioscan.mp3'),
       biologicalType: 'HUMAN_CYBORG',
       race: 'Mars Colony Gen 2',
       fingerprintType: 'HUMAN',
       bioStructure: 'ENHANCED',
       geneticPurity: 72,
       augmentationLevel: 'MODERATE',
+    },
+    bpmTells: {
+      type: 'FALSE_NEGATIVE',
+      description: 'Subject shows minimal BPM variation even under pressure - trained to control physiological responses',
+      baseElevation: -5,
+      isGoodLiar: true,
     },
   },
   
@@ -539,7 +835,7 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Corporate business meeting',
+    reasonForVisit: 'Corporate breach audit inside the facility.',
     destinationPlanet: 'EARTH',
     videoSource: require('../assets/videos/subjects/subject03.mp4'),
     eyeImage: MALE_EYES[1],
@@ -577,6 +873,15 @@ export const SUBJECTS: SubjectData[] = [
       address: 'Titan Corporate Tower, Executive Level 12',
       occupation: 'Corporate Executive',
       sex: 'MALE',
+    },
+    verificationRecord: {
+      type: 'INCIDENT',
+      date: '3183-12-02',
+      referenceId: 'INC-5409',
+      source: 'AMBER ACCESS LOG',
+      summary: 'Executive override used to access Secure Bay 3 during last visit.',
+      contradiction: 'No access request or audit meeting logged for that visit.',
+      question: 'Your record shows a Secure Bay 3 access override. What was the purpose?',
     },
     characterBrief: {
       personality: 'Confident, arrogant, dismissive. Thinks rules don\'t apply to him.',
@@ -626,9 +931,11 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Academic conference',
+    reasonForVisit: 'Systems review for depot breach containment.',
     destinationPlanet: 'EARTH',
+    profilePic: require('../assets/subjects-passports/vera.png'),
     videoSource: require('../assets/videos/subjects/subject02.mp4'),
+    eyeVideo: require('../assets/female-eyes/vera-vid.mp4'),
     eyeImage: FEMALE_EYES[2],
     dialogue: "I'm here for the conference. Everything is legitimate.",
     biometricData: {
@@ -669,6 +976,15 @@ export const SUBJECTS: SubjectData[] = [
       type: 'SURGERY',
       explanation: "The fingerprint modification? That's... that was a medical procedure. I had an accident. The doctors had to reconstruct my hand.",
       suspicious: true,
+    },
+    verificationRecord: {
+      type: 'INCIDENT',
+      date: '3184-01-04',
+      referenceId: 'INC-6103',
+      source: 'EUROPA MEDICAL REGISTRY',
+      summary: 'Biometric alteration recorded within the last 30 days.',
+      contradiction: 'Recent biometric change not disclosed on intake.',
+      question: 'A biometric alteration was logged last month. Why was it not disclosed?',
     },
     characterBrief: {
       personality: 'Intelligent, evasive, nervous. Hiding something about recent surgery.',
@@ -725,7 +1041,7 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Visiting family on Earth',
+    reasonForVisit: 'Escort request to retrieve family from the depot.',
     destinationPlanet: 'EARTH',
     videoSource: require('../assets/videos/subjects/subject03.mp4'),
     eyeImage: MALE_EYES[2],
@@ -762,6 +1078,15 @@ export const SUBJECTS: SubjectData[] = [
       address: 'Europa Station, Residential Block 3, Apt 90',
       occupation: 'Mechanic',
       sex: 'MALE',
+    },
+    verificationRecord: {
+      type: 'TRANSIT',
+      date: '3183-10-05',
+      referenceId: 'TR-4472',
+      source: 'AMBER TRANSIT HUB',
+      summary: 'Transit log shows a prior Earth entry under temporary work permit.',
+      contradiction: 'States this is his first visit to Earth.',
+      question: 'Transit logs show a prior Earth entry. Why did you say this is your first visit?',
     },
     characterBrief: {
       personality: 'Worried, genuine, concerned about family. Not hiding anything major.',
@@ -811,9 +1136,10 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Medical treatment continuation',
+    reasonForVisit: 'Medical access to stabilize injuries in the depot.',
     destinationPlanet: 'EARTH',
     videoSource: require('../assets/videos/subjects/subject02.mp4'),
+    eyeVideo: require('../assets/female-eyes/clara-vance.mp4'),
     eyeImage: FEMALE_EYES[3],
     dialogue: "I need to continue my treatment. The doctors on Mars can't help me anymore.",
     biometricData: {
@@ -854,6 +1180,15 @@ export const SUBJECTS: SubjectData[] = [
       type: 'SURGERY',
       explanation: "The surgeries? I had an accident. A mining accident. They had to reconstruct... everything. My face, my leg. It's all documented.",
       suspicious: false,
+    },
+    verificationRecord: {
+      type: 'INCIDENT',
+      date: '3183-12-20',
+      referenceId: 'INC-3920',
+      source: 'MARS MEDICAL BOARD',
+      summary: 'Clinic audit flags elective facial reconstruction outside injury scope.',
+      contradiction: 'Claims reconstruction was solely due to a mining accident.',
+      question: 'Your medical record lists elective reconstruction outside the accident scope. Explain.',
     },
     characterBrief: {
       personality: 'Vulnerable, honest, desperate for help. Not hiding anything.',
@@ -903,7 +1238,7 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Seeking employment opportunities',
+    reasonForVisit: 'Maintenance contract for depot systems.',
     destinationPlanet: 'EARTH',
     videoSource: require('../assets/videos/subjects/subject02.mp4'),
     eyeImage: FEMALE_EYES[4],
@@ -941,6 +1276,15 @@ export const SUBJECTS: SubjectData[] = [
       address: 'Titan Station, Residential Block 12, Unit 445',
       occupation: 'Service Worker',
       sex: 'FEMALE',
+    },
+    verificationRecord: {
+      type: 'INCIDENT',
+      date: '3184-01-08',
+      referenceId: 'INC-4581',
+      source: 'AMBER CONTRACT REGISTRY',
+      summary: 'Maintenance contract verification failed—no active contract on file.',
+      contradiction: 'Claims a depot maintenance contract as the reason for entry.',
+      question: 'No maintenance contract is on file. Who contracted you for this work?',
     },
     characterBrief: {
       personality: 'Desperate, uncertain, trying to pass as human. Doesn\'t fully understand what she is.',
@@ -990,7 +1334,7 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Family emergency',
+    reasonForVisit: 'Emergency entry—family trapped inside.',
     destinationPlanet: 'EARTH',
     videoSource: require('../assets/videos/subjects/subject02.mp4'),
     eyeImage: FEMALE_EYES[5],
@@ -1028,6 +1372,15 @@ export const SUBJECTS: SubjectData[] = [
       address: 'Mars Colony, Residential Sector 4, Unit 112',
       occupation: 'Nurse',
       sex: 'FEMALE',
+    },
+    verificationRecord: {
+      type: 'INCIDENT',
+      date: '3184-01-15',
+      referenceId: 'INC-5044',
+      source: 'MARS SURGICAL BOARD',
+      summary: 'Recent augmentation logged; travel restriction requires 30-day recovery window.',
+      contradiction: 'Requests immediate travel under emergency exemption.',
+      question: 'Your augmentation was logged three days ago. Why are you traveling before clearance?',
     },
     characterBrief: {
       personality: 'Urgent, emotional, genuine. Legitimate emergency but suspicious timing of surgery.',
@@ -1077,7 +1430,7 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Visiting family on Earth',
+    reasonForVisit: 'Authorized access to locate family in the depot.',
     destinationPlanet: 'EARTH',
     videoSource: require('../assets/videos/subjects/subject03.mp4'),
     eyeImage: MALE_EYES[3],
@@ -1114,6 +1467,15 @@ export const SUBJECTS: SubjectData[] = [
       address: 'Mars Colony, Residential Sector 4, Unit 113',
       occupation: 'Student',
       sex: 'MALE',
+    },
+    verificationRecord: {
+      type: 'TRANSIT',
+      date: '3183-08-11',
+      referenceId: 'TR-3307',
+      source: 'AMBER TRANSIT HUB',
+      summary: 'Prior Earth visit logged six months ago with a short-stay permit.',
+      contradiction: 'States this is his first visit to Earth.',
+      question: 'Transit logs show a prior Earth visit six months ago. Why did you say this is your first?',
     },
     characterBrief: {
       personality: 'Worried, genuine, concerned about sister. Honest and straightforward.',
@@ -1162,7 +1524,7 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Prosthetic maintenance',
+    reasonForVisit: 'Scheduled prosthetic service at depot clinic.',
     destinationPlanet: 'EARTH',
     videoSource: require('../assets/videos/subjects/subject03.mp4'),
     eyeImage: MALE_EYES[4],
@@ -1200,6 +1562,15 @@ export const SUBJECTS: SubjectData[] = [
       address: 'Europa Station, Industrial Sector, Worker Housing',
       occupation: 'Miner',
       sex: 'MALE',
+    },
+    verificationRecord: {
+      type: 'TRANSIT',
+      date: '3183-12-28',
+      referenceId: 'TR-7819',
+      source: 'EUROPA MEDICAL SHUTTLE',
+      summary: 'Prosthetic maintenance completed on Earth last quarter; next service not due.',
+      contradiction: 'Claims urgent maintenance required now.',
+      question: 'Your service record shows maintenance completed last quarter. Why the urgent visit?',
     },
     characterBrief: {
       personality: 'Practical, straightforward, no-nonsense. Honest about his situation.',
@@ -1249,7 +1620,7 @@ export const SUBJECTS: SubjectData[] = [
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
-    reasonForVisit: 'Diplomatic mission',
+    reasonForVisit: 'Corporate security liaison for breach response.',
     destinationPlanet: 'EARTH',
     videoSource: require('../assets/videos/subjects/subject03.mp4'),
     eyeImage: MALE_EYES[5],
@@ -1287,6 +1658,15 @@ export const SUBJECTS: SubjectData[] = [
       address: 'Titan Corporate Headquarters, Diplomatic Wing',
       occupation: 'Diplomatic Representative',
       sex: 'UNKNOWN',
+    },
+    verificationRecord: {
+      type: 'INCIDENT',
+      date: '3184-01-10',
+      referenceId: 'INC-9001',
+      source: 'EARTH COUNCIL REGISTRY',
+      summary: 'Diplomatic registry lacks authorization for this liaison.',
+      contradiction: 'Claims full diplomatic clearance for breach response.',
+      question: 'Earth Council registry has no authorization for this liaison. Explain the discrepancy.',
     },
     characterBrief: {
       personality: 'Cold, calculating, superior. Knows exactly what it is and is confident in its position.',

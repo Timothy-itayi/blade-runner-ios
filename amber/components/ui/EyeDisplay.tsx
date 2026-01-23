@@ -61,12 +61,14 @@ export const EyeDisplay = ({
   viewChannel = 'facial',
   onChannelChange,
   eyeScannerActive = false,
+  onToggleEyeScanner,
   onEyeScannerTap,
   identityScanHoldActive = false,
   onIdentityScanHoldStart,
   onIdentityScanHoldEnd,
   interactionPhase = 'investigation',
   isIdentityScanning = false,
+  identityScanComplete = false,
   onIdentityScanComplete,
   biometricsRevealed = false,
 }: { 
@@ -85,12 +87,14 @@ export const EyeDisplay = ({
   viewChannel?: 'facial' | 'eye',
   onChannelChange?: () => void,
   eyeScannerActive?: boolean,
+  onToggleEyeScanner?: () => void,
   onEyeScannerTap?: (holdDurationMs?: number) => void,
   identityScanHoldActive?: boolean,
   onIdentityScanHoldStart?: () => void,
   onIdentityScanHoldEnd?: (holdDurationMs: number) => void,
   interactionPhase?: 'greeting' | 'credentials' | 'investigation',
   isIdentityScanning?: boolean,
+  identityScanComplete?: boolean,
   onIdentityScanComplete?: () => void,
   biometricsRevealed?: boolean,
 }) => {
@@ -104,6 +108,7 @@ export const EyeDisplay = ({
   const eyeScannerLaser = useRef(new Animated.Value(0)).current;
   const eyeScannerLaserOpacity = useRef(new Animated.Value(0)).current;
   const holdMarkerOpacity = useRef(new Animated.Value(0)).current;
+  const holdTintOpacity = useRef(new Animated.Value(0)).current;
   
   // Identity scan animation states
   const identityScanLaser = useRef(new Animated.Value(0)).current;
@@ -224,35 +229,44 @@ export const EyeDisplay = ({
       eyeScannerLaser.stopAnimation();
       eyeScannerLaserOpacity.stopAnimation();
       holdMarkerOpacity.stopAnimation();
+      holdTintOpacity.stopAnimation();
       eyeScannerLaser.setValue(0);
       eyeScannerLaserOpacity.setValue(0);
       holdMarkerOpacity.setValue(0);
+      holdTintOpacity.setValue(0);
 
       Animated.parallel([
         Animated.timing(eyeScannerLaserOpacity, {
           toValue: 1,
           duration: 120,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(eyeScannerLaser, {
           toValue: 1,
           duration: HOLD_FULL_DURATION_MS,
           easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
         Animated.timing(holdMarkerOpacity, {
           toValue: 1,
           duration: HOLD_FULL_DURATION_MS,
-          useNativeDriver: true,
+          useNativeDriver: false,
+        }),
+        Animated.timing(holdTintOpacity, {
+          toValue: 1,
+          duration: 240,
+          useNativeDriver: false,
         }),
       ]).start();
     } else {
       eyeScannerLaser.stopAnimation();
       eyeScannerLaserOpacity.stopAnimation();
       holdMarkerOpacity.stopAnimation();
+      holdTintOpacity.stopAnimation();
       eyeScannerLaser.setValue(0);
       eyeScannerLaserOpacity.setValue(0);
       holdMarkerOpacity.setValue(0);
+      holdTintOpacity.setValue(0);
     }
   }, [identityScanHoldActive, eyeScannerActive]);
 
@@ -329,27 +343,42 @@ export const EyeDisplay = ({
       <View style={styles.videoWrapper}>
         <CircularBorder active={true} delay={BUILD_SEQUENCE.retinalBorder} />
         
-        {/* Static Overlay - Shows when eye scanner is OFF */}
-        <Animated.View style={[
-          StyleSheet.absoluteFill, 
-          { 
-            opacity: !eyeScannerActive ? 1 : staticFade, 
-            zIndex: !eyeScannerActive ? 15 : 10 
-          }
-        ]}>
-          <Image 
-            source={changeChannel}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-          />
-          <View style={[styles.gridOverlay, { backgroundColor: 'rgba(0,0,0,0.3)' }]} />
-          {!eyeScannerActive && (
+        {/* Screen state overlay */}
+        {!eyeScannerActive ? (
+          <View style={[StyleSheet.absoluteFill, { zIndex: 15, backgroundColor: '#05070a' }]}>
+            <Image
+              source={staticOverlay}
+              style={[StyleSheet.absoluteFill, { opacity: 0.18 }]}
+              contentFit="cover"
+            />
+            <View style={[styles.gridOverlay, { backgroundColor: 'rgba(0,0,0,0.55)' }]} />
             <View style={styles.staticLabel}>
-              <Text style={styles.staticText}>EYE SCANNER OFF</Text>
-              <Text style={styles.staticSubtext}>STATIC NOISE</Text>
+              <View style={styles.staticLabelBackground} />
+              <Text style={styles.staticText}>
+                {interactionPhase === 'investigation' ? 'ID SCANNER READY' : 'ID SCANNER'}
+              </Text>
+              <Text style={styles.staticSubtext}>
+                {interactionPhase === 'investigation' ? 'TAP TO BEGIN' : 'TAP TO POWER ON'}
+              </Text>
             </View>
-          )}
-        </Animated.View>
+          </View>
+        ) : (
+          <Animated.View
+            style={[
+              StyleSheet.absoluteFill,
+              {
+                opacity: staticFade,
+                zIndex: 10,
+              },
+            ]}
+          >
+            <Image
+              source={staticOverlay}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+            />
+          </Animated.View>
+        )}
 
         {/* Main Subject UI - Eye scanner view when active */}
         <Animated.View style={[
@@ -363,20 +392,41 @@ export const EyeDisplay = ({
             styles.zoomContainer, 
             { 
               transform: [
-                { scale: 1.2 }, // 20% zoom in
+                {
+                  scale: eyeScannerLaser.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1.2, 1.26],
+                  }),
+                },
                 { translateY: 0 }
               ] 
             }
           ]}>
-            {eyeScannerActive && eyeImage && biometricsRevealed ? (
-              // Eye scanner active: Show eye image with effects (only after scan)
-              <Image
-                source={eyeImage}
-                style={styles.video}
-                contentFit="contain"
-              />
+            {eyeScannerActive ? (
+              eyeVideo ? (
+                <VideoView
+                  style={styles.video}
+                  player={player}
+                  contentFit="cover"
+                  allowsFullscreen={false}
+                  allowsPictureInPicture={false}
+                />
+              ) : eyeImage && biometricsRevealed ? (
+                <Image
+                  source={eyeImage}
+                  style={styles.video}
+                  contentFit="contain"
+                />
+              ) : (
+                <VideoView
+                  style={styles.video}
+                  player={player}
+                  contentFit="cover"
+                  allowsFullscreen={false}
+                  allowsPictureInPicture={false}
+                />
+              )
             ) : (
-              // Facial view: Use video
               <VideoView
                 style={styles.video}
                 player={player}
@@ -438,6 +488,23 @@ export const EyeDisplay = ({
                 },
               ]}
             />
+          )}
+
+          {/* Hold progress bar */}
+          {eyeScannerActive && identityScanHoldActive && (
+            <View style={styles.holdProgressTrack}>
+              <Animated.View
+                style={[
+                  styles.holdProgressFill,
+                  {
+                    width: eyeScannerLaser.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%'],
+                    }),
+                  },
+                ]}
+              />
+            </View>
           )}
 
           {/* Identity scan laser - slides down when ID scan is triggered */}
@@ -535,6 +602,15 @@ export const EyeDisplay = ({
             </Animated.View>
           )}
 
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              styles.holdTint,
+              { opacity: holdTintOpacity },
+            ]}
+          />
+
           <View style={styles.gridOverlay}>
             {[...Array(8)].map((_, i) => (
               <View key={`v-${i}`} style={[styles.gridLine, styles.verticalLine, { left: `${(i + 1) * 12.5}%` }]} />
@@ -553,6 +629,20 @@ export const EyeDisplay = ({
             )}
           </View>
 
+          {eyeScannerActive && !isIdentityScanning && (
+            <View style={styles.eyeScannerHint}>
+              <View style={styles.eyeScannerHintBadge}>
+                <Text style={styles.eyeScannerHintText}>
+                  {identityScanComplete
+                    ? 'ID VERIFIED'
+                    : identityScanHoldActive
+                      ? 'RELEASE TO COMPLETE'
+                      : 'HOLD TO SCAN'}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {hasDecision && decisionType && (
             <DecisionStamp type={decisionType} visible={!!hasDecision} />
           )}
@@ -561,16 +651,22 @@ export const EyeDisplay = ({
     </HUDBox>
   );
 
-  // Wrap in Pressable if eye scanner is active (Pressable doesn't cause layout changes)
-  // ID scan (tap-and-hold) active only after proceeding with subject (investigation phase)
-  if (eyeScannerActive && onEyeScannerTap && interactionPhase === 'investigation') {
+  // Tap to power on; hold to scan when active (investigation phase only).
+  if (onEyeScannerTap && interactionPhase === 'investigation') {
     return (
       <Pressable 
+        onPress={() => {
+          if (!eyeScannerActive) {
+            onToggleEyeScanner?.();
+          }
+        }}
         onPressIn={() => {
+          if (!eyeScannerActive || identityScanComplete) return;
           holdStartRef.current = Date.now();
           onIdentityScanHoldStart?.();
         }}
         onPressOut={() => {
+          if (!eyeScannerActive || identityScanComplete) return;
           const startedAt = holdStartRef.current;
           holdStartRef.current = null;
           if (!startedAt) return;

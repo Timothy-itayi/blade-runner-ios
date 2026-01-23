@@ -21,6 +21,7 @@ export interface SaveData {
   shiftStats: ShiftStats;
   decisionHistory: Record<string, 'APPROVE' | 'DENY'>;
   subjectsProcessed: number;
+  lives: number;
   timestamp: number;
 }
 

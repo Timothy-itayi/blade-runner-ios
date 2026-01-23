@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, Animated, TouchableOpacity, Easing } from 'react-native';
-import { useAudioPlayer } from 'expo-audio';
 import { styles } from '../../styles/ui/ScanData.styles';
 import { HUDBox } from './HUDBox';
 import { SubjectData } from '../../data/subjects';
@@ -140,13 +139,8 @@ export const ScanData = ({
   hasDecision, 
   decisionType,
   onIdentityScan,
-  onIdentityScanHoldStart,
-  onIdentityScanHoldEnd,
-  onHealthScan,
   viewChannel = 'facial',
-  resourcesRemaining = 0,
   identityScanUsed = false,
-  healthScanUsed = false,
   activeServices = [],
   memoryCapacity = MEMORY_SLOT_CAPACITY,
   interactionPhase = 'investigation',
@@ -162,13 +156,8 @@ export const ScanData = ({
   hasDecision?: boolean,
   decisionType?: 'APPROVE' | 'DENY',
   onIdentityScan?: (holdDurationMs?: number) => void,
-  onIdentityScanHoldStart?: () => void,
-  onIdentityScanHoldEnd?: (holdDurationMs: number) => void,
-  onHealthScan?: () => void,
   viewChannel?: 'facial' | 'eye',
-  resourcesRemaining?: number,
   identityScanUsed?: boolean,
-  healthScanUsed?: boolean,
   activeServices?: ServiceType[],
   memoryCapacity?: number,
   interactionPhase?: 'greeting' | 'credentials' | 'investigation',
@@ -178,18 +167,6 @@ export const ScanData = ({
 }) => {
   const memoryFull = (activeServices?.length || 0) >= (memoryCapacity || MEMORY_SLOT_CAPACITY);
   const identityRunning = !!activeServices?.includes('IDENTITY_SCAN');
-  const healthRunning = !!activeServices?.includes('HEALTH_SCAN');
-  const identityHoldStartRef = React.useRef<number | null>(null);
-  const audioFile = subject.bioScanData?.audioFile;
-  const audioPlayer = useAudioPlayer(audioFile || null);
-
-  React.useEffect(() => {
-    return () => {
-      if (audioPlayer?.playing) {
-        audioPlayer.pause();
-      }
-    };
-  }, [audioPlayer, subject.id]);
 
   const getStatusLine = () => {
     if (!hasDecision) {
@@ -345,59 +322,61 @@ export const ScanData = ({
   });
 
   return (
-    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.locRecord}>
+    <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.locRecord} mechanical>
       <View style={styles.leftColumn}>
-        <View style={styles.identHeader}>
-          <View style={styles.statusContainer}>
+        {/* Top row: ID + Progress on left, Status on right */}
+        <View style={styles.topRow}>
+          <View style={styles.idSection}>
+            <TypewriterText
+              text={id}
+              active={hudStage === 'full'}
+              delay={BUILD_SEQUENCE.identification + 400}
+              style={styles.idCode}
+              showCursor={false}
+            />
+            {renderProgressBar()}
+
+            {hudStage === 'full' && (
+              <View style={styles.verificationRow}>
+                <View>
+                  <Animated.Text style={[styles.verificationLabel, { color: verificationLabelColor, opacity: verificationLabelOpacity }]}>
+                    VERIFICATION
+                  </Animated.Text>
+                  <Animated.Text style={[styles.verificationLabel, { color: verificationLabelColor, opacity: readyLabelOpacity, position: 'absolute', left: 0, top: 0 }]}>
+                    SUBJECT READY
+                  </Animated.Text>
+                </View>
+                <View style={styles.verificationTicks}>
+                  {[0, 1, 2, 3].map((step) => (
+                    <Animated.View
+                      key={step}
+                      style={[
+                        styles.verificationTick,
+                        {
+                          borderColor: verificationAnim.interpolate({
+                            inputRange: [step, step + 1],
+                            outputRange: ['#2a3a4a', '#c9a227'],
+                            extrapolate: 'clamp',
+                          }),
+                          backgroundColor: verificationAnim.interpolate({
+                            inputRange: [step, step + 1],
+                            outputRange: ['rgba(0,0,0,0)', '#c9a227'],
+                            extrapolate: 'clamp',
+                          }),
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Status on right side */}
+          <View style={styles.statusColumn}>
             {getStatusLine()}
           </View>
         </View>
-        
-        <View style={styles.idSection}>
-          <TypewriterText 
-            text={id} 
-            active={hudStage === 'full'} 
-            delay={BUILD_SEQUENCE.identification + 400} 
-            style={styles.idCode} 
-            showCursor={false}
-          />
-          {renderProgressBar()}
-        </View>
-
-        {hudStage === 'full' && (
-          <View style={styles.verificationRow}>
-            <View>
-              <Animated.Text style={[styles.verificationLabel, { color: verificationLabelColor, opacity: verificationLabelOpacity }]}>
-                VERIFICATION
-              </Animated.Text>
-              <Animated.Text style={[styles.verificationLabel, { color: verificationLabelColor, opacity: readyLabelOpacity, position: 'absolute', left: 0, top: 0 }]}>
-                SUBJECT READY
-              </Animated.Text>
-            </View>
-            <View style={styles.verificationTicks}>
-              {[0, 1, 2, 3].map((step) => (
-                <Animated.View
-                  key={step}
-                  style={[
-                    styles.verificationTick,
-                    {
-                      borderColor: verificationAnim.interpolate({
-                        inputRange: [step, step + 1],
-                        outputRange: ['#2a3a4a', '#c9a227'],
-                        extrapolate: 'clamp',
-                      }),
-                      backgroundColor: verificationAnim.interpolate({
-                        inputRange: [step, step + 1],
-                        outputRange: ['rgba(0,0,0,0)', '#c9a227'],
-                        extrapolate: 'clamp',
-                      }),
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-          </View>
-        )}
 
         <Animated.View
           style={{
@@ -415,110 +394,6 @@ export const ScanData = ({
           {renderResponseBox()}
         </Animated.View>
       </View>
-      
-      {/* Scan Buttons - Identity & Health */}
-      {hudStage === 'full' && (
-        <View style={styles.rightColumn}>
-          <TouchableOpacity 
-            style={[
-              styles.scanButton,
-              styles.identityScanButton,
-              (identityScanUsed || identityRunning || memoryFull || interactionPhase !== 'investigation') && styles.channelToggleButtonDisabled
-            ]}
-            onPressIn={() => {
-              identityHoldStartRef.current = Date.now();
-              onIdentityScanHoldStart?.();
-            }}
-            onPressOut={() => {
-              const startedAt = identityHoldStartRef.current;
-              identityHoldStartRef.current = null;
-              const duration = startedAt ? Date.now() - startedAt : 0;
-              onIdentityScan?.(duration);
-              onIdentityScanHoldEnd?.(duration);
-            }}
-            disabled={identityScanUsed || identityRunning || memoryFull || interactionPhase !== 'investigation'}
-          >
-            <Text style={[
-              styles.channelToggleText,
-              (identityScanUsed || identityRunning || memoryFull || interactionPhase !== 'investigation') && styles.channelToggleTextDisabled
-            ]}>
-              {identityRunning ? 'ID SCAN [RUNNING]' : identityScanUsed ? 'ID SCAN [USED]' : 'ID SCAN [HOLD]'}
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[
-              styles.scanButton,
-              styles.healthScanButton,
-              (healthScanUsed || healthRunning || memoryFull || interactionPhase !== 'investigation') && styles.channelToggleButtonDisabled
-            ]}
-            onPress={onHealthScan}
-            disabled={healthScanUsed || healthRunning || memoryFull || interactionPhase !== 'investigation'}
-          >
-            <Text style={[
-              styles.channelToggleText,
-              (healthScanUsed || healthRunning || memoryFull || interactionPhase !== 'investigation') && styles.channelToggleTextDisabled
-            ]}>
-              {healthRunning ? 'HEALTH [RUNNING]' : healthScanUsed ? 'HEALTH [USED]' : 'HEALTH SCAN'}
-            </Text>
-          </TouchableOpacity>
-
-          <View
-            style={[
-              styles.healthAudioPanel,
-              !healthScanUsed && styles.healthAudioPanelDisabled,
-            ]}
-          >
-            <Text
-              style={[
-                styles.healthAudioLabel,
-                !healthScanUsed && styles.healthAudioLabelDisabled,
-              ]}
-            >
-              HEALTH AUDIO
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.healthAudioButton,
-                (!healthScanUsed || !audioFile) && styles.healthAudioButtonDisabled,
-              ]}
-              onPress={() => {
-                if (!audioPlayer || !audioFile) return;
-                if (audioPlayer.playing) {
-                  audioPlayer.pause();
-                } else {
-                  audioPlayer.volume = 0.7;
-                  audioPlayer.loop = false;
-                  audioPlayer.play();
-                }
-              }}
-              disabled={!healthScanUsed || !audioFile}
-            >
-              <Text
-                style={[
-                  styles.healthAudioButtonText,
-                  (!healthScanUsed || !audioFile) && styles.healthAudioButtonTextDisabled,
-                ]}
-              >
-                {audioPlayer?.playing ? '[ PAUSE ]' : '[ PLAY ]'}
-              </Text>
-            </TouchableOpacity>
-            <Text
-              style={[
-                styles.healthAudioStatus,
-                !healthScanUsed && styles.healthAudioStatusDisabled,
-              ]}
-            >
-              {!healthScanUsed
-                ? 'LOCKED UNTIL HEALTH SCAN COMPLETE'
-                : audioFile
-                  ? 'AUDIO READY'
-                  : 'NO AUDIO FILE'}
-            </Text>
-          </View>
-
-        </View>
-      )}
     </HUDBox>
   );
 };

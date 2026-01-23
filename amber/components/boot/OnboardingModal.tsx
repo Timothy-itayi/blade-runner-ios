@@ -29,7 +29,7 @@ export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingMo
         useNativeDriver: true,
       }).start();
 
-      // Show button after text sequence finishes (faster timing)
+      // Show button after text sequence finishes
       setTimeout(() => {
         setShowButton(true);
         Animated.timing(buttonOpacity, {
@@ -37,7 +37,7 @@ export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingMo
           duration: 400,
           useNativeDriver: true,
         }).start();
-      }, 5000);
+      }, 9000);
     }
   }, [visible]);
 
@@ -108,7 +108,7 @@ export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingMo
                   style={[styles.text, styles.textDim]}
                 />
                 <TypewriterText
-                  text="Review"
+                  text="Review dossier + biometrics"
                   active={isActive}
                   delay={2100}
                   style={[styles.text, styles.textReview]}
@@ -124,7 +124,7 @@ export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingMo
                   style={[styles.text, styles.textDim]}
                 />
                 <TypewriterText
-                  text="Verify"
+                  text="Run scans (ID hold + Health)"
                   active={isActive}
                   delay={2500}
                   style={[styles.text, styles.textVerify]}
@@ -140,9 +140,41 @@ export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingMo
                   style={[styles.text, styles.textDim]}
                 />
                 <TypewriterText
-                  text="Decide"
+                  text="Play tapes (Warrant / Transit / Incident)"
                   active={isActive}
                   delay={2900}
+                  style={[styles.text, styles.textVerify]}
+                />
+              </View>
+
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>  </Text>
+                <TypewriterText
+                  text="4. "
+                  active={isActive}
+                  delay={3200}
+                  style={[styles.text, styles.textDim]}
+                />
+                <TypewriterText
+                  text="Resources reset each subject (3 total)"
+                  active={isActive}
+                  delay={3300}
+                  style={[styles.text, styles.textSecondary]}
+                />
+              </View>
+
+              <View style={styles.terminalLine}>
+                <Text style={styles.prompt}>  </Text>
+                <TypewriterText
+                  text="5. "
+                  active={isActive}
+                  delay={3600}
+                  style={[styles.text, styles.textDim]}
+                />
+                <TypewriterText
+                  text="Decide: Approve or Deny"
+                  active={isActive}
+                  delay={3700}
                   style={[styles.text, styles.textDecide]}
                 />
               </View>
@@ -152,9 +184,9 @@ export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingMo
               <View style={styles.terminalLine}>
                 <Text style={styles.prompt}>!</Text>
                 <TypewriterText
-                  text="Always check credentials."
+                  text="Demo: 3 subjects, 1 shift. Credits disabled."
                   active={isActive}
-                  delay={3400}
+                  delay={4200}
                   style={[styles.text, styles.textCredentialWarn]}
                 />
               </View>
@@ -164,7 +196,7 @@ export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingMo
                 <TypewriterText
                   text="Trust nothing at face value."
                   active={isActive}
-                  delay={3900}
+                  delay={4700}
                   style={[styles.text, styles.textSecondary]}
                 />
               </View>
@@ -176,7 +208,7 @@ export const OnboardingModal = ({ visible, onDismiss, operatorId }: OnboardingMo
                 <TypewriterText
                   text="The system is watching. :)"
                   active={isActive}
-                  delay={4400}
+                  delay={5200}
                   style={[styles.text, styles.textFinality]}
                 />
               </View>

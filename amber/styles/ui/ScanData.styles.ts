@@ -267,6 +267,65 @@ export const styles = StyleSheet.create({
     backgroundColor: 'rgba(201, 162, 39, 0.1)',
     borderColor: Theme.colors.accentWarn,
   },
+  healthAudioPanel: {
+    width: '100%',
+    marginTop: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(26, 42, 58, 0.25)',
+    borderWidth: 1,
+    borderColor: Theme.colors.border,
+  },
+  healthAudioPanelDisabled: {
+    opacity: 0.35,
+  },
+  healthAudioLabel: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  healthAudioLabelDisabled: {
+    color: Theme.colors.textDim,
+  },
+  healthAudioButton: {
+    width: '100%',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(26, 42, 58, 0.45)',
+    borderWidth: 1,
+    borderColor: Theme.colors.textSecondary,
+    marginBottom: 6,
+  },
+  healthAudioButtonDisabled: {
+    borderColor: Theme.colors.textDim,
+    backgroundColor: 'rgba(26, 42, 58, 0.2)',
+  },
+  healthAudioButtonText: {
+    color: Theme.colors.textPrimary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 1,
+  },
+  healthAudioButtonTextDisabled: {
+    color: Theme.colors.textDim,
+  },
+  healthAudioStatus: {
+    color: Theme.colors.textSecondary,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+  },
+  healthAudioStatusDisabled: {
+    color: Theme.colors.textDim,
+  },
   eyeScannerButton: {
     backgroundColor: 'rgba(26, 42, 58, 0.3)',
     borderColor: Theme.colors.border,
@@ -295,9 +354,11 @@ export const styles = StyleSheet.create({
   },
   // Subject Response Styles
   responseBox: {
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 6,
+    marginLeft: -4, 
+    // Move box more to the left
     width: '100%',
+    backgroundColor: 'black'
   },
   responseHeader: {
     flexDirection: 'row',
@@ -307,7 +368,7 @@ export const styles = StyleSheet.create({
     // Keep a stable layout height so the UI doesn't jump as content changes.
     // Sized for header + ~4 lines of response text at 18px lineHeight.
     minHeight: 14 + 6 + 18 * 3,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     paddingVertical: 6,
     backgroundColor: 'rgba(13, 17, 23, 0.65)', // Theme.colors.bgPanel w/ opacity
     borderWidth: 1,

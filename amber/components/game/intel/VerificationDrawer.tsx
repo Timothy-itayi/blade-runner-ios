@@ -7,6 +7,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withRepeat,
   withTiming,
 } from 'react-native-reanimated';
 import { Theme } from '@/constants/theme';
@@ -127,6 +128,7 @@ export function VerificationDrawer({
     TRANSIT: { status: 'IDLE', elapsedMs: 0, script: [], confirmStop: false },
     INCIDENT: { status: 'IDLE', elapsedMs: 0, script: [], confirmStop: false },
   }));
+  const reelSpin = useSharedValue(0);
 
   // Reset on subject change.
   useEffect(() => {
@@ -140,6 +142,25 @@ export function VerificationDrawer({
       INCIDENT: { status: 'IDLE', elapsedMs: 0, script: [], confirmStop: false },
     });
   }, [subject.id]);
+
+  const activeTapeStatus = activeFolder ? tapes[activeFolder].status : 'IDLE';
+  const shouldSpinReels = activeTapeStatus === 'PLAYING';
+
+  useEffect(() => {
+    if (shouldSpinReels) {
+      reelSpin.value = withRepeat(withTiming(1, { duration: 1200 }), -1, false);
+    } else {
+      reelSpin.value = withTiming(0, { duration: 200 });
+    }
+  }, [shouldSpinReels, reelSpin]);
+
+  const reelSpinStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${reelSpin.value * 360}deg` }],
+  }));
+
+  const reelSpinReverseStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${-reelSpin.value * 360}deg` }],
+  }));
 
   const activeServices: ServiceType[] = gatheredInformation?.activeServices || [];
   const memoryUsed = activeServices.length;
@@ -717,9 +738,39 @@ export function VerificationDrawer({
                     >
                       {activeFolder}_TAPE
                     </Text>
-                    <Text style={{ color: Theme.colors.textDim, fontFamily: Theme.fonts.mono, fontSize: 8, letterSpacing: 0.8 }}>
-                      {tapes[activeFolder].status === 'BUFFERED' ? 'BUFFERED' : tapes[activeFolder].status}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Animated.View
+                          style={[
+                            {
+                              width: 10,
+                              height: 10,
+                              borderRadius: 5,
+                              borderWidth: 1,
+                              borderColor: 'rgba(127, 184, 216, 0.45)',
+                              backgroundColor: 'rgba(13, 17, 23, 0.55)',
+                            },
+                            reelSpinStyle,
+                          ]}
+                        />
+                        <Animated.View
+                          style={[
+                            {
+                              width: 10,
+                              height: 10,
+                              borderRadius: 5,
+                              borderWidth: 1,
+                              borderColor: 'rgba(127, 184, 216, 0.45)',
+                              backgroundColor: 'rgba(13, 17, 23, 0.55)',
+                            },
+                            reelSpinReverseStyle,
+                          ]}
+                        />
+                      </View>
+                      <Text style={{ color: Theme.colors.textDim, fontFamily: Theme.fonts.mono, fontSize: 8, letterSpacing: 0.8 }}>
+                        {tapes[activeFolder].status === 'BUFFERED' ? 'BUFFERED' : tapes[activeFolder].status}
+                      </Text>
+                    </View>
                   </View>
 
                   <View style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.06)', marginTop: 8 }}>

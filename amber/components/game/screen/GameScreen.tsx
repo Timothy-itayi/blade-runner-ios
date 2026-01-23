@@ -29,7 +29,7 @@ interface GameScreenProps {
   consequence?: Consequence | null;
   citationVisible?: boolean;
   onAcknowledgeCitation?: () => void;
-  credits: number;
+  credits?: number;
   resourcesRemaining?: number;
   resourcesPerShift?: number;
   onSettingsPress: () => void;
@@ -229,6 +229,7 @@ export const GameScreen = ({
             interactionPhase={interactionPhase}
             isIdentityScanning={isIdentityScanning}
             onIdentityScanComplete={onIdentityScanComplete}
+            biometricsRevealed={biometricsRevealed}
           />
         </View>
         

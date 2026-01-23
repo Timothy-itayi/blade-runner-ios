@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Animated, TouchableOpacity, Easing } from 'react-native';
+import { useAudioPlayer } from 'expo-audio';
 import { styles } from '../../styles/ui/ScanData.styles';
 import { HUDBox } from './HUDBox';
 import { SubjectData } from '../../data/subjects';
@@ -179,6 +180,16 @@ export const ScanData = ({
   const identityRunning = !!activeServices?.includes('IDENTITY_SCAN');
   const healthRunning = !!activeServices?.includes('HEALTH_SCAN');
   const identityHoldStartRef = React.useRef<number | null>(null);
+  const audioFile = subject.bioScanData?.audioFile;
+  const audioPlayer = useAudioPlayer(audioFile || null);
+
+  React.useEffect(() => {
+    return () => {
+      if (audioPlayer?.playing) {
+        audioPlayer.pause();
+      }
+    };
+  }, [audioPlayer, subject.id]);
 
   const getStatusLine = () => {
     if (!hasDecision) {
@@ -412,7 +423,7 @@ export const ScanData = ({
             style={[
               styles.scanButton,
               styles.identityScanButton,
-              (identityScanUsed || identityRunning || memoryFull || interactionPhase === 'greeting') && styles.channelToggleButtonDisabled
+              (identityScanUsed || identityRunning || memoryFull || interactionPhase !== 'investigation') && styles.channelToggleButtonDisabled
             ]}
             onPressIn={() => {
               identityHoldStartRef.current = Date.now();
@@ -425,11 +436,11 @@ export const ScanData = ({
               onIdentityScan?.(duration);
               onIdentityScanHoldEnd?.(duration);
             }}
-            disabled={identityScanUsed || identityRunning || memoryFull || interactionPhase === 'greeting'}
+            disabled={identityScanUsed || identityRunning || memoryFull || interactionPhase !== 'investigation'}
           >
             <Text style={[
               styles.channelToggleText,
-              (identityScanUsed || identityRunning || memoryFull || interactionPhase === 'greeting') && styles.channelToggleTextDisabled
+              (identityScanUsed || identityRunning || memoryFull || interactionPhase !== 'investigation') && styles.channelToggleTextDisabled
             ]}>
               {identityRunning ? 'ID SCAN [RUNNING]' : identityScanUsed ? 'ID SCAN [USED]' : 'ID SCAN [HOLD]'}
             </Text>
@@ -439,18 +450,72 @@ export const ScanData = ({
             style={[
               styles.scanButton,
               styles.healthScanButton,
-              (healthScanUsed || healthRunning || memoryFull || interactionPhase === 'greeting') && styles.channelToggleButtonDisabled
+              (healthScanUsed || healthRunning || memoryFull || interactionPhase !== 'investigation') && styles.channelToggleButtonDisabled
             ]}
             onPress={onHealthScan}
-            disabled={healthScanUsed || healthRunning || memoryFull || interactionPhase === 'greeting'}
+            disabled={healthScanUsed || healthRunning || memoryFull || interactionPhase !== 'investigation'}
           >
             <Text style={[
               styles.channelToggleText,
-              (healthScanUsed || healthRunning || memoryFull || interactionPhase === 'greeting') && styles.channelToggleTextDisabled
+              (healthScanUsed || healthRunning || memoryFull || interactionPhase !== 'investigation') && styles.channelToggleTextDisabled
             ]}>
               {healthRunning ? 'HEALTH [RUNNING]' : healthScanUsed ? 'HEALTH [USED]' : 'HEALTH SCAN'}
             </Text>
           </TouchableOpacity>
+
+          <View
+            style={[
+              styles.healthAudioPanel,
+              !healthScanUsed && styles.healthAudioPanelDisabled,
+            ]}
+          >
+            <Text
+              style={[
+                styles.healthAudioLabel,
+                !healthScanUsed && styles.healthAudioLabelDisabled,
+              ]}
+            >
+              HEALTH AUDIO
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.healthAudioButton,
+                (!healthScanUsed || !audioFile) && styles.healthAudioButtonDisabled,
+              ]}
+              onPress={() => {
+                if (!audioPlayer || !audioFile) return;
+                if (audioPlayer.playing) {
+                  audioPlayer.pause();
+                } else {
+                  audioPlayer.volume = 0.7;
+                  audioPlayer.loop = false;
+                  audioPlayer.play();
+                }
+              }}
+              disabled={!healthScanUsed || !audioFile}
+            >
+              <Text
+                style={[
+                  styles.healthAudioButtonText,
+                  (!healthScanUsed || !audioFile) && styles.healthAudioButtonTextDisabled,
+                ]}
+              >
+                {audioPlayer?.playing ? '[ PAUSE ]' : '[ PLAY ]'}
+              </Text>
+            </TouchableOpacity>
+            <Text
+              style={[
+                styles.healthAudioStatus,
+                !healthScanUsed && styles.healthAudioStatusDisabled,
+              ]}
+            >
+              {!healthScanUsed
+                ? 'LOCKED UNTIL HEALTH SCAN COMPLETE'
+                : audioFile
+                  ? 'AUDIO READY'
+                  : 'NO AUDIO FILE'}
+            </Text>
+          </View>
 
         </View>
       )}

@@ -11,6 +11,7 @@ import { SettingsModal } from '../components/settings/SettingsModal';
 type InteractionPhase = 'greeting' | 'credentials' | 'investigation';
 // Boot components
 import { OnboardingModal } from '../components/boot/OnboardingModal';
+import { DemoOnboardModal } from '../components/demo-onboard/DemoOnboardModal';
 import { BootSequence } from '../components/boot/BootSequence';
 import { SystemTakeover } from '../components/boot/SystemTakeover';
 // Intro components
@@ -39,7 +40,7 @@ import { createPatternTracker, checkWarningPatterns, PatternTracker } from '../u
 const DEV_MODE = false; // Set to true to bypass onboarding and boot
 
 export default function MainScreen() {
-  const { credits: storeCredits, resourcesRemaining, resourcesPerShift } = useGameStore();
+  const { resourcesRemaining, resourcesPerShift } = useGameStore();
   
   const [gamePhase, setGamePhase] = useState<GamePhase>(DEV_MODE ? 'active' : 'intro');
   const [hasSave, setHasSave] = useState(false);
@@ -49,8 +50,8 @@ export default function MainScreen() {
   const [decisionHistory, setDecisionHistory] = useState<Record<string, 'APPROVE' | 'DENY'>>({});
   const [isNewGame, setIsNewGame] = useState(true);
   
-  // Phase 5: Subject pool (mix of manual and generated)
-  const [subjectPool, setSubjectPool] = useState<SubjectData[]>(() => createDefaultSubjectPool());
+  // Phase 5: Subject pool (demo: first 3 subjects only)
+  const [subjectPool, setSubjectPool] = useState<SubjectData[]>(() => SUBJECTS.slice(0, 3));
   
   // Phase 2: BPM monitoring state
   const [interrogationBPM, setInterrogationBPM] = useState<number | null>(null); // Current BPM during interrogation
@@ -153,6 +154,7 @@ export default function MainScreen() {
     setBiometricsRevealed(false);
     // Reset resources for new subject
     useGameStore.getState().resetSubjectResources();
+    useGameStore.getState().resetResourcesForShift(3);
     // Phase 4: Reset to greeting phase
     setInteractionPhase('greeting');
     setEstablishedBPM(72);
@@ -427,10 +429,9 @@ export default function MainScreen() {
         )}
 
         {gamePhase === 'briefing' && (
-          <OnboardingModal 
-            visible={true} 
+          <DemoOnboardModal
+            visible={true}
             onDismiss={handleBriefingComplete}
-            operatorId="OP-7734"
           />
         )}
 
@@ -448,7 +449,6 @@ export default function MainScreen() {
               biometricsRevealed={biometricsRevealed}
               hasDecision={hasDecision}
               decisionOutcome={decisionOutcome}
-              credits={storeCredits}
               resourcesRemaining={resourcesRemaining}
               resourcesPerShift={resourcesPerShift}
               onSettingsPress={() => setShowSettings(true)}
@@ -713,10 +713,8 @@ export default function MainScreen() {
                 totalAccuracy={totalAccuracy}
                 messageHistory={messageHistory}
                 shiftDecisions={shiftDecisions}
-                credits={storeCredits}
                 familyNeeds={familyNeeds}
                 onContinue={handleShiftContinue}
-                onCreditsChange={(newCredits) => useGameStore.getState().addCredits(newCredits - storeCredits)}
                 onFamilyNeedsChange={setFamilyNeeds}
               />
             )}

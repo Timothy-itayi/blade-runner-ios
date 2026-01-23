@@ -8,49 +8,33 @@ import { BUILD_SEQUENCE } from '../../constants/animations';
 
 const FINGERPRINT_IMG = require('../../assets/finger-print.png');
 const HAND_PRINT_0 = require('../../assets/handprints/hand-print0.png');
-const HUMAN_PRINT_1 = require('../../assets/handprints/human-print1.png');
-const HUMAN_PRINT_2 = require('../../assets/handprints/human-print2.png');
-const AMPUTEE_HAND_0 = require('../../assets/handprints/amputee-hand0.png');
 const REPLICANT_HAND = require('../../assets/handprints/replicant-hand.png');
 const CYBORG_HAND = require('../../assets/handprints/cyborg-hand.png');
 
 // Helper function to get the appropriate handprint image based on subject type
-// Always returns subject-specific prints for UI consistency
-const getHandprintImage = (subject: SubjectData, subjectIndex: number): any => {
-  // Replicants get replicant handprint (check archetype string for 'REP')
-  const archetypeStr = subject.archetype?.toString() || '';
-  if (archetypeStr.includes('REP')) {
+// Uses only the three approved handprint assets.
+const getHandprintImage = (subject: SubjectData): any => {
+  const anomalyType = subject.biometricData?.anomalyType;
+  const subjectType = subject.subjectType;
+
+  if (subjectType === 'REPLICANT' || anomalyType === 'REPLICANT') {
     return REPLICANT_HAND;
   }
 
-  // Amputees get amputee handprint
-  if (subject.biometricAnomaly === 'AMP') {
-    return AMPUTEE_HAND_0;
-  }
-
-  // Cyborgs (prosthetics) get cyborg handprint
-  if (subject.biometricAnomaly === 'PRO') {
+  if (subjectType === 'HUMAN_CYBORG' || subjectType === 'ROBOT_CYBORG' || anomalyType === 'CYBORG') {
     return CYBORG_HAND;
   }
 
-  // Humans get one of the three human handprints (deterministic based on subject index)
-  // Use modulo to cycle through the 3 options
-  const humanPrintIndex = subjectIndex % 3;
-  switch (humanPrintIndex) {
-    case 0:
-      return HAND_PRINT_0;
-    case 1:
-      return HUMAN_PRINT_1;
-    case 2:
-      return HUMAN_PRINT_2;
-    default:
-      return HAND_PRINT_0;
-  }
+  return HAND_PRINT_0;
 };
 
 const FingerprintSlot = ({ active, flipped = false, delay = 0, statusText, subjectIndex = 0, scanningHands = false, subject, biometricsRevealed = true }: { active: boolean, flipped?: boolean, delay?: number, statusText: string, subjectIndex?: number, scanningHands?: boolean, subject?: SubjectData, biometricsRevealed?: boolean }) => {
+  const subjectData = subject || ({} as SubjectData);
+  const anomalyType = subjectData.biometricData?.anomalyType;
+  const isMissingHand = subjectData.id === 'S3-03' && flipped;
+
   // Get the appropriate handprint image based on subject type (always subject-specific)
-  const imageSource = getHandprintImage(subject || {} as SubjectData, subjectIndex);
+  const imageSource = isMissingHand ? null : getHandprintImage(subjectData);
   const contentFade = useRef(new Animated.Value(0)).current;
   const gridFade = useRef(new Animated.Value(0)).current;
   const scanLineY = useRef(new Animated.Value(0)).current;
@@ -103,15 +87,21 @@ const FingerprintSlot = ({ active, flipped = false, delay = 0, statusText, subje
       </Animated.View>
 
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: contentFade }]}>
-        <Image
-          source={imageSource}
-          style={[
-            styles.handprintImage, // Always use handprint style for subject-specific prints
-            flipped && styles.flippedFingerprint,
-            { transform: [{ scale: 1.4 }, flipped ? { scaleX: -1 } : { scaleX: 1 }] }
-          ]}
-          resizeMode="cover"
-        />
+        {imageSource ? (
+          <Image
+            source={imageSource}
+            style={[
+              styles.handprintImage, // Always use handprint style for subject-specific prints
+              flipped && styles.flippedFingerprint,
+              { transform: [{ scale: 1.4 }, flipped ? { scaleX: -1 } : { scaleX: 1 }] }
+            ]}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.missingHandOverlay}>
+            <Text style={styles.missingHandText}>X</Text>
+          </View>
+        )}
         {/* Laser scan line for hand scanning */}
         {scanningHands && (
           <Animated.View

@@ -68,6 +68,7 @@ export const EyeDisplay = ({
   interactionPhase = 'investigation',
   isIdentityScanning = false,
   onIdentityScanComplete,
+  biometricsRevealed = false,
 }: { 
   isScanning: boolean, 
   scanProgress: Animated.Value, 
@@ -91,6 +92,7 @@ export const EyeDisplay = ({
   interactionPhase?: 'greeting' | 'credentials' | 'investigation',
   isIdentityScanning?: boolean,
   onIdentityScanComplete?: () => void,
+  biometricsRevealed?: boolean,
 }) => {
   const staticOverlay = require('../../assets/videos/static.gif');
   const changeChannel = require('../../assets/videos/change-channel.gif');
@@ -366,8 +368,8 @@ export const EyeDisplay = ({
               ] 
             }
           ]}>
-            {eyeScannerActive && eyeImage ? (
-              // Eye scanner active: Show eye image with effects
+            {eyeScannerActive && eyeImage && biometricsRevealed ? (
+              // Eye scanner active: Show eye image with effects (only after scan)
               <Image
                 source={eyeImage}
                 style={styles.video}
@@ -560,7 +562,8 @@ export const EyeDisplay = ({
   );
 
   // Wrap in Pressable if eye scanner is active (Pressable doesn't cause layout changes)
-  if (eyeScannerActive && onEyeScannerTap && interactionPhase !== 'greeting') {
+  // ID scan (tap-and-hold) active only after proceeding with subject (investigation phase)
+  if (eyeScannerActive && onEyeScannerTap && interactionPhase === 'investigation') {
     return (
       <Pressable 
         onPressIn={() => {

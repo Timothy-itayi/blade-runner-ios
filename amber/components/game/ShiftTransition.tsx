@@ -21,7 +21,7 @@ interface ShiftTransitionProps {
   totalAccuracy: number;
   messageHistory: string[];
   shiftDecisions: ShiftDecision[]; // NEW: Decisions made this shift
-  credits: number;
+  credits?: number;
   familyNeeds: { food: number; medicine: number; housing: number };
   onContinue: () => void;
   onCreditsChange?: (newCredits: number) => void;
@@ -45,6 +45,8 @@ export const ShiftTransition = ({
   const [phase, setPhase] = useState<'summary' | 'reports' | 'menu' | 'profile' | 'briefing'>('profile');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const briefingOpacity = useRef(new Animated.Value(0)).current;
+  const creditsEnabled = typeof credits === 'number';
+  const safeCredits = creditsEnabled ? credits : 0;
   
   // Local state for family needs payment choices
   const [paidFor, setPaidFor] = useState<{ food: boolean; medicine: boolean; housing: boolean }>({
@@ -73,15 +75,16 @@ export const ShiftTransition = ({
   
   // Apply shift pay when entering profile (once per shift)
   useEffect(() => {
+    if (!creditsEnabled) return;
     if (phase === 'profile' && !shiftPayApplied && onCreditsChange) {
       const shiftPay = getShiftPay();
       if (shiftPay > 0) {
         // Add shift pay to current credits
-        onCreditsChange(credits + shiftPay);
+        onCreditsChange(safeCredits + shiftPay);
         setShiftPayApplied(true);
       }
     }
-  }, [phase, shiftPayApplied, credits, onCreditsChange]);
+  }, [phase, shiftPayApplied, safeCredits, onCreditsChange, creditsEnabled]);
   
   // Reset payment state when phase changes away from profile
   useEffect(() => {
@@ -91,7 +94,7 @@ export const ShiftTransition = ({
   }, [phase]);
   
   // Calculate what player can afford
-  const canAfford = (cost: number) => credits >= cost;
+  const canAfford = (cost: number) => (creditsEnabled ? safeCredits >= cost : false);
   
   // Handle paying for family needs
   const handlePayFor = (need: 'food' | 'medicine' | 'housing') => {
@@ -101,12 +104,13 @@ export const ShiftTransition = ({
       housing: familyNeeds.housing,
     };
     
+    if (!creditsEnabled) return;
     if (!paidFor[need] && canAfford(costs[need])) {
       const newPaidFor = { ...paidFor, [need]: true };
       setPaidFor(newPaidFor);
       
       // Deduct credits
-      const newCredits = credits - costs[need];
+      const newCredits = safeCredits - costs[need];
       onCreditsChange?.(newCredits);
       
       // Update family needs (reduce urgency - they're paid for this cycle)
@@ -155,14 +159,15 @@ export const ShiftTransition = ({
           >
             <Text style={styles.profileTitle}>OPERATOR LOG // PERSONAL</Text>
             
-            {/* Credits Display */}
-            <View style={styles.creditsSection}>
-              <Text style={styles.sectionLabel}>AVAILABLE CREDITS</Text>
-              <Text style={styles.creditsValue}>{credits}</Text>
-              {shiftPayApplied && shiftPay > 0 && (
-                <Text style={styles.shiftPayText}>+{shiftPay} (SHIFT PAY)</Text>
-              )}
-            </View>
+            {creditsEnabled && (
+              <View style={styles.creditsSection}>
+                <Text style={styles.sectionLabel}>AVAILABLE CREDITS</Text>
+                <Text style={styles.creditsValue}>{safeCredits}</Text>
+                {shiftPayApplied && shiftPay > 0 && (
+                  <Text style={styles.shiftPayText}>+{shiftPay} (SHIFT PAY)</Text>
+                )}
+              </View>
+            )}
 
             <View style={styles.profileContent}>
               <View style={styles.profilePhotoSection}>
@@ -195,95 +200,96 @@ export const ShiftTransition = ({
               </View>
             </View>
 
-            {/* Family Needs Section */}
-            <View style={styles.familyNeedsSection}>
-              <Text style={styles.sectionLabel}>FAMILY NEEDS</Text>
-              <Text style={styles.sectionSubtext}>Choose what to provide this cycle</Text>
+            {creditsEnabled && (
+              <View style={styles.familyNeedsSection}>
+                <Text style={styles.sectionLabel}>FAMILY NEEDS</Text>
+                <Text style={styles.sectionSubtext}>Choose what to provide this cycle</Text>
               
-              {/* Food */}
-              <Pressable
-                onPress={() => handlePayFor('food')}
-                disabled={paidFor.food || !canAfford(costs.food)}
-                style={({ pressed }) => [
-                  styles.needButton,
-                  paidFor.food && styles.needButtonPaid,
-                  !canAfford(costs.food) && styles.needButtonDisabled,
-                  pressed && !paidFor.food && canAfford(costs.food) && styles.needButtonPressed,
-                ]}
-              >
-                <View style={styles.needButtonContent}>
-                  <View style={styles.needButtonLeft}>
-                    <Text style={[styles.needLabel, paidFor.food && styles.needLabelPaid]}>FOOD</Text>
-                    <Text style={[styles.needCost, paidFor.food && styles.needCostPaid]}>
-                      {costs.food} CREDITS
-                    </Text>
+                {/* Food */}
+                <Pressable
+                  onPress={() => handlePayFor('food')}
+                  disabled={paidFor.food || !canAfford(costs.food)}
+                  style={({ pressed }) => [
+                    styles.needButton,
+                    paidFor.food && styles.needButtonPaid,
+                    !canAfford(costs.food) && styles.needButtonDisabled,
+                    pressed && !paidFor.food && canAfford(costs.food) && styles.needButtonPressed,
+                  ]}
+                >
+                  <View style={styles.needButtonContent}>
+                    <View style={styles.needButtonLeft}>
+                      <Text style={[styles.needLabel, paidFor.food && styles.needLabelPaid]}>FOOD</Text>
+                      <Text style={[styles.needCost, paidFor.food && styles.needCostPaid]}>
+                        {costs.food} CREDITS
+                      </Text>
+                    </View>
+                    {paidFor.food ? (
+                      <Text style={styles.needStatusPaid}>✓ PAID</Text>
+                    ) : canAfford(costs.food) ? (
+                      <Text style={styles.needStatusAvailable}>[ PAY ]</Text>
+                    ) : (
+                      <Text style={styles.needStatusUnavailable}>INSUFFICIENT</Text>
+                    )}
                   </View>
-                  {paidFor.food ? (
-                    <Text style={styles.needStatusPaid}>✓ PAID</Text>
-                  ) : canAfford(costs.food) ? (
-                    <Text style={styles.needStatusAvailable}>[ PAY ]</Text>
-                  ) : (
-                    <Text style={styles.needStatusUnavailable}>INSUFFICIENT</Text>
-                  )}
-                </View>
-              </Pressable>
+                </Pressable>
 
-              {/* Medicine */}
-              <Pressable
-                onPress={() => handlePayFor('medicine')}
-                disabled={paidFor.medicine || !canAfford(costs.medicine)}
-                style={({ pressed }) => [
-                  styles.needButton,
-                  paidFor.medicine && styles.needButtonPaid,
-                  !canAfford(costs.medicine) && styles.needButtonDisabled,
-                  pressed && !paidFor.medicine && canAfford(costs.medicine) && styles.needButtonPressed,
-                ]}
-              >
-                <View style={styles.needButtonContent}>
-                  <View style={styles.needButtonLeft}>
-                    <Text style={[styles.needLabel, paidFor.medicine && styles.needLabelPaid]}>MEDICINE</Text>
-                    <Text style={[styles.needCost, paidFor.medicine && styles.needCostPaid]}>
-                      {costs.medicine} CREDITS
-                    </Text>
+                {/* Medicine */}
+                <Pressable
+                  onPress={() => handlePayFor('medicine')}
+                  disabled={paidFor.medicine || !canAfford(costs.medicine)}
+                  style={({ pressed }) => [
+                    styles.needButton,
+                    paidFor.medicine && styles.needButtonPaid,
+                    !canAfford(costs.medicine) && styles.needButtonDisabled,
+                    pressed && !paidFor.medicine && canAfford(costs.medicine) && styles.needButtonPressed,
+                  ]}
+                >
+                  <View style={styles.needButtonContent}>
+                    <View style={styles.needButtonLeft}>
+                      <Text style={[styles.needLabel, paidFor.medicine && styles.needLabelPaid]}>MEDICINE</Text>
+                      <Text style={[styles.needCost, paidFor.medicine && styles.needCostPaid]}>
+                        {costs.medicine} CREDITS
+                      </Text>
+                    </View>
+                    {paidFor.medicine ? (
+                      <Text style={styles.needStatusPaid}>✓ PAID</Text>
+                    ) : canAfford(costs.medicine) ? (
+                      <Text style={styles.needStatusAvailable}>[ PAY ]</Text>
+                    ) : (
+                      <Text style={styles.needStatusUnavailable}>INSUFFICIENT</Text>
+                    )}
                   </View>
-                  {paidFor.medicine ? (
-                    <Text style={styles.needStatusPaid}>✓ PAID</Text>
-                  ) : canAfford(costs.medicine) ? (
-                    <Text style={styles.needStatusAvailable}>[ PAY ]</Text>
-                  ) : (
-                    <Text style={styles.needStatusUnavailable}>INSUFFICIENT</Text>
-                  )}
-                </View>
-              </Pressable>
+                </Pressable>
 
-              {/* Housing */}
-              <Pressable
-                onPress={() => handlePayFor('housing')}
-                disabled={paidFor.housing || !canAfford(costs.housing)}
-                style={({ pressed }) => [
-                  styles.needButton,
-                  paidFor.housing && styles.needButtonPaid,
-                  !canAfford(costs.housing) && styles.needButtonDisabled,
-                  pressed && !paidFor.housing && canAfford(costs.housing) && styles.needButtonPressed,
-                ]}
-              >
-                <View style={styles.needButtonContent}>
-                  <View style={styles.needButtonLeft}>
-                    <Text style={[styles.needLabel, paidFor.housing && styles.needLabelPaid]}>HOUSING</Text>
-                    <Text style={[styles.needCost, paidFor.housing && styles.needCostPaid]}>
-                      {costs.housing} CREDITS
-                    </Text>
+                {/* Housing */}
+                <Pressable
+                  onPress={() => handlePayFor('housing')}
+                  disabled={paidFor.housing || !canAfford(costs.housing)}
+                  style={({ pressed }) => [
+                    styles.needButton,
+                    paidFor.housing && styles.needButtonPaid,
+                    !canAfford(costs.housing) && styles.needButtonDisabled,
+                    pressed && !paidFor.housing && canAfford(costs.housing) && styles.needButtonPressed,
+                  ]}
+                >
+                  <View style={styles.needButtonContent}>
+                    <View style={styles.needButtonLeft}>
+                      <Text style={[styles.needLabel, paidFor.housing && styles.needLabelPaid]}>HOUSING</Text>
+                      <Text style={[styles.needCost, paidFor.housing && styles.needCostPaid]}>
+                        {costs.housing} CREDITS
+                      </Text>
+                    </View>
+                    {paidFor.housing ? (
+                      <Text style={styles.needStatusPaid}>✓ PAID</Text>
+                    ) : canAfford(costs.housing) ? (
+                      <Text style={styles.needStatusAvailable}>[ PAY ]</Text>
+                    ) : (
+                      <Text style={styles.needStatusUnavailable}>INSUFFICIENT</Text>
+                    )}
                   </View>
-                  {paidFor.housing ? (
-                    <Text style={styles.needStatusPaid}>✓ PAID</Text>
-                  ) : canAfford(costs.housing) ? (
-                    <Text style={styles.needStatusAvailable}>[ PAY ]</Text>
-                  ) : (
-                    <Text style={styles.needStatusUnavailable}>INSUFFICIENT</Text>
-                  )}
-                </View>
-              </Pressable>
-            </View>
+                </Pressable>
+              </View>
+            )}
           </ScrollView>
 
           {/* Continue Button - Always visible at bottom */}

@@ -1,6 +1,6 @@
 import { Theme } from './theme';
 
-export const SUBJECTS_PER_SHIFT = 4;
+export const SUBJECTS_PER_SHIFT = 3;
 
 export interface ShiftData {
   id: number;

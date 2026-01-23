@@ -58,6 +58,18 @@ export const styles = StyleSheet.create({
     opacity: 0.7,
     // No tintColor for JPG handprints
   },
+  missingHandOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  missingHandText: {
+    color: Theme.colors.textDim,
+    fontFamily: Theme.fonts.mono,
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: 2,
+  },
   flippedFingerprint: {
     transform: [{ scaleX: -1 }],
   },

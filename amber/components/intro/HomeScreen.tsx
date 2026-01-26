@@ -3,7 +3,7 @@ import { View, Text, Animated, Pressable, Easing, Image, Modal } from 'react-nat
 import { styles } from '../../styles/intro/HomeScreen.styles';
 import { MessageThread } from './MessageThread';
 import { IntroAlertModal } from './IntroAlertModal';
-import { IntroSettingsModal } from './IntroSettingsModal';
+import { MainMenu } from './MainMenu';
 import { INTRO_MESSAGES, ALERT_DELAY, INTERRUPTED_MESSAGE } from '../../constants/intro';
 import { useIntroAudio } from '../../hooks/useIntroAudio';
 
@@ -18,7 +18,6 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
   // Audio settings
   const [musicVolume, setMusicVolume] = useState(1);
   const [sfxVolume, setSfxVolume] = useState(1);
-  const [showSettings, setShowSettings] = useState(false);
   const [showConfirmNewGame, setShowConfirmNewGame] = useState(false);
 
   // Audio hook
@@ -330,93 +329,12 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
   if (phase === 'menu') {
     return (
       <View style={styles.container}>
-        {/* Windows XP-style title bar */}
-        <View style={styles.titleBar}>
-          <View style={styles.titleBarLeft}>
-            <View style={styles.titleBarIcon} />
-            <Text style={styles.titleBarText}>AMBER Control Panel</Text>
-          </View>
-          <View style={styles.titleBarButtons}>
-            <View style={styles.titleBarButton}>
-              <Text style={styles.titleBarButtonText}>−</Text>
-            </View>
-            <View style={styles.titleBarButton}>
-              <Text style={styles.titleBarButtonText}>□</Text>
-            </View>
-            <View style={[styles.titleBarButton, styles.titleBarButtonClose]}>
-              <Text style={styles.titleBarButtonText}>×</Text>
-            </View>
-          </View>
-        </View>
-
-        <Animated.View style={[styles.menuContainer, { opacity: fadeAnim }]}>
-          <View style={styles.menuContent}>
-            {/* Logo Image */}
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('../../assets/app-icon.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-
-            <Text style={styles.menuTitle}>AMBER</Text>
-            <Text style={styles.menuSubtitle}>Automated Movement & Biometric Evaluation Registry</Text>
-
-            <View style={styles.divider} />
-
-            <Text style={styles.menuSlogan}>"Securing Identity. Protecting Tomorrow."</Text>
-
-            <Text style={styles.menuVersion}>Version 2.4.1 Build 1847</Text>
-
-            {hasSaveData && (
-              <Pressable
-                onPress={handleContinue}
-                style={({ pressed }) => [styles.continueButton, pressed && styles.continueButtonPressed]}
-              >
-                {({ pressed }) => (
-                  <View style={[styles.continueButtonInner, pressed && styles.continueButtonInnerPressed]}>
-                    <Text style={[styles.continueButtonText, pressed && styles.continueButtonTextPressed]}>
-                      CONTINUE
-                    </Text>
-                    <Text style={[styles.continueSubtext, pressed && styles.continueSubtextPressed]}>
-                      CONTINUE
-                    </Text>
-                  </View>
-                )}
-              </Pressable>
-            )}
-
-            <Pressable
-              onPress={handleStart}
-              style={({ pressed }) => [styles.startButton, pressed && styles.startButtonPressed]}
-            >
-              {({ pressed }) => (
-                <View style={[styles.startButtonInner, pressed && styles.startButtonInnerPressed]}>
-                  <Text style={[styles.startButtonText, pressed && styles.startButtonTextPressed]}>
-                    {hasSaveData ? 'NEW GAME' : 'START SYSTEM'}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-
-            <Pressable
-              onPress={() => setShowSettings(true)}
-              style={({ pressed }) => [styles.settingsButton, pressed && styles.settingsButtonPressed]}
-            >
-              <Text style={styles.settingsButtonText}>Audio Settings</Text>
-            </Pressable>
-          </View>
-
-          <View style={styles.footerBar}>
-            <Text style={styles.footerText}>© 2019 AMBER Systems International. All Rights Reserved.</Text>
-            <Text style={styles.footerSubtext}>AUTHORIZED PERSONNEL ONLY</Text>
-          </View>
-        </Animated.View>
-
-        <IntroSettingsModal
-          visible={showSettings}
-          onClose={() => setShowSettings(false)}
+        <MainMenu
+          onStart={handleStart}
+          onContinue={handleContinue}
+          hasSaveData={hasSaveData}
+          saveShiftNumber={saveShiftNumber}
+          fadeAnim={fadeAnim}
           musicVolume={musicVolume}
           sfxVolume={sfxVolume}
           onMusicVolumeChange={setMusicVolume}

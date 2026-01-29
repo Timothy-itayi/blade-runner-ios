@@ -1,6 +1,11 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { Image } from 'expo-image';
 import { Theme } from '../../constants/theme';
+import { LEDIndicator } from './LabelTape';
+
+// Metal texture for button surfaces
+const METAL_TEXTURE = require('../../assets/textures/Texturelabs_Metal_264S.jpg');
 
 interface MechanicalButtonProps {
   label: string;
@@ -9,17 +14,58 @@ interface MechanicalButtonProps {
   disabled?: boolean;
   style?: any;
   active?: boolean;
+  /** Show LED indicator */
+  showLED?: boolean;
+  /** LED color */
+  ledColor?: 'green' | 'red' | 'yellow' | 'blue';
+  /** LED active state (defaults to !disabled) */
+  ledActive?: boolean;
+  /** Button variant */
+  variant?: 'standard' | 'toggle' | 'key';
 }
 
-export const MechanicalButton = ({ label, onPress, color = Theme.colors.industrialCream, disabled, style, active }: MechanicalButtonProps) => {
-  const pressAnim = React.useRef(new Animated.Value(0)).current;
+export const MechanicalButton = ({ 
+  label, 
+  onPress, 
+  color = Theme.colors.industrialCream, 
+  disabled, 
+  style, 
+  active,
+  showLED = false,
+  ledColor = 'green',
+  ledActive,
+  variant = 'standard',
+}: MechanicalButtonProps) => {
+  const pressAnim = useRef(new Animated.Value(0)).current;
+  const glowAnim = useRef(new Animated.Value(0)).current;
+
+  // LED is active when explicitly set, or defaults to !disabled
+  const isLedActive = ledActive !== undefined ? ledActive : !disabled;
 
   const handlePressIn = () => {
-    Animated.spring(pressAnim, { toValue: 1, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.spring(pressAnim, { toValue: 1, useNativeDriver: true, tension: 100, friction: 8 }),
+      Animated.timing(glowAnim, { toValue: 1, duration: 50, useNativeDriver: true }),
+    ]).start();
   };
 
   const handlePressOut = () => {
-    Animated.spring(pressAnim, { toValue: 0, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.spring(pressAnim, { toValue: 0, useNativeDriver: true, tension: 80, friction: 10 }),
+      Animated.timing(glowAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+    ]).start();
+  };
+
+  // Determine button styling based on variant
+  const getVariantStyles = () => {
+    switch (variant) {
+      case 'toggle':
+        return styles.buttonToggle;
+      case 'key':
+        return styles.buttonKey;
+      default:
+        return {};
+    }
   };
 
   return (
@@ -31,32 +77,102 @@ export const MechanicalButton = ({ label, onPress, color = Theme.colors.industri
       disabled={disabled}
       style={[styles.buttonWrapper, style]}
     >
+      {/* LED Indicator */}
+      {showLED && (
+        <View style={styles.ledPosition}>
+          <LEDIndicator 
+            active={isLedActive} 
+            color={ledColor} 
+            size={6}
+          />
+        </View>
+      )}
+
+      {/* Button shadow/depth */}
+      <View style={styles.buttonShadow} />
+      
+      {/* Main button body - sinks in when pressed (scale + slight down), not pop-up */}
       <Animated.View style={[
         styles.buttonBase,
+        getVariantStyles(),
         { backgroundColor: disabled ? Theme.colors.bgMechanical : color },
         active && styles.buttonActive,
         {
-          transform: [{
-            translateY: pressAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, 2],
-            })
-          }]
-        }
+          transform: [
+            {
+              translateY: pressAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 2],
+              }),
+            },
+            {
+              scaleY: pressAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 0.96],
+              }),
+            },
+            {
+              scaleX: pressAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [1, 0.99],
+              }),
+            },
+          ],
+        },
       ]}>
+        {/* Metal texture overlay */}
+        <View style={styles.buttonTextureContainer}>
+          <Image
+            source={METAL_TEXTURE}
+            style={styles.buttonTexture}
+            contentFit="cover"
+          />
+        </View>
+
+        {/* Highlight edge (top-left light) */}
+        <View style={styles.buttonHighlight} />
+        
+        {/* Button face */}
         <View style={styles.buttonTop}>
           <Text style={[
             styles.buttonText,
-            { color: color === Theme.colors.buttonWhite ? '#000' : '#fff' },
-            disabled && { color: Theme.colors.textDim }
+            { color: getTextColor(color, disabled) },
+            disabled && { color: Theme.colors.textDim, opacity: 0.6 }
           ]}>
             {label}
           </Text>
         </View>
+
+        {/* Press glow effect */}
+        <Animated.View 
+          style={[
+            styles.buttonGlow,
+            { 
+              opacity: glowAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 0.2],
+              }),
+              backgroundColor: color,
+            }
+          ]} 
+          pointerEvents="none"
+        />
       </Animated.View>
-      <View style={styles.buttonShadow} />
     </TouchableOpacity>
   );
+};
+
+// Helper to determine text color based on background
+const getTextColor = (bgColor: string, disabled?: boolean): string => {
+  if (disabled) return Theme.colors.textDim;
+  
+  // Light backgrounds get dark text
+  if (bgColor === Theme.colors.buttonWhite || 
+      bgColor === Theme.colors.industrialCream ||
+      bgColor === Theme.colors.buttonYellow) {
+    return '#1a1a1a';
+  }
+  return '#ffffff';
 };
 
 export const Knob = ({ label, value = 0, style }: { label: string, value?: number, style?: any }) => {
@@ -74,46 +190,96 @@ export const Knob = ({ label, value = 0, style }: { label: string, value?: numbe
 
 const styles = StyleSheet.create({
   buttonWrapper: {
-    height: 48,
+    height: 52,
     minWidth: 92,
+    position: 'relative',
+  },
+  ledPosition: {
+    position: 'absolute',
+    top: -2,
+    right: 4,
+    zIndex: 10,
   },
   buttonBase: {
-    height: 44,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderTopColor: 'rgba(255,255,255,0.5)',
-    borderLeftColor: 'rgba(255,255,255,0.5)',
-    borderBottomColor: 'rgba(0,0,0,0.3)',
-    borderRightColor: 'rgba(0,0,0,0.3)',
+    height: 46,
+    borderRadius: 3,
+    borderWidth: 2,
+    borderTopColor: 'rgba(255,255,255,0.4)',
+    borderLeftColor: 'rgba(255,255,255,0.3)',
+    borderBottomColor: 'rgba(0,0,0,0.5)',
+    borderRightColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
+    overflow: 'hidden',
+    // Raised key effect
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  buttonTextureContainer: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.08,
+    overflow: 'hidden',
+  },
+  buttonTexture: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  buttonHighlight: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  buttonToggle: {
+    borderRadius: 4,
+    height: 40,
+    borderWidth: 3,
+  },
+  buttonKey: {
+    borderRadius: 2,
+    height: 50,
+    minWidth: 50,
   },
   buttonActive: {
     borderColor: '#fff',
     borderWidth: 2,
+    shadowColor: '#fff',
+    shadowOpacity: 0.3,
   },
   buttonTop: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 2,
   },
   buttonText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 'bold',
-    letterSpacing: 1,
+    letterSpacing: 1.5,
     textTransform: 'uppercase',
+    // Subtle emboss effect
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 0,
+  },
+  buttonGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 2,
   },
   buttonShadow: {
     position: 'absolute',
     bottom: 0,
-    left: 0,
-    right: 0,
-    height: 44,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    left: 2,
+    right: 2,
+    height: 4,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     borderRadius: 2,
     zIndex: 1,
-    marginTop: 4,
+    marginTop: 2,
   },
   knobContainer: {
     alignItems: 'center',

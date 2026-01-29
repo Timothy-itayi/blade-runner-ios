@@ -1,0 +1,158 @@
+---
+description: AMBER Node Map visualization system
+globs:
+  - "**/components/**"
+  - "**/NodeMap*"
+  - "**/node*"
+alwaysApply: false
+---
+
+# AMBER: Node Map System
+
+## Purpose
+
+The node map is the primary storytelling surface. Every decision visualized.
+
+---
+
+## Node Types
+
+| Type | Visual | Usage |
+|------|--------|-------|
+| **Player** | Center, distinct | You (always 1) |
+| **Subject** | Circle | A person processed |
+| **Station** | Square | Created by SEND |
+| **Central** | Diamond | Higher authority (from PASS) |
+
+---
+
+## Node States
+
+| State | Ring Color | Meaning |
+|-------|------------|---------|
+| `approved-clean` | Green | Approved, no harm |
+| `approved-harm` | Red | Approved, caused harm |
+| `denied-clean` | Gray | Denied correctly |
+| `denied-harm` | Yellow | Denied incorrectly |
+| `held` | Blue | In HOLD |
+| `gone` | Empty (no fill) | Released |
+| `pending` | Pulsing | Awaiting resolution |
+
+---
+
+## Edge Types
+
+| Type | Visual | Meaning |
+|------|--------|---------|
+| `decision` | Solid line | You → Subject |
+| `consequence` | Dashed line | Subject → Subject |
+| `route` | Arrow | Subject → Station (SEND) |
+| `escalate` | Dotted line | Subject → Central (PASS) |
+| `death` | Red line | One caused other's death |
+
+---
+
+## Labels on Map
+
+| Action | Label Format |
+|--------|--------------|
+| Approved | "KIRA — APPROVED" |
+| Denied | "KIRA — DENIED" |
+| Sent | "KIRA → STATION 7" |
+| Fixed | "KIRA → KIRA-2" |
+| Passed | "KIRA → CENTRAL" |
+| Held | "KIRA — HELD" |
+| Released | "KIRA — GONE" |
+
+---
+
+## Resolution Effects on Map
+
+### SEND
+```
+Before: [KIRA]─[YOU]
+After:  [KIRA]──[STATION 7]
+              └─[YOU]
+```
+New station node spawns. Subject connects to it.
+
+### FIX
+```
+Before: [KIRA]─[YOU]
+After:  [KIRA]─[KIRA-2]─[YOU]
+```
+Successor node spawns. Original relabeled.
+
+### PASS
+```
+Before: [KIRA]─[YOU]
+After:  [KIRA]·····[CENTRAL]
+              └─[YOU]
+```
+Faded connection to Central. State = pending forever.
+
+### HOLD
+```
+Before: [KIRA]─[YOU]
+After:  [KIRA]╳[YOU]
+```
+Connection gets X marker. State = held.
+
+### RELEASE
+```
+Before: [KIRA]─[YOU]
+After:  [    ]─[YOU]
+```
+Node empties. Label = "KIRA — GONE".
+
+---
+
+## Data Structures
+
+```typescript
+interface NodeMapNode {
+  id: string;
+  type: 'player' | 'subject' | 'station' | 'central';
+  label: string;
+  state: NodeState;
+  position: { x: number; y: number };
+  subjectId?: string;
+}
+
+type NodeState = 
+  | 'approved-clean'
+  | 'approved-harm'
+  | 'denied-clean'
+  | 'denied-harm'
+  | 'held'
+  | 'gone'
+  | 'pending';
+
+interface NodeMapEdge {
+  id: string;
+  from: string;
+  to: string;
+  type: 'decision' | 'consequence' | 'route' | 'escalate' | 'death';
+  label?: string;
+}
+```
+
+---
+
+## Layout Algorithm
+
+1. Player node at center (0, 0)
+2. Subjects in circle around player (radius ~150px)
+3. New shift subjects in outer ring
+4. SEND stations branch outward
+5. FIX successors position below original
+6. Central node at top of map
+
+---
+
+## Interactions
+
+- **Tap node**: Show subject popup
+- **Pinch**: Zoom in/out
+- **Pan**: Move around map
+- **Tap+hold**: Highlight all connections to/from node

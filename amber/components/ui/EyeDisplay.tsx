@@ -2,11 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Animated, StyleSheet, Easing, TouchableOpacity, Text, Pressable } from 'react-native';
 import { VideoView, useVideoPlayer } from 'expo-video';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { styles } from '../../styles/ui/EyeDisplay.styles';
 import { Blinker, HUDBox } from './HUDBox';
 import { BUILD_SEQUENCE } from '../../constants/animations';
 import { Theme } from '../../constants/theme';
 import { DecisionStamp } from '../game/DecisionStamp';
+import { ProceduralPortrait } from './ProceduralPortrait';
+import { ScanlineOverlay } from './CRTScreen';
 
 const CircularBorder = ({ active, delay = 0 }: { active: boolean, delay?: number }) => {
   const anim = useRef(new Animated.Value(0)).current;
@@ -71,10 +74,15 @@ export const EyeDisplay = ({
   identityScanComplete = false,
   onIdentityScanComplete,
   biometricsRevealed = false,
+  // Procedural portrait props
+  useProceduralPortrait = false,
+  subjectId,
+  subjectType,
+  isAnomaly = false,
 }: { 
   isScanning: boolean, 
   scanProgress: Animated.Value, 
-  videoSource: any,
+  videoSource?: any,
   eyeVideo?: any,
   eyeImage?: any,
   videoStartTime?: number,
@@ -97,6 +105,11 @@ export const EyeDisplay = ({
   identityScanComplete?: boolean,
   onIdentityScanComplete?: () => void,
   biometricsRevealed?: boolean,
+  // Procedural portrait props
+  useProceduralPortrait?: boolean,
+  subjectId?: string,
+  subjectType?: string,
+  isAnomaly?: boolean,
 }) => {
   const staticOverlay = require('../../assets/videos/static.gif');
   const changeChannel = require('../../assets/videos/change-channel.gif');
@@ -124,19 +137,30 @@ export const EyeDisplay = ({
   const [showRedDots, setShowRedDots] = useState(false);
   const [showIdCompleted, setShowIdCompleted] = useState(false);
   
+  // Determine if we should use procedural portrait
+  const shouldUseProcedural = useProceduralPortrait || (!videoSource && subjectId);
+  
   // Use eye video if available and in eye view, otherwise use face video
   const currentVideoSource = (viewChannel === 'eye' && eyeVideo) ? eyeVideo : videoSource;
   
-  const player = useVideoPlayer(currentVideoSource, (player) => {
-    player.loop = false;
-    player.playbackRate = 0.5; // 50% slower than normal (0.5x speed)
-    player.timeUpdateEventInterval = 0.05;
-    player.play();
+  // Placeholder video for when no source is available (prevents hook error)
+  const placeholderVideo = require('../../assets/videos/static.gif');
+  const videoToUse = shouldUseProcedural ? placeholderVideo : (currentVideoSource || placeholderVideo);
+  
+  const player = useVideoPlayer(videoToUse, (player) => {
+    if (!shouldUseProcedural && currentVideoSource) {
+      player.loop = false;
+      player.playbackRate = 0.5; // 50% slower than normal (0.5x speed)
+      player.timeUpdateEventInterval = 0.05;
+      player.play();
+    }
   });
   
-  // Update video source when channel changes
+  // Update video source when channel changes (only for video mode)
   useEffect(() => {
+    if (shouldUseProcedural) return;
     const newSource = (viewChannel === 'eye' && eyeVideo) ? eyeVideo : videoSource;
+    if (!newSource) return;
     // Replace video source if it changed
     try {
       player.replace(newSource);
@@ -144,7 +168,7 @@ export const EyeDisplay = ({
       // If replace fails, the player will use the initial source
       console.warn('Failed to replace video source:', e);
     }
-  }, [viewChannel, eyeVideo, videoSource, player]);
+  }, [viewChannel, eyeVideo, videoSource, player, shouldUseProcedural]);
 
   useEffect(() => {
     if (player.status === 'readyToPlay') {
@@ -348,14 +372,38 @@ export const EyeDisplay = ({
 
   if (hudStage === 'none') return <View style={styles.container} />;
 
+  // CRT glitch animation
+  const crtGlitchY = useRef(new Animated.Value(0)).current;
+  const crtGlitchOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Trigger random glitch bands
+  useEffect(() => {
+    const triggerGlitch = () => {
+      const delay = 4000 + Math.random() * 10000;
+      setTimeout(() => {
+        const yPos = Math.random() * 100;
+        crtGlitchY.setValue(yPos);
+        
+        Animated.sequence([
+          Animated.timing(crtGlitchOpacity, { toValue: 0.6, duration: 30, useNativeDriver: true }),
+          Animated.timing(crtGlitchOpacity, { toValue: 0, duration: 80, useNativeDriver: true }),
+        ]).start(() => triggerGlitch());
+      }, delay);
+    };
+    triggerGlitch();
+  }, []);
+
   const content = (
     <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.retinalBorder}>
       <View style={styles.videoWrapper}>
+        {/* CRT Phosphor glow base */}
+        <View style={styles.phosphorGlow} pointerEvents="none" />
+        
         <CircularBorder active={true} delay={BUILD_SEQUENCE.retinalBorder} />
         
-        {/* Screen state overlay */}
+        {/* Scanner OFF: opaque screen, no portrait. Scanner ON: subject feed + scan effects. */}
         {!eyeScannerActive ? (
-          <View style={[StyleSheet.absoluteFill, { zIndex: 15, backgroundColor: '#05070a' }]}>
+          <View style={[StyleSheet.absoluteFill, { zIndex: 15, backgroundColor: '#05070a' }]} pointerEvents="none">
             <Image
               source={staticOverlay}
               style={[StyleSheet.absoluteFill, { opacity: 0.18 }]}
@@ -368,7 +416,7 @@ export const EyeDisplay = ({
                 {interactionPhase === 'investigation' ? 'ID SCANNER READY' : 'VERIFY TO BEGIN'}
               </Text>
               <Text style={styles.staticSubtext}>
-                {interactionPhase === 'investigation' ? 'TAP TO BEGIN' : 'VERIFY TO BEGIN'}
+                {interactionPhase === 'investigation' ? 'TAP TO SCAN' : 'VERIFY TO BEGIN'}
               </Text>
             </View>
           </View>
@@ -390,11 +438,11 @@ export const EyeDisplay = ({
           </Animated.View>
         )}
 
-        {/* Main Subject UI - Eye scanner view when active */}
+        {/* Main Subject UI - Portrait/feed only visible when scanner is ON */}
         <Animated.View style={[
           StyleSheet.absoluteFill, 
           { 
-            opacity: eyeScannerActive ? contentFade : (viewChannel === 'facial' ? contentFade : 0), 
+            opacity: eyeScannerActive ? contentFade : 0, 
             zIndex: 5 
           }
         ]}>
@@ -412,7 +460,17 @@ export const EyeDisplay = ({
               ] 
             }
           ]}>
-            {eyeScannerActive ? (
+            {/* Procedural Portrait Mode */}
+            {shouldUseProcedural && subjectId ? (
+              <ProceduralPortrait
+                subjectId={subjectId}
+                subjectType={subjectType}
+                isAnomaly={isAnomaly}
+                isScanning={isIdentityScanning || identityScanHoldActive}
+                scanProgress={isIdentityScanning ? 1 : (identityScanHoldActive ? 0.5 : 0)}
+                style={styles.video}
+              />
+            ) : eyeScannerActive ? (
               eyeVideo ? (
                 <VideoView
                   style={styles.video}
@@ -448,7 +506,7 @@ export const EyeDisplay = ({
           </Animated.View>
           
 
-          {/* Standard scan laser line */}
+          {/* Standard scan laser line - only when scanner is on and scanning */}
           <Animated.View 
             style={[
               styles.laserLine,
@@ -459,7 +517,7 @@ export const EyeDisplay = ({
                     outputRange: [0, 250],
                   })
                 }],
-                opacity: isScanning ? 1 : 0
+                opacity: eyeScannerActive && isScanning ? 1 : 0
               }
             ]}
           />
@@ -657,6 +715,52 @@ export const EyeDisplay = ({
             <DecisionStamp type={decisionType} visible={!!hasDecision} />
           )}
         </Animated.View>
+        
+        {/* CRT Effects Overlays */}
+        {/* Scanlines */}
+        <ScanlineOverlay intensity={0.12} />
+        
+        {/* Vignette - darkening at edges */}
+        <View style={styles.vignetteOverlay} pointerEvents="none" />
+        
+        {/* Glass reflection */}
+        <View style={styles.glassReflection} pointerEvents="none">
+          <LinearGradient
+            colors={[
+              'rgba(255,255,255,0.06)',
+              'rgba(255,255,255,0.02)',
+              'rgba(255,255,255,0)',
+            ]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={{ flex: 1, borderRadius: 4 }}
+          />
+        </View>
+        
+        {/* Glitch band - uses transform instead of top for native driver compatibility */}
+        <Animated.View
+          style={{
+            position: 'absolute',
+            left: 0,
+            right: 0,
+            top: 0,
+            height: 12,
+            backgroundColor: 'rgba(255,255,255,0.1)',
+            borderTopWidth: 1,
+            borderTopColor: 'rgba(255,50,50,0.25)',
+            borderBottomWidth: 1,
+            borderBottomColor: 'rgba(50,255,255,0.25)',
+            opacity: crtGlitchOpacity,
+            zIndex: 35,
+            transform: [{
+              translateY: crtGlitchY.interpolate({
+                inputRange: [0, 100],
+                outputRange: [0, 250],
+              }),
+            }],
+          }}
+          pointerEvents="none"
+        />
       </View>
     </HUDBox>
   );

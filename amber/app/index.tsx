@@ -34,7 +34,7 @@ import { SupervisorWarning, WarningPattern } from '../components/game/Supervisor
 import { createPatternTracker, checkWarningPatterns, PatternTracker } from '../utils/warningPatterns';
 import { useGameAudioContext } from '../contexts/AudioContext';
 
-const DEV_MODE = false; // Set to true to bypass onboarding and boot
+const DEV_MODE = true; // Set to true to bypass onboarding and boot
 
 export default function MainScreen() {
   const { lives, setLives, resetLives } = useGameStore();
@@ -461,204 +461,31 @@ export default function MainScreen() {
               currentSubjectIndex={currentSubjectIndex}
               isScanning={isScanning}
               scanProgress={scanProgress}
-              scanningHands={scanningHands}
-              scanningIris={scanningIris}
+              scanningHands={false}
+              scanningIris={false}
               biometricsRevealed={biometricsRevealed}
               hasDecision={hasDecision}
               decisionOutcome={decisionOutcome}
               onSettingsPress={() => setShowSettings(true)}
               onDecision={handleDecision}
               onNext={() => {
-                // Phase 2: Reset information tracking for next subject with equipment failures
-                const nextIndex = getNextSubjectIndexSequential(currentSubjectIndex, subjectPool.length);
-                const nextSubjectData = getSubjectByIndex(nextIndex, subjectPool);
-                const equipmentFailures = determineEquipmentFailures(nextSubjectData.id);
-                setGatheredInformation(createEmptyInformation(equipmentFailures));
-                setInterrogationBPM(null); // Reset BPM
-                setIsInterrogationActive(false); // Reset interrogation state
-                // Hard reset per-subject transient UI state immediately (prevents bleed/flicker)
-                setSubjectResponse('');
-                setDossierRevealed(false);
                 setEyeScannerActive(false);
                 setIsIdentityScanning(false);
-                setScanningHands(false);
-                setScanningIris(false);
-                // Phase 4: Reset to greeting phase
-                setInteractionPhase('greeting');
-                setEstablishedBPM(72);
-                nextSubject(); // Call the handler function
+                nextSubject();
               }}
-              onScanHands={() => {
-                // Legacy - kept for compatibility
-              }}
-              onIdentityScan={(holdDurationMs = 0) => {
-                // Model B: Starting a scan consumes a memory slot, not a “resource.”
-                // The gathered flag flips ONLY when the scan completes.
-                const MIN_HOLD_MS = 600;
-                if (holdDurationMs < MIN_HOLD_MS) return;
-                if (!eyeScannerActive) {
+              eyeScannerActive={eyeScannerActive}
+              onToggleEyeScanner={() => setEyeScannerActive(!eyeScannerActive)}
+              onEyeScannerTap={(holdDurationMs = 0) => {
+                if (holdDurationMs >= 600 && !eyeScannerActive) {
                   setEyeScannerActive(true);
-                  setGatheredInformation(prev => ({
-                    ...prev,
-                    eyeScannerActive: true,
-                  }));
                 }
-                const active = gatheredInformation.activeServices || [];
-                if (gatheredInformation.identityScan) return;
-                if (active.includes('IDENTITY_SCAN')) return;
-                if (active.length >= MEMORY_SLOT_CAPACITY) return;
-                setGatheredInformation(prev => ({
-                  ...prev,
-                  activeServices: [...(prev.activeServices || []), 'IDENTITY_SCAN'],
-                }));
-                const quality =
-                  holdDurationMs >= 1800
-                    ? 'COMPLETE'
-                    : holdDurationMs >= 1200
-                      ? 'DEEP'
-                      : holdDurationMs >= 700
-                        ? 'STANDARD'
-                        : 'PARTIAL';
-                setGatheredInformation(prev => ({
-                  ...prev,
-                  identityScanQuality: quality,
-                }));
-                setIsIdentityScanning(true);
-              }}
-              onIdentityScanComplete={() => {
-                // Called after ID scan animation completes.
-                setDossierRevealed(true);
-                setIsIdentityScanning(false);
-                setGatheredInformation(prev => ({
-                  ...prev,
-                  identityScan: true,
-                  timestamps: {
-                    ...prev.timestamps,
-                    identityScan: Date.now(),
-                  },
-                  activeServices: (prev.activeServices || []).filter((s) => s !== 'IDENTITY_SCAN'),
-                }));
+                if (holdDurationMs >= 600) {
+                  setIsIdentityScanning(true);
+                }
               }}
               isIdentityScanning={isIdentityScanning}
-              identityScanUsed={gatheredInformation.identityScan}
-              eyeScannerActive={eyeScannerActive}
-              onToggleEyeScanner={() => {
-                if (!eyeScannerActive) {
-                  // Model B: Eye scanner is a channel/tool toggle; turning it on is free.
-                  setEyeScannerActive(true);
-                  setGatheredInformation(prev => ({
-                    ...prev,
-                    eyeScannerActive: true,
-                  }));
-                } else {
-                  // Turning off is free
-                  setEyeScannerActive(false);
-                  setGatheredInformation(prev => ({
-                    ...prev,
-                    eyeScannerActive: false,
-                  }));
-                }
-              }}
-              onEyeScannerTap={(holdDurationMs = 0) => {
-                // Tap/hold scan from the eye view. Hold duration upgrades quality.
-                const MIN_HOLD_MS = 600;
-                if (holdDurationMs < MIN_HOLD_MS) return;
-                if (!eyeScannerActive) {
-                  setEyeScannerActive(true);
-                  setGatheredInformation(prev => ({
-                    ...prev,
-                    eyeScannerActive: true,
-                  }));
-                }
-                if (gatheredInformation.identityScan) return;
-
-                const quality =
-                  holdDurationMs >= 1800
-                    ? 'COMPLETE'
-                    : holdDurationMs >= 1200
-                      ? 'DEEP'
-                      : holdDurationMs >= 700
-                        ? 'STANDARD'
-                        : holdDurationMs > 0
-                          ? 'PARTIAL'
-                          : undefined;
-
-                const active = gatheredInformation.activeServices || [];
-                if (active.includes('IDENTITY_SCAN')) {
-                  if (quality) {
-                    setGatheredInformation(prev => ({
-                      ...prev,
-                      identityScanQuality: quality,
-                    }));
-                  }
-                  return;
-                }
-                if (active.length >= MEMORY_SLOT_CAPACITY) return;
-                setGatheredInformation(prev => ({
-                  ...prev,
-                  activeServices: [...(prev.activeServices || []), 'IDENTITY_SCAN'],
-                  ...(quality ? { identityScanQuality: quality } : {}),
-                }));
-                setIsIdentityScanning(true);
-              }}
-              onInterrogate={() => {
-                // Handled directly in IntelPanel
-              }}
-              dossierRevealed={dossierRevealed}
-              subjectResponse={subjectResponse}
-              onResponseUpdate={(response) => {
-                setSubjectResponse(response);
-              }}
-              gatheredInformation={gatheredInformation}
-              onBPMChange={(bpm) => {
-                // Phase 2: Update BPM when question is asked
-                setInterrogationBPM(bpm);
-                setIsInterrogationActive(true);
-              }}
-              onInformationUpdate={(info) => {
-                // Phase 2: Update gathered information
-                setGatheredInformation(prev => ({
-                  ...prev,
-                  ...info,
-                  lastExtracted: {
-                    ...(prev.lastExtracted || {}),
-                    ...(info.lastExtracted || {}),
-                  },
-                  interrogation: {
-                    ...prev.interrogation,
-                    ...(info.interrogation || {}),
-                  },
-                  timestamps: {
-                    ...prev.timestamps,
-                    ...(info.timestamps || {}),
-                  },
-                }));
-              }}
-              onQueryPerformed={(queryType: 'WARRANT' | 'TRANSIT' | 'INCIDENT') => {
-                // Model B: Queries are “files as services” gated by memory slots (handled in drawer).
-                void queryType;
-              }}
-              isNewGame={isNewGame}
-              equipmentFailures={gatheredInformation.equipmentFailures}
-              bpmDataAvailable={gatheredInformation.bpmDataAvailable}
-              interrogationBPM={interrogationBPM}
-              isInterrogationActive={isInterrogationActive}
-              establishedBPM={establishedBPM}
-              interactionPhase={interactionPhase}
-              onGreetingComplete={() => setInteractionPhase('credentials')}
-              onCredentialsComplete={(hasAnomalies) => {
-                setInteractionPhase('investigation');
-                // Track credential examination in gathered information
-                setGatheredInformation(prev => ({
-                  ...prev,
-                  basicScan: true,
-                  timestamps: {
-                    ...prev.timestamps,
-                    basicScan: Date.now(),
-                  },
-                }));
-              }}
-              onEstablishBPM={(bpm) => setEstablishedBPM(bpm)}
+              identityScanUsed={false}
+              onIdentityScanComplete={() => setIsIdentityScanning(false)}
             />
 
 

@@ -7,8 +7,12 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderTopWidth: 1,
-    borderTopColor: Theme.colors.border,
+    // CRT inset panel effect
+    borderTopWidth: 2,
+    borderTopColor: 'rgba(0,0,0,0.4)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(80,85,95,0.2)',
+    backgroundColor: 'rgba(16, 20, 26, 0.95)',
   },
   leftColumn: {
     flex: 1,

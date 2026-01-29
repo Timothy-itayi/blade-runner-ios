@@ -4,21 +4,70 @@ import { Theme } from '../../constants/theme';
 export const styles = StyleSheet.create({
   container: {
     flex: 3,
-    backgroundColor: Theme.colors.bgDark, // Darker frame
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
-    padding: 8, // Padding for monitor frame
+    backgroundColor: Theme.colors.bgDark,
+    // CRT monitor frame styling
+    borderWidth: 3,
+    borderTopColor: 'rgba(80,85,95,0.6)',
+    borderLeftColor: 'rgba(80,85,95,0.5)',
+    borderBottomColor: 'rgba(15,17,22,0.9)',
+    borderRightColor: 'rgba(15,17,22,0.8)',
+    padding: 6,
     overflow: 'hidden',
-    borderRadius: 4, // Outer frame slight rounding
+    borderRadius: 4,
+    // Bezel shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.6,
+    shadowRadius: 5,
+    elevation: 6,
   },
   videoWrapper: {
     flex: 1,
     position: 'relative',
-    borderRadius: 8, // More pronounced rounding for the monitor screen
+    borderRadius: 6, // CRT screen curvature
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(26, 42, 58, 0.8)',
-    backgroundColor: '#000', // Screen black base
+    // Inset screen effect
+    borderWidth: 2,
+    borderTopColor: 'rgba(0,0,0,0.7)',
+    borderLeftColor: 'rgba(0,0,0,0.6)',
+    borderBottomColor: 'rgba(60,65,75,0.3)',
+    borderRightColor: 'rgba(60,65,75,0.25)',
+    backgroundColor: '#050708', // Deep CRT black
+  },
+  // CRT effects overlays
+  scanlinesOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 30,
+    pointerEvents: 'none',
+    overflow: 'hidden',
+  },
+  scanline: {
+    width: '100%',
+    height: 2,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  vignetteOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 31,
+    pointerEvents: 'none',
+    borderRadius: 6,
+    borderWidth: 20,
+    borderColor: 'rgba(0,0,0,0.25)',
+  },
+  glassReflection: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '35%',
+    zIndex: 32,
+    pointerEvents: 'none',
+  },
+  phosphorGlow: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(80, 200, 120, 0.02)',
+    zIndex: 3,
+    pointerEvents: 'none',
   },
   video: {
     width: '100%',

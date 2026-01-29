@@ -31,6 +31,7 @@ export interface SubjectFactoryConfig {
     profilePic?: any;
     eyeVideo?: any;
   };
+  useProceduralPortrait?: boolean; // If true, skip video assets and use procedural face
 }
 
 // =============================================================================
@@ -532,10 +533,13 @@ export function createSubjectFromTraits(
   const idCode = config.manualOverrides?.id || generateIdCodeFromTraits(traits);
   const reasonForVisit = config.manualOverrides?.reasonForVisit || generateReasonForVisit(traits);
 
-  // Assign assets
+  // Assign assets (skip if using procedural portrait)
+  const useProcedural = config.useProceduralPortrait ?? false;
   const manualAssetOverride = getManualAssetOverride(idCode);
-  const assets = config.assetOverrides || manualAssetOverride || 
-    assignAssetsToSubject(traits.subjectType, traits.hierarchyTier, sex, config.seed);
+  const assets = useProcedural 
+    ? { videoSource: undefined, eyeImage: undefined, profilePic: undefined, eyeVideo: undefined }
+    : (config.assetOverrides || manualAssetOverride || 
+        assignAssetsToSubject(traits.subjectType, traits.hierarchyTier, sex, config.seed));
 
   // Generate personality first (needed for communication/credential generation)
   const personality = generatePersonalityTraits(traits.hierarchyTier);
@@ -590,6 +594,7 @@ export function createSubjectFromTraits(
     eyeVideo: assets.eyeVideo,
     videoStartTime: 0,
     videoEndTime: 3,
+    useProceduralPortrait: useProcedural,
     
     // BPM
     bpm: initialBPM,
@@ -643,9 +648,12 @@ export function createSubjectFromTraits(
 /**
  * Generates a random subject
  */
-export function generateRandomSubject(sex: 'M' | 'F' | 'X' = 'M'): SubjectData {
+export function generateRandomSubject(
+  sex: 'M' | 'F' | 'X' = 'M',
+  useProceduralPortrait: boolean = false
+): SubjectData {
   const traits = generateRandomTraits();
-  return createSubjectFromTraits(traits, sex);
+  return createSubjectFromTraits(traits, sex, { useProceduralPortrait });
 }
 
 /**
@@ -653,10 +661,21 @@ export function generateRandomSubject(sex: 'M' | 'F' | 'X' = 'M'): SubjectData {
  */
 export function generateSubjectFromSeed(
   seed: number,
-  sex: 'M' | 'F' | 'X' = 'M'
+  sex: 'M' | 'F' | 'X' = 'M',
+  useProceduralPortrait: boolean = false
 ): SubjectData {
   const traits = generateTraitsFromSeed(seed);
-  return createSubjectFromTraits(traits, sex, { seed });
+  return createSubjectFromTraits(traits, sex, { seed, useProceduralPortrait });
+}
+
+/**
+ * Generates a procedural subject (no video assets, uses holographic face)
+ */
+export function generateProceduralSubject(
+  seed: number,
+  sex: 'M' | 'F' | 'X' = 'M'
+): SubjectData {
+  return generateSubjectFromSeed(seed, sex, true);
 }
 
 /**

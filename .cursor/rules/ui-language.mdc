@@ -1,0 +1,151 @@
+---
+description: AMBER UI and language guidelines
+globs:
+  - "**/components/**"
+  - "**/*.tsx"
+alwaysApply: false
+---
+
+# AMBER: UI & Language Guidelines
+
+## Language Philosophy
+
+**Simple. Direct. No jargon.**
+
+Players should understand in under 2 seconds. If they have to re-read, it's too long.
+
+---
+
+## Writing Rules
+
+1. **One idea per line**
+2. **Verbs first** (DENY, ALLOW, SEND, FIX)
+3. **No corporate speak** (no "optimization", "implementation")
+4. **Plain consequences** (no euphemisms that obscure meaning)
+
+---
+
+## Good vs Bad Examples
+
+| Bad | Good |
+|-----|------|
+| "Subject status updated to TERMINAL following discharge" | "They don't come back." |
+| "PRIMARY: DENY ALL OFF-WORLD ENGINEERS. EXCEPTION: HUMAN ENGINEERS ARE EXEMPT" | "DENY: ENGINEERS / EXCEPT: HUMANS" |
+| "Awaiting feature implementation" | "AWAITING ASSIGNMENT" |
+| "Route to secondary transit node" | "Route to another station." |
+
+---
+
+## Resolution Prompt Format
+
+```
+┌─────────────────────────────────────┐
+│  [NAME]                             │
+│  DENIED — AWAITING ASSIGNMENT       │
+│                                     │
+│  ▸ SEND                             │
+│    Route to another station.        │
+│    Opens new path on map.           │
+│                                     │
+│  ▸ FIX                              │
+│    Modify and requeue.              │
+│    They come back changed.          │
+│                                     │
+│  ▸ PASS                             │
+│    Send to higher authority.        │
+│    You won't see what happens.      │
+│                                     │
+│  ▸ HOLD                             │
+│    Store indefinitely.              │
+│    Frozen. Not gone.                │
+│                                     │
+│  ▸ RELEASE                          │
+│    Let go. Off-grid.                │
+│    They don't come back.            │
+│                                     │
+└─────────────────────────────────────┘
+```
+
+---
+
+## Directive Display Format
+
+Simple:
+```
+DENY: WARRANTS
+```
+
+With exception:
+```
+DENY: ENGINEERS
+EXCEPT: HUMANS
+```
+
+Stacked:
+```
+DENY: REPLICANTS
+EXCEPT: VIP
+EXCEPT: MEDICAL
+```
+
+---
+
+## Button Labels
+
+| Action | Label |
+|--------|-------|
+| Approve subject | APPROVE |
+| Deny subject | DENY |
+| Route elsewhere | SEND |
+| Modify subject | FIX |
+| Send to authority | PASS |
+| Store indefinitely | HOLD |
+| Release off-grid | RELEASE |
+| Continue | CONTINUE |
+| Start shift | BEGIN SHIFT |
+
+---
+
+## AMBER Messages
+
+Corporate. Hollow. Bureaucratic. Doesn't acknowledge deaths.
+
+**Examples:**
+```
+"SHIFT COMPLETE. PROCESSING EFFICIENCY: ACCEPTABLE. GOOD WORK, OPERATOR."
+```
+
+```
+"3 SUBJECTS PROCESSED. THROUGHPUT WITHIN PARAMETERS. AMBER THANKS YOU."
+```
+
+```
+"SHIFT 1 CONCLUDED. 0 CITATIONS. 0 WARNINGS. CONTINUE TO NEXT SHIFT."
+```
+
+---
+
+## Theme: Cassette Futurism
+
+From `theme.ts`:
+
+| Token | Hex | Use |
+|-------|-----|-----|
+| bgDark | #20242c | Main background |
+| bgPanel | #2a2f38 | Panel backgrounds |
+| textPrimary | #e2d3bf | Main text |
+| textDim | #8f816f | Muted text |
+| accentDeny | #d4534a | Red / Deny |
+| accentApprove | #4a8a5a | Green / Approve |
+| accentWarn | #c9a227 | Yellow / Warning |
+| industrialCream | #d8c3a6 | Buttons |
+
+**Font:** ShareTechMono — terminal aesthetic
+
+---
+
+## Component Patterns
+
+- **MechanicalButton**: Physical press animation, shadow depth
+- **HUDBox**: Bordered panels with mechanical styling
+- **Typewriter effect**: For subject dialogue and AMBER messages

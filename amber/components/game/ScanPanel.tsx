@@ -1,14 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Animated, Image, Easing, StyleSheet } from 'react-native';
+import { View, Text, Animated, Easing, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { styles } from '../../styles/game/ScanPanel.styles';
 import { HUDBox, DrawingBorder } from '../ui/HUDBox';
 import { SubjectData } from '../../data/subjects';
 import { Theme } from '../../constants/theme';
 import { BUILD_SEQUENCE } from '../../constants/animations';
+import { LabelTape, LEDIndicator } from '../ui/LabelTape';
+import { ScanlineOverlay } from '../ui/CRTScreen';
+
+// Metal texture
+const METAL_TEXTURE = require('../../assets/textures/Texturelabs_Metal_264S.jpg');
 
 const HAND_PRINT_0 = require('../../assets/handprints/hand-print0.png');
 const REPLICANT_HAND = require('../../assets/handprints/replicant-hand.png');
 const CYBORG_HAND = require('../../assets/handprints/cyborg-hand.png');
+
+// Import native Image for handprint compatibility
+import { Image as RNImage } from 'react-native';
 
 // Helper function to get the appropriate handprint image based on subject type
 // Uses only the three approved handprint assets.
@@ -86,7 +95,7 @@ const FingerprintSlot = ({ active, flipped = false, delay = 0, statusText, subje
 
       <Animated.View style={[StyleSheet.absoluteFill, { opacity: contentFade }]}>
         {imageSource ? (
-          <Image
+          <RNImage
             source={imageSource}
             style={[
               styles.handprintImage, // Always use handprint style for subject-specific prints
@@ -252,9 +261,7 @@ const BPMMonitor = ({ active, delay = 0, bpm, pulseAnim, dataRevealed = true }: 
 
   return (
     <Animated.View style={[styles.bpmColumn, { opacity }]}>
-      <View style={styles.tapeLabel}>
-        <Text style={styles.tapeLabelText}>BPM</Text>
-      </View>
+      <LabelTape text="BPM" variant="cream" size="small" />
       <View style={styles.bpmScreen}>
         <View style={styles.screenStatic} />
         <View style={styles.bpmScreenInner}>
@@ -517,7 +524,16 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
   }, []);
 
   return (
-    <Animated.View style={{ opacity: panelOpacity }}>
+    <Animated.View style={[{ opacity: panelOpacity }, scanPanelStyles.panelContainer]}>
+      {/* Metal texture background */}
+      <View style={scanPanelStyles.textureContainer}>
+        <Image source={METAL_TEXTURE} style={scanPanelStyles.texture} contentFit="cover" />
+        <View style={scanPanelStyles.textureTint} />
+      </View>
+      
+      {/* Scanlines overlay */}
+      <ScanlineOverlay intensity={0.06} />
+      
       <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.scanPanelBorder} mechanical>
       <View style={styles.fingerprintSection}>
         <View style={styles.fingerprintSlots}>
@@ -549,9 +565,7 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
 
       <View style={styles.matchSection}>
         <Animated.View style={[styles.sexColumn, { opacity: matchSectionOpacity }]}>
-          <View style={styles.tapeLabel}>
-            <Text style={styles.tapeLabelText}>SEX</Text>
-          </View>
+          <LabelTape text="SEX" variant="cream" size="small" />
           <View style={styles.sexLightsRow}>
             <View style={[styles.sexLight, subject.sex === 'F' && styles.sexLightActive]}>
               <Text style={[styles.sexLightText, subject.sex === 'F' && styles.sexLightTextActive]}>F</Text>
@@ -582,3 +596,30 @@ export const ScanPanel = ({ isScanning, scanProgress, hudStage, subject, subject
     </Animated.View>
   );
 };
+
+// Scan panel frame styles
+const scanPanelStyles = StyleSheet.create({
+  panelContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: 3,
+    // Inset panel effect
+    borderWidth: 2,
+    borderTopColor: 'rgba(0,0,0,0.4)',
+    borderLeftColor: 'rgba(0,0,0,0.3)',
+    borderBottomColor: 'rgba(80,85,95,0.25)',
+    borderRightColor: 'rgba(80,85,95,0.2)',
+  },
+  textureContainer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
+  texture: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.12,
+  },
+  textureTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(28, 32, 40, 0.94)',
+  },
+});

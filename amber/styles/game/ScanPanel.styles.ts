@@ -5,9 +5,20 @@ export const styles = StyleSheet.create({
   container: {
     flex: 2,
     backgroundColor: Theme.colors.bgPanel,
-    borderWidth: 1,
-    borderColor: Theme.colors.border,
+    // CRT inset panel effect
+    borderWidth: 2,
+    borderTopColor: 'rgba(0,0,0,0.5)',
+    borderLeftColor: 'rgba(0,0,0,0.4)',
+    borderBottomColor: 'rgba(80,85,95,0.3)',
+    borderRightColor: 'rgba(80,85,95,0.25)',
+    borderRadius: 3,
     padding: 8,
+    // Inset shadow
+    shadowColor: '#000',
+    shadowOffset: { width: 1, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 3,
+    elevation: 3,
   },
   fingerprintSection: {
     marginBottom: 16,
@@ -274,17 +285,22 @@ export const styles = StyleSheet.create({
   bpmScreen: {
     width: 78,
     height: 36,
-    backgroundColor: Theme.colors.bgDark,
+    backgroundColor: '#050708', // Deep CRT black
+    // CRT screen inset effect
     borderWidth: 2,
-    borderColor: Theme.colors.industrialGray,
-    borderTopColor: '#4e5563',
-    borderLeftColor: '#4e5563',
-    borderBottomColor: '#1a1d23',
-    borderRightColor: '#1a1d23',
-    borderRadius: 2,
+    borderTopColor: 'rgba(0,0,0,0.7)',
+    borderLeftColor: 'rgba(0,0,0,0.6)',
+    borderBottomColor: 'rgba(60,65,75,0.4)',
+    borderRightColor: 'rgba(60,65,75,0.35)',
+    borderRadius: 3,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    // Subtle inner glow
+    shadowColor: 'rgba(80, 200, 120, 0.2)',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
   },
   screenStatic: {
     ...StyleSheet.absoluteFillObject,

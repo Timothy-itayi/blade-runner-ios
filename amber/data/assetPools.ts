@@ -1,30 +1,10 @@
 // =============================================================================
-// ASSET POOLS - Phase 5: Factory & Generation
+// ASSET POOLS - Deprecated (Procedural Portrait System)
 // =============================================================================
-// Asset assignment system for procedurally generated subjects
+// This file is maintained for backwards compatibility.
+// New subjects use procedural portrait generation and don't need asset pools.
 
 import { SubjectType, HierarchyTier } from './subjects';
-import { OriginPlanet } from './subjectTraits';
-
-// Eye image arrays (from subjects.ts)
-const FEMALE_EYES = [
-  require('../assets/female-eyes/mara.mp4'),
-  require('../assets/female-eyes/elena-vid.mp4'),
-  require('../assets/female-eyes/female1.mp4'),
-  // Fill out indices used by fixed-subject definitions (avoid undefined)
-  require('../assets/female-eyes/female1.mp4'),
-   
-];
-
-const MALE_EYES = [
-  require('../assets/male-eyes/male1.mp4'),
-  // Fill out indices used by fixed-subject definitions (avoid undefined)
-  require('../assets/male-eyes/male1.mp4'),
-  require('../assets/male-eyes/male1.mp4'),
-  require('../assets/male-eyes/male1.mp4'),
-  require('../assets/male-eyes/male1.mp4'),
-  require('../assets/male-eyes/male1.mp4'),
-];
 
 // =============================================================================
 // ASSET POOL INTERFACE
@@ -38,57 +18,33 @@ export interface AssetPool {
 }
 
 // =============================================================================
-// ASSET POOLS BY TRAIT
+// ASSET POOLS - Empty (using procedural portraits now)
 // =============================================================================
 
 /**
  * Gets asset pool based on subject type and hierarchy
+ * Returns empty pools as we're using procedural portraits
  */
 export function getAssetPoolForTraits(
-  subjectType: SubjectType,
-  hierarchyTier: HierarchyTier,
-  sex: 'M' | 'F' | 'X'
+  _subjectType: SubjectType,
+  _hierarchyTier: HierarchyTier,
+  _sex: 'M' | 'F' | 'X'
 ): AssetPool {
-  // Default pools (can be expanded with more assets)
-  const defaultVideoSources = [
-    require('../assets/videos/subjects/subject02.mp4'),
-    require('../assets/videos/subjects/subject03.mp4'),
-  ];
-
-  const eyeImages = sex === 'F' ? FEMALE_EYES : MALE_EYES;
-
-  // VIP subjects might have special assets
-  if (hierarchyTier === 'VIP') {
-    return {
-      videoSources: defaultVideoSources, // Could add VIP-specific videos
-      eyeImages,
-      profilePics: [], // Profile pics optional
-    };
-  }
-
-  // Replicants might have synthetic-looking assets
-  if (subjectType === 'REPLICANT') {
-    return {
-      videoSources: defaultVideoSources,
-      eyeImages,
-      profilePics: [],
-    };
-  }
-
-  // Default pool
+  // All subjects now use procedural portraits
   return {
-    videoSources: defaultVideoSources,
-    eyeImages,
+    videoSources: [],
+    eyeImages: [],
     profilePics: [],
+    eyeVideos: [],
   };
 }
 
 /**
  * Selects a random asset from a pool
  */
-export function selectAssetFromPool<T>(pool: T[], seed?: number): T {
+export function selectAssetFromPool<T>(pool: T[], seed?: number): T | undefined {
   if (pool.length === 0) {
-    throw new Error('Asset pool is empty');
+    return undefined;
   }
 
   if (seed !== undefined) {
@@ -100,40 +56,32 @@ export function selectAssetFromPool<T>(pool: T[], seed?: number): T {
 
 /**
  * Assigns assets to a subject based on traits
+ * Returns undefined for all assets as we're using procedural portraits
  */
 export function assignAssetsToSubject(
-  subjectType: SubjectType,
-  hierarchyTier: HierarchyTier,
-  sex: 'M' | 'F' | 'X',
-  seed?: number
+  _subjectType: SubjectType,
+  _hierarchyTier: HierarchyTier,
+  _sex: 'M' | 'F' | 'X',
+  _seed?: number
 ): {
   videoSource: any;
   eyeImage: any;
   profilePic?: any;
   eyeVideo?: any;
 } {
-  const pool = getAssetPoolForTraits(subjectType, hierarchyTier, sex);
-
+  // All subjects now use procedural portraits
   return {
-    videoSource: selectAssetFromPool(pool.videoSources, seed),
-    eyeImage: selectAssetFromPool(pool.eyeImages, seed),
-    profilePic: pool.profilePics.length > 0 
-      ? selectAssetFromPool(pool.profilePics, seed)
-      : undefined,
-    eyeVideo: pool.eyeVideos && pool.eyeVideos.length > 0
-      ? selectAssetFromPool(pool.eyeVideos, seed)
-      : undefined,
+    videoSource: undefined,
+    eyeImage: undefined,
+    profilePic: undefined,
+    eyeVideo: undefined,
   };
 }
 
 // =============================================================================
-// MANUAL ASSET OVERRIDES
+// MANUAL ASSET OVERRIDES - No longer used
 // =============================================================================
 
-/**
- * Manual asset overrides for narrative-critical subjects
- * These subjects have specific assets that should not be procedurally assigned
- */
 export interface ManualAssetOverride {
   subjectId: string;
   videoSource?: any;
@@ -144,9 +92,8 @@ export interface ManualAssetOverride {
 
 /**
  * Checks if a subject has manual asset overrides
+ * Always returns null as we're using procedural portraits
  */
-export function getManualAssetOverride(subjectId: string): ManualAssetOverride | null {
-  // This would be populated with specific overrides for key subjects
-  // For now, return null (no overrides)
+export function getManualAssetOverride(_subjectId: string): ManualAssetOverride | null {
   return null;
 }

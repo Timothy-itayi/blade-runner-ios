@@ -1,0 +1,156 @@
+---
+description: AMBER Game Design Document - Core design principles and mechanics
+globs:
+  - "**/*.tsx"
+  - "**/*.ts"
+  - "**/docs/**"
+alwaysApply: true
+---
+
+# AMBER: Game Design Reference
+
+## One-Line Pitch
+
+A border control game where every decision creates consequences you must see — and live with.
+
+---
+
+## Core Loop
+
+```
+PROCESS → DECIDE → SEE CONSEQUENCES → RESOLVE DENIALS → REPEAT
+```
+
+1. **Process**: Subjects appear at checkpoint. Player investigates.
+2. **Decide**: Approve or Deny based on directive.
+3. **See**: Node map shows what happened. Who lived. Who died.
+4. **Resolve**: Denied subjects become "bugs." Player chooses: SEND, FIX, PASS, HOLD, or RELEASE.
+5. **Repeat**: Next shift. Directive changes. Complexity grows.
+
+---
+
+## Design Pillars
+
+1. **Full Transparency** — Player sees exactly what happened and why
+2. **No Recovery** — Choices permanent, no undo
+3. **No Judgment** — Game shows consequences, doesn't preach
+4. **Player-Authored Story** — Decisions create the narrative
+
+---
+
+## The Setting: Year 3184
+
+- **AMBER** = Transit hub in Earth orbit
+- **Player** = Checkpoint operator processing subjects
+- **Locations**: Earth, Mars, Europa, Titan, Io, The Void, Archive, Central
+
+---
+
+## Subject Types
+
+| Type | Description |
+|------|-------------|
+| HUMAN | Baseline Earth-origin |
+| REPLICANT | Synthetic human |
+| HYBRID | Human with augments |
+| CONSTRUCT | Fully synthetic |
+| REMNANT | Post-human, degraded |
+| UNKNOWN | Classification pending |
+
+---
+
+## Directive System
+
+Each shift has rules. Clear. Binary.
+
+```
+DENY: [CATEGORY]
+EXCEPT: [CONDITION]
+```
+
+**Examples:**
+- `DENY: WARRANTS` (simple)
+- `DENY: ENGINEERS / EXCEPT: HUMANS` (one exception)
+- `DENY: REPLICANTS / EXCEPT: VIP / EXCEPT: MEDICAL` (stacked)
+
+---
+
+## Node Map
+
+Visual representation of all decisions.
+
+**Node States:**
+- Green = Approved, no harm
+- Red = Approved, caused harm
+- Gray = Denied correctly
+- Yellow = Denied incorrectly
+- Blue = Held
+- Empty = Released (gone)
+
+**Edges:**
+- Solid = Decision (you → subject)
+- Dashed = Consequence (subject → subject)
+- Red = Death chain
+
+---
+
+## Bug Resolution (5 Options)
+
+After each shift, denied subjects need resolution:
+
+| Option | Effect | Map Visual |
+|--------|--------|------------|
+| **SEND** | Route to another station | New branch |
+| **FIX** | Modify and requeue | Successor node |
+| **PASS** | Send to higher authority | Faded connection |
+| **HOLD** | Store indefinitely | Frozen (X) |
+| **RELEASE** | Let go off-grid | Empty node (gone) |
+
+---
+
+## The Wrapped
+
+End-of-shift Spotify Wrapped-style summary:
+- Stats: Processed, Approved, Denied, Casualties
+- Node map preview
+- AMBER message: "Good work, Operator."
+
+---
+
+## Language Guidelines
+
+- **One idea per line**
+- **Verbs first** (DENY, ALLOW, SEND, FIX)
+- **No corporate jargon**
+- **Plain consequences** ("They don't come back" not "Status: TERMINAL")
+
+---
+
+## Development Phases
+
+| Phase | Focus |
+|-------|-------|
+| 1 | Core Loop (process → decide → feedback) |
+| 2 | Directive System (DENY/EXCEPT rules) |
+| 3 | Node Map (decision visualization) |
+| 4 | Bug Resolution (5 options) |
+| 5 | The Wrapped (stats summary) |
+| 6 | Content (36 subjects, 9 shifts) |
+
+---
+
+## MVP Scope
+
+- 3 shifts, 9 subjects
+- 3 directives
+- 3 consequence chains
+- Full loop playable
+
+---
+
+## Full GDD Location
+
+See `/amber/assets/docs/gdd/` for complete documentation:
+- `GAME_DESIGN_DOCUMENT.md` — Master doc
+- `phase-X-*/OVERVIEW.md` — Phase details
+- `phase-X-*/TRELLO.md` — Task boards

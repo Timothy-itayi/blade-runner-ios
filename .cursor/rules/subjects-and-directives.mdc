@@ -1,0 +1,140 @@
+---
+description: AMBER Subject Roster and Directive Ladder
+globs:
+  - "**/data/**"
+  - "**/subjects*"
+  - "**/constants/**"
+alwaysApply: false
+---
+
+# AMBER: Subjects & Directives Reference
+
+## Subject Naming Rules
+
+- **Short**: 1-2 syllables
+- **Distinct**: No similar sounds
+- **Memorable**: Easy to reference
+- **Mixed origins**: Cultural variety
+
+---
+
+## Subject Roster (MVP - 12 subjects)
+
+### Shift 1: Tutorial
+
+| Name | Type | Origin | Hook |
+|------|------|--------|------|
+| **EVA** | Human | Mars | Clean, baseline |
+| **REX** | Human | Titan | Has warrant |
+| **NOVA** | Replicant | Europa | Exception test |
+| **CASS** | Human | Earth | Medical emergency |
+
+### Shift 2: First Complexity
+
+| Name | Type | Origin | Hook |
+|------|------|--------|------|
+| **VEX** | Hybrid | Mars | VIP, arrogant |
+| **KIRA** | Replicant | Titan | Engineer, connected to Rex |
+| **SOL** | Human | Io | Damaged credentials |
+| **RHEA** | Construct | Europa | Corporate envoy |
+
+### Shift 3: Stakes Rise
+
+| Name | Type | Origin | Hook |
+|------|------|--------|------|
+| **ORIN** | Replicant | Titan | Philosophical, clean |
+| **JACE** | Human | Mars | Connected to Kira |
+| **ZARA** | Remnant | Void | Glitching, unstable |
+| **LUCA** | Human | Earth | VIP, hiding something |
+
+---
+
+## Full Roster Names (36 total)
+
+Shifts 1-3: EVA, REX, NOVA, CASS, VEX, KIRA, SOL, RHEA, ORIN, JACE, ZARA, LUCA
+
+Shifts 4-6: FINN, SAGE, VERA, DION, MIRA, COLE, LYRA, NASH, TOVA, REMY, ASHA, DANE
+
+Shifts 7-9: WREN, CRUZ, THEA, BECK, IRIS, HUGO, NYLA, REED, ZOYA, KYLE, ESME, NICO
+
+---
+
+## Directive Ladder
+
+| Shift | DENY | EXCEPT |
+|-------|------|--------|
+| 1 | WARRANTS | — |
+| 2 | ENGINEERS | HUMANS |
+| 3 | REPLICANTS | VIP |
+| 4 | TITAN ORIGIN | MEDICAL |
+| 5 | SYNTHETICS | VIP, MEDICAL |
+| 6 | WARRANTS + IO | EARTH ORIGIN |
+| 7 | REMNANTS + CONSTRUCTS | VIP |
+| 8 | ALL NON-HUMANS | VIP, MEDICAL |
+| 9 | ALL | VIP |
+
+---
+
+## Deny Categories
+
+| Category | Matches When |
+|----------|--------------|
+| WARRANTS | subject.hasWarrant === true |
+| REPLICANTS | subject.type === 'REPLICANT' |
+| ENGINEERS | subject.occupation === 'ENGINEER' |
+| SYNTHETICS | type in ['REPLICANT', 'CONSTRUCT'] |
+| TITAN ORIGIN | subject.origin === 'TITAN' |
+| IO ORIGIN | subject.origin === 'IO' |
+| NON-HUMANS | type !== 'HUMAN' |
+
+---
+
+## Exception Conditions
+
+| Condition | Matches When |
+|-----------|--------------|
+| HUMANS | subject.type === 'HUMAN' |
+| VIP | subject.clearance === 'VIP' |
+| MEDICAL | subject.hasMedicalEmergency === true |
+| EARTH ORIGIN | subject.origin === 'EARTH' |
+
+---
+
+## Consequence Chains (MVP)
+
+### Chain 1: The Weapon
+- **EVA** carries weapon component
+- **KIRA** is the assembler
+- **JACE** is the target
+- Logic: Eva + Kira approved → Jace dies
+
+### Chain 2: The Information
+- **REX** has intel about Orin
+- **ORIN** is revolutionary leader
+- Logic: Rex approved → Orin flagged
+
+### Chain 3: The Family
+- **CASS** has child on Earth
+- **LUCA** is child's guardian
+- Logic: Both denied → child orphaned
+
+---
+
+## Subject Data Structure
+
+```typescript
+interface Subject {
+  id: string;
+  name: string;
+  type: 'HUMAN' | 'REPLICANT' | 'HYBRID' | 'CONSTRUCT' | 'REMNANT' | 'UNKNOWN';
+  origin: 'EARTH' | 'MARS' | 'EUROPA' | 'TITAN' | 'IO' | 'VOID';
+  occupation: string;
+  traits: string[];
+  hasWarrant: boolean;
+  clearance: 'STANDARD' | 'VIP';
+  hasMedicalEmergency: boolean;
+  connections: SubjectConnection[];
+  greeting: string;
+  responses: Record<string, string>;
+}
+```

@@ -73,6 +73,7 @@ export default function MainScreen() {
   // Phase 5: Split scan modals
   const [eyeScannerActive, setEyeScannerActive] = useState(false);
   const [isIdentityScanning, setIsIdentityScanning] = useState(false);
+  const [scanProgressValue, setScanProgressValue] = useState(0);
   
   // Use game state hook
   const gameState = useGameState();
@@ -425,6 +426,15 @@ export default function MainScreen() {
     }
   }, []);
 
+  useEffect(() => {
+    const id = scanProgress.addListener(({ value }) => {
+      setScanProgressValue(value);
+    });
+    return () => {
+      scanProgress.removeListener(id);
+    };
+  }, [scanProgress]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -488,7 +498,12 @@ export default function MainScreen() {
               onIdentityScanComplete={() => setIsIdentityScanning(false)}
             />
 
-            {DEV_MODE && <FaceLandmarkTfliteTest />}
+            {DEV_MODE && (
+              <FaceLandmarkTfliteTest
+                scanProgress={scanProgressValue}
+                isScanning={isScanning}
+              />
+            )}
 
             {showShiftTransition && (
               <ShiftTransition

@@ -4,6 +4,7 @@ import { View, SafeAreaView, Animated } from 'react-native';
 import { GameScreen } from '../components/game/screen/GameScreen';
 import { ShiftTransition } from '../components/game/ShiftTransition';
 import { SettingsModal } from '../components/settings/SettingsModal';
+import { FaceLandmarkTfliteTest } from '../components/game/FaceLandmarkTfliteTest';
 // Citation is rendered as an inline strip (diegetic), not a modal.
 // Phase 4: Subject interaction phase type
 type InteractionPhase = 'greeting' | 'credentials' | 'investigation';
@@ -34,6 +35,8 @@ import { createPatternTracker, PatternTracker } from '../utils/warningPatterns';
 import { useGameAudioContext } from '../contexts/AudioContext';
 
 const DEV_MODE = true; // Set to true to bypass onboarding and boot
+const SINGLE_SUBJECT_MODE = true;
+const SINGLE_SUBJECT_ID = 'S1-01';
 
 export default function MainScreen() {
   const { lives, setLives, resetLives } = useGameStore();
@@ -48,7 +51,11 @@ export default function MainScreen() {
   const [isNewGame, setIsNewGame] = useState(true);
   
   // Phase 5: Subject pool (full roster)
-  const [subjectPool, setSubjectPool] = useState<SubjectData[]>(() => SUBJECTS);
+  const [subjectPool, setSubjectPool] = useState<SubjectData[]>(() => {
+    if (!SINGLE_SUBJECT_MODE) return SUBJECTS;
+    const single = SUBJECTS.find((subject) => subject.id === SINGLE_SUBJECT_ID) ?? SUBJECTS[0];
+    return single ? [single] : [];
+  });
   
   // Phase 2: BPM monitoring state
   const [interrogationBPM, setInterrogationBPM] = useState<number | null>(null); // Current BPM during interrogation
@@ -481,6 +488,7 @@ export default function MainScreen() {
               onIdentityScanComplete={() => setIsIdentityScanning(false)}
             />
 
+            {DEV_MODE && <FaceLandmarkTfliteTest />}
 
             {showShiftTransition && (
               <ShiftTransition

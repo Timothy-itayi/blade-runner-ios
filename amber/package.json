@@ -19,6 +19,7 @@
     "@react-navigation/native": "^7.1.8",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@shopify/react-native-skia": "^2.4.16",
     "@types/three": "^0.182.0",
     "expo": "~54.0.32",
     "expo-audio": "~1.1.1",

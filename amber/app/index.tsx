@@ -30,8 +30,7 @@ import { getShiftForSubject, isEndOfShift } from '../constants/shifts';
 import { useGameStore } from '../store/gameStore';
 import { createEmptyInformation, MEMORY_SLOT_CAPACITY } from '../types/information';
 import { determineEquipmentFailures } from '../utils/equipmentFailures';
-import { SupervisorWarning, WarningPattern } from '../components/game/SupervisorWarning';
-import { createPatternTracker, checkWarningPatterns, PatternTracker } from '../utils/warningPatterns';
+import { createPatternTracker, PatternTracker } from '../utils/warningPatterns';
 import { useGameAudioContext } from '../contexts/AudioContext';
 
 const DEV_MODE = true; // Set to true to bypass onboarding and boot
@@ -57,9 +56,8 @@ export default function MainScreen() {
   
   // Phase 3: Consequence evaluation state
   
-  // Phase 3: Supervisor warning state
+  // Phase 3: Supervisor warning state (modal removed; tracking still used for stats)
   const [warningTracker, setWarningTracker] = useState<PatternTracker>(createPatternTracker());
-  const [currentWarning, setCurrentWarning] = useState<WarningPattern | null>(null);
 
   // Phase 4: Subject interaction state
   const [interactionPhase, setInteractionPhase] = useState<InteractionPhase>('greeting');
@@ -185,10 +183,7 @@ export default function MainScreen() {
     // lives handled via store
     triggerScan,
     gatheredInformation, // Phase 3: Pass gathered information for consequence evaluation
-    onWarningPattern: (warning) => {
-      // Phase 3: Show supervisor warning
-      setCurrentWarning(warning);
-    },
+    onWarningPattern: () => {}, // Modal removed: no popup when approving without checking
     warningTracker, // Phase 3: Pattern tracking
     setWarningTracker, // Phase 3: Update pattern tracker
   });
@@ -215,7 +210,6 @@ export default function MainScreen() {
     setGatheredInformation(createEmptyInformation());
     setInterrogationBPM(null);
     setIsInterrogationActive(false);
-    setCurrentWarning(null);
     setWarningTracker(createPatternTracker());
     setInteractionPhase('greeting');
     setEstablishedBPM(72);
@@ -253,7 +247,6 @@ export default function MainScreen() {
     setGatheredInformation(createEmptyInformation(equipmentFailures));
     setInterrogationBPM(null); // Reset BPM
     setIsInterrogationActive(false); // Reset interrogation state
-    setCurrentWarning(null); // Phase 3: Reset warning
     // Phase 3: Reset warning pattern tracker for new shift
     setWarningTracker(createPatternTracker());
     // Phase 4: Reset to greeting phase
@@ -488,13 +481,6 @@ export default function MainScreen() {
               onIdentityScanComplete={() => setIsIdentityScanning(false)}
             />
 
-
-            {/* Phase 3: Supervisor Warning - Shows mid-shift pattern warnings */}
-            <SupervisorWarning
-              visible={!!currentWarning}
-              warning={currentWarning}
-              onDismiss={() => setCurrentWarning(null)}
-            />
 
             {showShiftTransition && (
               <ShiftTransition

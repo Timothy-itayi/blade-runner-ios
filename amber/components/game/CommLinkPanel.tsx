@@ -4,15 +4,26 @@ import { Theme } from '../../constants/theme';
 import { HUDBox } from '../ui/HUDBox';
 import { TypewriterText } from '../ui/ScanData';
 import { BUILD_SEQUENCE } from '../../constants/animations';
+import { ProceduralPortrait } from '../ui/ProceduralPortrait';
 
 export const CommLinkPanel = ({ 
   dialogue, 
-  hudStage
+  hudStage,
+  subjectId,
+  subjectType,
+  isAnomaly = false,
+  useProceduralPortrait = true,
 }: { 
   dialogue?: string, 
-  hudStage: 'none' | 'wireframe' | 'outline' | 'full'
+  hudStage: 'none' | 'wireframe' | 'outline' | 'full',
+  subjectId?: string,
+  subjectType?: string,
+  isAnomaly?: boolean,
+  useProceduralPortrait?: boolean,
 }) => {
   if (hudStage === 'none') return null;
+
+  const showPortrait = !!subjectId && useProceduralPortrait;
 
   return (
     <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.header}>
@@ -28,16 +39,29 @@ export const CommLinkPanel = ({
       </View>
       
       <View style={styles.content}>
-        {dialogue ? (
-          <TypewriterText 
-            text={`"${dialogue}"`} 
-            active={hudStage === 'full'} 
-            delay={BUILD_SEQUENCE.header + 500} 
-            style={styles.dialogueText}
-          />
-        ) : (
-          <Text style={[styles.dialogueText, { opacity: 0.3 }]}>[ NO ACTIVE TRANSMISSION ]</Text>
+        {showPortrait && (
+          <View style={styles.portraitFrame}>
+            <ProceduralPortrait
+              subjectId={subjectId as string}
+              subjectType={subjectType}
+              isAnomaly={isAnomaly}
+              portraitPreset="comms"
+              style={styles.portraitImage}
+            />
+          </View>
         )}
+        <View style={[styles.dialogueBlock, showPortrait && styles.dialogueBlockWithPortrait]}>
+          {dialogue ? (
+            <TypewriterText 
+              text={`"${dialogue}"`} 
+              active={hudStage === 'full'} 
+              delay={BUILD_SEQUENCE.header + 500} 
+              style={styles.dialogueText}
+            />
+          ) : (
+            <Text style={[styles.dialogueText, { opacity: 0.3 }]}>[ NO ACTIVE TRANSMISSION ]</Text>
+          )}
+        </View>
       </View>
       
       <View style={styles.footer}>
@@ -82,7 +106,26 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 8,
     paddingBottom: 8,
-    justifyContent: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  portraitFrame: {
+    width: 72,
+    height: 72,
+    borderWidth: 1,
+    borderColor: 'rgba(127, 184, 216, 0.12)',
+    backgroundColor: '#070b0f',
+    marginRight: 12,
+  },
+  portraitImage: {
+    width: '100%',
+    height: '100%',
+  },
+  dialogueBlock: {
+    flex: 1,
+  },
+  dialogueBlockWithPortrait: {
+    paddingRight: 4,
   },
   dialogueText: {
     color: Theme.colors.textPrimary,

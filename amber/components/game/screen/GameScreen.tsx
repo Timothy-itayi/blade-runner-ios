@@ -4,9 +4,11 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { EyeDisplay } from '../../ui/EyeDisplay';
+import { CommLinkPanel } from '../CommLinkPanel';
 import { SubjectData } from '../../../data/subjects';
 import { ShiftData } from '../../../constants/shifts';
 import { Theme } from '../../../constants/theme';
+import { getSubjectGreeting } from '../../../data/subjectGreetings';
 import { MechanicalButton } from '../../ui/MechanicalUI';
 import { LabelTape, LEDIndicator, ControlGroup } from '../../ui/LabelTape';
 import { Screw, NoiseOverlay } from '../../ui/ChassisFrame';
@@ -156,7 +158,7 @@ export const GameScreen = ({
           <View style={styles.modelLabel}>
             <Text style={styles.modelText}>7613</Text>
           </View>
-          <Text style={styles.deviceName}>REPLICANT SCANNER</Text>
+          <Text style={styles.deviceName}>FACE SCANNER</Text>
         </View>
         <View style={styles.headerRight}>
           <View style={styles.statusGroup}>
@@ -183,7 +185,7 @@ export const GameScreen = ({
             {/* Phosphor glow base */}
             <View style={styles.phosphorGlow} />
             
-            {/* Eye display */}
+            {/* Face display */}
             <EyeDisplay
               key={`eye-${currentSubject.id}`}
               isScanning={isScanning}
@@ -238,6 +240,18 @@ export const GameScreen = ({
             </View>
           </View>
         </View>
+      </View>
+
+      {/* Dialogue comms link - live transcription under screen */}
+      <View style={styles.commsLinkWrapper}>
+        <CommLinkPanel
+          hudStage={hudStage}
+          dialogue={currentSubject.dialogue ?? getSubjectGreeting(currentSubject.id, currentSubject)?.greetingText}
+          subjectId={currentSubject.id}
+          subjectType={currentSubject.subjectType}
+          isAnomaly={currentSubject.biometricData?.anomalyDetected}
+          useProceduralPortrait={currentSubject.useProceduralPortrait}
+        />
       </View>
 
       {/* Control panel */}
@@ -404,7 +418,15 @@ const styles = StyleSheet.create({
   // Screen
   screenContainer: {
     flex: 1,
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  commsLinkWrapper: {
+    marginBottom: 10,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(127, 184, 216, 0.15)',
+    borderRadius: 4,
+    backgroundColor: 'rgba(10, 14, 18, 0.6)',
   },
   screenBezel: {
     flex: 1,

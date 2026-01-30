@@ -4,6 +4,7 @@ import { Audio } from 'expo-av';
 import { Theme } from '../../constants/theme';
 import { ShiftDecision } from './ShiftTransition';
 import { NewsReport } from '../../data/subjects';
+import { ProceduralPortrait } from '../ui/ProceduralPortrait';
 
 interface ShiftNewsReportProps {
   shiftDecisions: ShiftDecision[];
@@ -84,6 +85,7 @@ export const ShiftNewsReport = ({ shiftDecisions, onComplete }: ShiftNewsReportP
   const subject = currentItem.decision.subject;
   const decision = currentItem.decision.decision;
   const reportType = currentItem.news.type || 'NEWS';
+  const shouldUseProceduralPortrait = subject.useProceduralPortrait || (!subject.profilePic && !!subject.id);
 
   const handleNext = async () => {
     if (sound) {
@@ -120,13 +122,23 @@ export const ShiftNewsReport = ({ shiftDecisions, onComplete }: ShiftNewsReportP
       {/* Content */}
       <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
         {/* Subject Passport Photo (fallback to news image) */}
-        {(subject.profilePic || currentItem.news.image) && (
+        {(shouldUseProceduralPortrait || subject.profilePic || currentItem.news.image) && (
           <View style={styles.imageContainer}>
-            <Image 
-              source={subject.profilePic || currentItem.news.image} 
-              style={styles.image} 
-              resizeMode="cover" 
-            />
+            {shouldUseProceduralPortrait ? (
+              <ProceduralPortrait
+                subjectId={subject.id}
+                subjectType={subject.subjectType}
+                isAnomaly={subject.subjectType === 'REPLICANT'}
+                portraitPreset="dossier"
+                style={styles.image}
+              />
+            ) : (
+              <Image 
+                source={subject.profilePic || currentItem.news.image} 
+                style={styles.image} 
+                resizeMode="cover" 
+              />
+            )}
           </View>
         )}
 

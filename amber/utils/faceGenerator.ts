@@ -62,6 +62,33 @@ export interface FaceGeometry {
   glitchSeed: number;
   scanlineOffset: number;
   corruptionLevel: number;  // 0-1, affects missing geometry
+
+  // PORTRAIT SYNTHESIS PARAMS (Option 1)
+  baseHeadIndex: number; // 0-23
+  warp: {
+    jawTaper: number;
+    cheekFullness: number;
+    browHeight: number;
+    eyeSpacing: number;
+    noseWidth: number;
+    mouthWidth: number;
+  };
+  tone: {
+    hueShift: number; // -0.5 to 0.5
+    saturation: number; // 0.5 to 1.5
+    contrast: number; // 0.8 to 1.2
+  };
+  details: {
+    freckleDensity: number;
+    poreStrength: number;
+    blemishSeed: number;
+  };
+  cyber: {
+    barcodeIndex: number;
+    scratchIntensity: number;
+    glowStrength: number;
+    scanlineIntensity: number;
+  };
 }
 
 /**
@@ -241,6 +268,33 @@ export function generateFaceGeometry(seed: string): FaceGeometry {
     glitchSeed: rng.int(0, 10000),
     scanlineOffset: rng.next(),
     corruptionLevel: rng.range(0.2, 0.55),  // More dropout, missing data
+
+    // PORTRAIT SYNTHESIS PARAMS
+    baseHeadIndex: rng.int(0, 3), // Currently 4 heads available (head1-head4)
+    warp: {
+      jawTaper: rng.range(-0.12, 0.12),
+      cheekFullness: rng.range(-0.09, 0.09),
+      browHeight: rng.range(-0.08, 0.08),
+      eyeSpacing: rng.range(-0.09, 0.09),
+      noseWidth: rng.range(-0.09, 0.09),
+      mouthWidth: rng.range(-0.09, 0.09),
+    },
+    tone: {
+      hueShift: rng.range(-0.1, 0.1),
+      saturation: rng.range(0.8, 1.2),
+      contrast: rng.range(0.9, 1.1),
+    },
+    details: {
+      freckleDensity: rng.range(0, 1),
+      poreStrength: rng.range(0, 0.5),
+      blemishSeed: rng.next(),
+    },
+    cyber: {
+      barcodeIndex: rng.int(0, 5),
+      scratchIntensity: rng.range(0, 0.4),
+      glowStrength: rng.range(0, 0.6),
+      scanlineIntensity: rng.range(0.1, 0.4),
+    },
   };
 }
 
@@ -303,6 +357,103 @@ export function generatePortraitData(
     geometry: generateFaceGeometry(subjectId),
     traits: generateVisualTraits(subjectId, subjectType, isAnomaly),
     seed: subjectId,
+  };
+}
+
+/**
+ * Template-based geometry: one reference face (from template seed) + subject variation.
+ * Use when the base face comes from a reference (e.g. face-template.png); each subject
+ * gets a new face with defined characteristics (eyes, nose, mouth, proportions), slightly
+ * different per subjectId. Base is currently from fixed seed; to use scanned image geometry,
+ * run a face-mesh/depth tool on the template image, export landmarks to JSON, and load that
+ * as the base instead of generateFaceGeometry(TEMPLATE_GEOMETRY_SEED).
+ */
+export const TEMPLATE_GEOMETRY_SEED = '__template__';
+
+export function getTemplateBasedGeometry(
+  subjectId: string,
+  _subjectType?: string,
+  _isAnomaly?: boolean
+): FaceGeometry {
+  const base = generateFaceGeometry(TEMPLATE_GEOMETRY_SEED);
+  const rng = new SeededRandom(subjectId);
+
+  return {
+    ...base,
+    headWidth: base.headWidth * (1 + rng.range(-0.06, 0.06)),
+    headHeight: base.headHeight * (1 + rng.range(-0.06, 0.06)),
+    jawWidth: base.jawWidth * (1 + rng.range(-0.08, 0.08)),
+    jawHeight: base.jawHeight * (1 + rng.range(-0.08, 0.08)),
+    foreheadHeight: base.foreheadHeight * (1 + rng.range(-0.08, 0.08)),
+    eyeSpacing: base.eyeSpacing * (1 + rng.range(-0.08, 0.08)),
+    eyeHeight: base.eyeHeight + rng.range(-0.015, 0.015),
+    eyeWidth: base.eyeWidth * (1 + rng.range(-0.1, 0.1)),
+    eyeSlant: base.eyeSlant + rng.range(-4, 4),
+    leftEyeOffset: {
+      ...base.leftEyeOffset,
+      x: base.leftEyeOffset.x + rng.range(-0.02, 0.02),
+      y: base.leftEyeOffset.y + rng.range(-0.02, 0.02),
+      scale: base.leftEyeOffset.scale * (1 + rng.range(-0.08, 0.08)),
+    },
+    rightEyeOffset: {
+      ...base.rightEyeOffset,
+      x: base.rightEyeOffset.x + rng.range(-0.02, 0.02),
+      y: base.rightEyeOffset.y + rng.range(-0.02, 0.02),
+      scale: base.rightEyeOffset.scale * (1 + rng.range(-0.08, 0.08)),
+    },
+    pupilMisalignment: {
+      left: base.pupilMisalignment.left + rng.range(-0.02, 0.02),
+      right: base.pupilMisalignment.right + rng.range(-0.02, 0.02),
+    },
+    noseLength: base.noseLength * (1 + rng.range(-0.1, 0.1)),
+    noseWidth: base.noseWidth * (1 + rng.range(-0.12, 0.12)),
+    noseBridge: base.noseBridge * (1 + rng.range(-0.15, 0.15)),
+    noseSkew: base.noseSkew + rng.range(-0.01, 0.01),
+    mouthWidth: base.mouthWidth * (1 + rng.range(-0.1, 0.1)),
+    mouthHeight: base.mouthHeight + rng.range(-0.02, 0.02),
+    lipThickness: base.lipThickness * (1 + rng.range(-0.15, 0.15)),
+    mouthSkew: base.mouthSkew + rng.range(-0.02, 0.02),
+    earSize: base.earSize * (1 + rng.range(-0.1, 0.1)),
+    earPosition: base.earPosition + rng.range(-0.02, 0.02),
+    leftEarScale: base.leftEarScale * (1 + rng.range(-0.08, 0.08)),
+    rightEarScale: base.rightEarScale * (1 + rng.range(-0.08, 0.08)),
+    asymmetryX: base.asymmetryX + rng.range(-0.02, 0.02),
+    asymmetryY: base.asymmetryY + rng.range(-0.02, 0.02),
+    skullTilt: base.skullTilt + rng.range(-2, 2),
+    defects: generateDefects(rng),
+    jitterFrequency: base.jitterFrequency * (1 + rng.range(-0.2, 0.2)),
+    jitterAmplitude: base.jitterAmplitude * (1 + rng.range(-0.2, 0.2)),
+    driftSpeed: base.driftSpeed * (1 + rng.range(-0.2, 0.2)),
+    glitchSeed: rng.int(0, 10000),
+    scanlineOffset: rng.next(),
+    corruptionLevel: Math.max(0.1, Math.min(0.6, base.corruptionLevel * (1 + rng.range(-0.15, 0.15)))),
+    
+    // PORTRAIT SYNTHESIS PARAMS
+    baseHeadIndex: rng.int(0, 3),
+    warp: {
+      jawTaper: rng.range(-0.12, 0.12),
+      cheekFullness: rng.range(-0.09, 0.09),
+      browHeight: rng.range(-0.08, 0.08),
+      eyeSpacing: rng.range(-0.09, 0.09),
+      noseWidth: rng.range(-0.09, 0.09),
+      mouthWidth: rng.range(-0.09, 0.09),
+    },
+    tone: {
+      hueShift: rng.range(-0.1, 0.1),
+      saturation: rng.range(0.8, 1.2),
+      contrast: rng.range(0.9, 1.1),
+    },
+    details: {
+      freckleDensity: rng.range(0, 1),
+      poreStrength: rng.range(0, 0.5),
+      blemishSeed: rng.next(),
+    },
+    cyber: {
+      barcodeIndex: rng.int(0, 5),
+      scratchIntensity: rng.range(0, 0.4),
+      glowStrength: rng.range(0, 0.6),
+      scanlineIntensity: rng.range(0.1, 0.4),
+    },
   };
 }
 

@@ -413,10 +413,10 @@ export const EyeDisplay = ({
             <View style={styles.staticLabel}>
               <View style={styles.staticLabelBackground} />
               <Text style={styles.staticText}>
-                {interactionPhase === 'investigation' ? 'ID SCANNER READY' : 'VERIFY TO BEGIN'}
+                {interactionPhase === 'investigation' ? 'FACE SCANNER READY' : 'VERIFY TO BEGIN'}
               </Text>
               <Text style={styles.staticSubtext}>
-                {interactionPhase === 'investigation' ? 'TAP TO SCAN' : 'VERIFY TO BEGIN'}
+                {interactionPhase === 'investigation' ? 'TAP TO SCAN FACE' : 'VERIFY TO BEGIN'}
               </Text>
             </View>
           </View>
@@ -468,6 +468,7 @@ export const EyeDisplay = ({
                 isAnomaly={isAnomaly}
                 isScanning={isIdentityScanning || identityScanHoldActive}
                 scanProgress={isIdentityScanning ? 1 : (identityScanHoldActive ? 0.5 : 0)}
+                portraitPreset="scanner"
                 style={styles.video}
               />
             ) : eyeScannerActive ? (
@@ -705,7 +706,7 @@ export const EyeDisplay = ({
                     ? 'ID VERIFIED'
                     : identityScanHoldActive
                       ? 'RELEASE TO COMPLETE'
-                      : 'HOLD TO SCAN'}
+                      : 'HOLD TO SCAN FACE'}
                 </Text>
               </View>
             </View>

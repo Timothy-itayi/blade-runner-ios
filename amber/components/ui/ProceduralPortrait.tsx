@@ -6,10 +6,21 @@
 // References: Observer face scanning, MGS codec, SCP reconstructions,
 // Annihilation humanoid shimmer.
 
-import React, { useRef, useMemo, useEffect } from 'react';
-import { View, StyleSheet, Text, Animated } from 'react-native';
+import React, { useRef, useMemo, useEffect, useState } from 'react';
+import { View, StyleSheet, Text, Animated, LayoutChangeEvent, StyleProp, ViewStyle } from 'react-native';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
+import { Image as ExpoImage } from 'expo-image';
+import { PortraitCache } from '../../utils/PortraitCache';
+import { SynthesizedPortrait } from './SynthesizedPortrait';
+import {
+  PORTRAIT_GENERATOR_VERSION,
+  PORTRAIT_HEADSET_VERSION,
+  PORTRAIT_OUTPUT_SIZES,
+  PortraitPreset,
+  resolvePortraitFraming,
+} from '../../utils/PortraitConfig';
+import { getHeadAsset } from './portraitAssets';
 
 // React Native requires @react-three/fiber/native Canvas to create a GL surface.
 // The default @react-three/fiber Canvas is DOM-only and renders nothing in RN.
@@ -21,6 +32,7 @@ try {
 }
 import {
   generateFaceGeometry,
+  getTemplateBasedGeometry,
   generateVisualTraits,
   FaceGeometry,
   SubjectVisualTraits,
@@ -309,105 +321,106 @@ function FaceMesh({ geometry, traits, isScanning, scanProgress, seed }: FaceMesh
   
   const rng = useMemo(() => new SeededRandom(seed), [seed]);
   
-  // Generate face shape geometry
+  // Face proportions from geometry (template or procedural) — one defined base, varied per subject
+  const width = 0.8 * geometry.headWidth;
+  const height = 1.0 * geometry.headHeight;
+
+  // Generate face shape geometry driven by geometry params
   const faceGeometry = useMemo(() => {
-    const geo = new THREE.PlaneGeometry(0.8, 1.0, 32, 40);
+    const geo = new THREE.PlaneGeometry(width, height, 32, 40);
     const positions = geo.attributes.position;
-    
-    // Sculpt into face shape
+
     for (let i = 0; i < positions.count; i++) {
       const x = positions.getX(i);
       const y = positions.getY(i);
-      
-      // Oval face shape
+
       let z = 0;
-      const distFromCenter = Math.sqrt(x * x + y * y);
-      
-      // Face depth - bulge in center
+      const distFromCenter = Math.sqrt((x / (width / 2)) ** 2 + (y / (height / 2)) ** 2);
+
       z = Math.max(0, 0.15 - distFromCenter * 0.3);
-      
-      // Forehead bulge
-      if (y > 0.2) {
-        z += 0.03 * (1 - Math.abs(x) * 2);
+
+      if (y > 0.2 * height) {
+        z += 0.03 * (1 - (Math.abs(x) / (width / 2)) * 0.5);
       }
-      
-      // Cheek areas
-      if (y > -0.1 && y < 0.15 && Math.abs(x) > 0.15) {
+
+      if (y > -0.1 * height && y < 0.15 * height && Math.abs(x) > 0.15 * width) {
         z += 0.02;
       }
-      
-      // Nose ridge
-      if (Math.abs(x) < 0.08 && y > -0.15 && y < 0.1) {
-        z += 0.04 * (1 - Math.abs(x) * 10);
+
+      if (Math.abs(x) < geometry.noseWidth * 2 && y > -0.15 * height && y < 0.1 * height) {
+        z += 0.04 * (1 - Math.abs(x) / (geometry.noseWidth * 2) * 2);
       }
-      
-      // Jaw
-      if (y < -0.2) {
-        const jawWidth = 0.35 - (y + 0.2) * 0.3;
-        if (Math.abs(x) > jawWidth) {
+
+      // Jaw width from geometry
+      if (y < -0.2 * height) {
+        const jawWidthAtY = (geometry.jawWidth * width * 0.5) * (1 - Math.abs(y + 0.2 * height) / (0.3 * height));
+        if (Math.abs(x) > jawWidthAtY) {
           z = 0;
         }
       }
-      
-      // Add asymmetry from geometry params
+
       z += x * geometry.asymmetryX * 0.5;
       z += y * geometry.asymmetryY * 0.3;
-      
+
       positions.setZ(i, z);
     }
-    
+
     geo.computeVertexNormals();
     return geo;
-  }, [geometry]);
-  
-  // Generate dense wireframe grid
+  }, [geometry, width, height]);
+
+  // Wireframe grid follows face proportions
   const gridGeometry = useMemo(() => {
     const lines: number[] = [];
     const gridSize = 24;
-    const width = 0.85;
-    const height = 1.05;
-    
-    // Horizontal lines
+    const w = width * 1.05;
+    const h = height * 1.05;
+
     for (let i = 0; i <= gridSize; i++) {
-      const y = -height/2 + (i / gridSize) * height;
-      // Vary line width based on face shape
-      const lineWidth = width * (1 - Math.abs(y) * 0.3);
-      lines.push(-lineWidth/2, y, 0.01);
-      lines.push(lineWidth/2, y, 0.01);
+      const y = -h / 2 + (i / gridSize) * h;
+      const lineWidth = w * (1 - Math.abs(y / (h / 2)) * 0.35);
+      lines.push(-lineWidth / 2, y, 0.01);
+      lines.push(lineWidth / 2, y, 0.01);
     }
-    
-    // Vertical lines
+
     for (let i = 0; i <= gridSize; i++) {
-      const x = -width/2 + (i / gridSize) * width;
-      const lineHeight = height * (1 - Math.abs(x) * 0.4);
-      lines.push(x, -lineHeight/2, 0.01);
-      lines.push(x, lineHeight/2, 0.01);
+      const x = -w / 2 + (i / gridSize) * w;
+      const lineHeight = h * (1 - Math.abs(x / (w / 2)) * 0.4);
+      lines.push(x, -lineHeight / 2, 0.01);
+      lines.push(x, lineHeight / 2, 0.01);
     }
-    
-    // Diagonal lines (sparser)
-    for (let i = 0; i <= gridSize/2; i++) {
-      const offset = (i / (gridSize/2)) * width;
-      lines.push(-width/2 + offset, -height/2, 0.005);
-      lines.push(width/2, -height/2 + offset * (height/width), 0.005);
+
+    for (let i = 0; i <= gridSize / 2; i++) {
+      const offset = (i / (gridSize / 2)) * w;
+      lines.push(-w / 2 + offset, -h / 2, 0.005);
+      lines.push(w / 2, -h / 2 + offset * (h / w), 0.005);
     }
-    
+
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(lines, 3));
     return geo;
-  }, []);
-  
-  // Eye positions with misalignment
-  const leftEyePos = useMemo(() => [
-    -0.15 + geometry.leftEyeOffset.x,
-    0.12 + geometry.leftEyeOffset.y,
-    0.12
-  ] as [number, number, number], [geometry]);
-  
-  const rightEyePos = useMemo(() => [
-    0.15 + geometry.rightEyeOffset.x,
-    0.12 + geometry.rightEyeOffset.y,
-    0.12
-  ] as [number, number, number], [geometry]);
+  }, [width, height]);
+
+  // Eye positions from geometry (defined characteristics)
+  const leftEyePos = useMemo(
+    () =>
+      [
+        -geometry.eyeSpacing + geometry.leftEyeOffset.x,
+        geometry.eyeHeight + geometry.leftEyeOffset.y,
+        0.12,
+      ] as [number, number, number],
+    [geometry]
+  );
+
+  const rightEyePos = useMemo(
+    () =>
+      [
+        geometry.eyeSpacing + geometry.rightEyeOffset.x,
+        geometry.eyeHeight + geometry.rightEyeOffset.y,
+        0.12,
+      ] as [number, number, number],
+    [geometry]
+  );
   
   // Generate geometric plates (reconstruction panels)
   const plates = useMemo(() => {
@@ -797,6 +810,55 @@ function DataParticles({ seed, corruption }: { seed: string; corruption: number 
 }
 
 // =============================================================================
+// PORTRAIT FRAME - Canonical framing + per-head calibration
+// =============================================================================
+
+function PortraitFrame({
+  preset,
+  headIndex,
+  style,
+  overlay,
+  children,
+}: {
+  preset: PortraitPreset;
+  headIndex: number;
+  style?: any;
+  overlay?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const [layout, setLayout] = useState({ width: 0, height: 0 });
+  const framing = useMemo(() => resolvePortraitFraming(preset, headIndex), [preset, headIndex]);
+
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    if (width === layout.width && height === layout.height) return;
+    setLayout({ width, height });
+  };
+
+  const contentStyle = useMemo<StyleProp<ViewStyle>>(() => {
+    if (!layout.width || !layout.height) return styles.frameContent;
+    const translateX = framing.x * layout.width;
+    const translateY = framing.y * layout.height;
+    const transforms: Array<{ translateX?: number; translateY?: number; scale?: number; rotate?: string }> = [
+      { translateX },
+      { translateY },
+      { scale: framing.scale },
+    ];
+    if (framing.rotation) {
+      transforms.push({ rotate: `${framing.rotation}deg` });
+    }
+    return [styles.frameContent, { transform: transforms as any }];
+  }, [layout, framing]);
+
+  return (
+    <View style={[styles.container, style]} onLayout={handleLayout} collapsable={false}>
+      <View style={contentStyle}>{children}</View>
+      {overlay}
+    </View>
+  );
+}
+
+// =============================================================================
 // FALLBACK - When native Canvas is unavailable (Expo Go / web)
 // =============================================================================
 
@@ -853,8 +915,45 @@ function ProceduralPortraitFallback({
 }
 
 // =============================================================================
+// RAW HEAD FALLBACK - Base head image with framing
+// =============================================================================
+
+function RawHeadFallback({
+  headIndex,
+  preset,
+  style,
+  showScanLine = false,
+  scanProgress = 0,
+}: {
+  headIndex: number;
+  preset: PortraitPreset;
+  style?: any;
+  showScanLine?: boolean;
+  scanProgress?: number;
+}) {
+  const overlay = (
+    <>
+      {showScanLine && (
+        <View style={[styles.scanLineContainer, { top: `${scanProgress * 100}%` }]}>
+          <View style={styles.scanLine} />
+        </View>
+      )}
+      <View style={styles.vignette} pointerEvents="none" />
+    </>
+  );
+
+  return (
+    <PortraitFrame preset={preset} headIndex={headIndex} style={style} overlay={overlay}>
+      <ExpoImage source={getHeadAsset(headIndex)} style={StyleSheet.absoluteFill} contentFit="cover" />
+    </PortraitFrame>
+  );
+}
+
+// =============================================================================
 // MAIN COMPONENT
 // =============================================================================
+// Geometry: either template-based (reference face + subject variation) or fully procedural.
+// Renders a new face with defined characteristics via 3D mesh, not the template image.
 
 export interface ProceduralPortraitProps {
   subjectId: string;
@@ -863,6 +962,12 @@ export interface ProceduralPortraitProps {
   isScanning?: boolean;
   scanProgress?: number;
   style?: any;
+  portraitPreset?: PortraitPreset;
+  outputSize?: number;
+  /** Use template as geometry reference: one base face + subject variation. Default true. */
+  useTemplateGeometry?: boolean;
+  /** Use synthesized shader portrait. Default true. */
+  useSynthesized?: boolean;
 }
 
 export function ProceduralPortrait({
@@ -872,13 +977,211 @@ export function ProceduralPortrait({
   isScanning = false,
   scanProgress = 0,
   style,
+  portraitPreset = 'scanner',
+  outputSize,
+  useTemplateGeometry = true,
+  useSynthesized = true,
 }: ProceduralPortraitProps) {
-  const geometry = useMemo(() => generateFaceGeometry(subjectId), [subjectId]);
+  const [cachedUri, setCachedUri] = useState<string | null>(null);
+  const [needsRender, setNeedsRender] = useState(false);
+  const [, setQueueTick] = useState(0);
+  const [renderFailed, setRenderFailed] = useState(false);
+  const generatorVersion = PORTRAIT_GENERATOR_VERSION;
+  const targetSize = outputSize || PORTRAIT_OUTPUT_SIZES[portraitPreset];
+
+  const geometry = useMemo(
+    () =>
+      useTemplateGeometry
+        ? getTemplateBasedGeometry(subjectId, subjectType, isAnomaly)
+        : generateFaceGeometry(subjectId),
+    [subjectId, subjectType, isAnomaly, useTemplateGeometry]
+  );
   const traits = useMemo(
     () => generateVisualTraits(subjectId, subjectType, isAnomaly),
     [subjectId, subjectType, isAnomaly]
   );
 
+  useEffect(() => {
+    setCachedUri(null);
+    setNeedsRender(false);
+    setRenderFailed(false);
+  }, [subjectId, generatorVersion, targetSize]);
+
+  useEffect(() => {
+    if (useSynthesized) {
+      const checkCache = async () => {
+        await PortraitCache.init();
+        const exists = await PortraitCache.exists({
+          subjectId,
+          size: targetSize,
+          version: generatorVersion,
+          headSetVersion: PORTRAIT_HEADSET_VERSION,
+        });
+        if (exists) {
+          setCachedUri(
+            PortraitCache.getUri({
+              subjectId,
+              size: targetSize,
+              version: generatorVersion,
+              headSetVersion: PORTRAIT_HEADSET_VERSION,
+            })
+          );
+          await PortraitCache.touch({
+            subjectId,
+            size: targetSize,
+            version: generatorVersion,
+            headSetVersion: PORTRAIT_HEADSET_VERSION,
+          });
+        } else {
+          setNeedsRender(true);
+        }
+      };
+      checkCache();
+    }
+  }, [subjectId, targetSize, generatorVersion, useSynthesized]);
+
+  const handleCapture = async (base64: string) => {
+    try {
+      const uri = await PortraitCache.save(
+        {
+          subjectId,
+          size: targetSize,
+          version: generatorVersion,
+          headSetVersion: PORTRAIT_HEADSET_VERSION,
+        },
+        base64
+      );
+      setCachedUri(uri);
+      setNeedsRender(false);
+      setRenderFailed(false);
+    } catch (error) {
+      console.error('Failed to cache portrait:', error);
+      setRenderFailed(true);
+      setNeedsRender(false);
+    }
+  };
+
+  useEffect(() => {
+    return PortraitCache.subscribeQueue(() => setQueueTick((tick) => tick + 1));
+  }, []);
+
+  const cacheKey = useMemo(
+    () =>
+      PortraitCache.getKey({
+        subjectId,
+        size: targetSize,
+        version: generatorVersion,
+        headSetVersion: PORTRAIT_HEADSET_VERSION,
+      }),
+    [subjectId, targetSize, generatorVersion]
+  );
+
+  const needsCapture = useSynthesized && needsRender && !isScanning;
+  const hasRenderSlot = needsCapture && PortraitCache.isRenderSlotActive(cacheKey);
+
+  useEffect(() => {
+    if (!needsCapture) return;
+    PortraitCache.requestRenderSlot(cacheKey);
+    return () => {
+      PortraitCache.releaseRenderSlot(cacheKey);
+    };
+  }, [needsCapture, cacheKey]);
+
+  const overlay = (
+    <>
+      {isScanning && (
+        <View style={[styles.scanLineContainer, { top: `${scanProgress * 100}%` }]}>
+          <View style={styles.scanLine} />
+        </View>
+      )}
+      <View style={styles.vignette} pointerEvents="none" />
+    </>
+  );
+
+  const renderBaseHead = (extra?: React.ReactNode) => (
+    <PortraitFrame
+      preset={portraitPreset}
+      headIndex={geometry.baseHeadIndex}
+      style={style}
+      overlay={overlay}
+    >
+      <>
+        <ExpoImage source={getHeadAsset(geometry.baseHeadIndex)} style={StyleSheet.absoluteFill} contentFit="cover" />
+        {extra}
+      </>
+    </PortraitFrame>
+  );
+
+  // If we have a cached image, show it (fast UI)
+  if (useSynthesized && cachedUri && !isScanning) {
+    return (
+      <PortraitFrame
+        preset={portraitPreset}
+        headIndex={geometry.baseHeadIndex}
+        style={style}
+        overlay={overlay}
+      >
+        <ExpoImage
+          source={{ uri: cachedUri }}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+        />
+      </PortraitFrame>
+    );
+  }
+
+  // Live scanning view (no capture - keep deterministic cache)
+  if (useSynthesized && isScanning) {
+    return (
+      <PortraitFrame
+        preset={portraitPreset}
+        headIndex={geometry.baseHeadIndex}
+        style={style}
+        overlay={overlay}
+      >
+        <SynthesizedPortrait
+          geometry={geometry}
+          isStatic={false}
+          style={StyleSheet.absoluteFillObject}
+        />
+      </PortraitFrame>
+    );
+  }
+
+  // Cache capture path (single render slot)
+  if (useSynthesized && needsCapture) {
+    if (hasRenderSlot) {
+      return renderBaseHead(
+        <SynthesizedPortrait
+          geometry={geometry}
+          onCapture={handleCapture}
+          onCaptureError={() => {
+            setRenderFailed(true);
+            setNeedsRender(false);
+          }}
+          isStatic
+          renderSize={targetSize}
+          style={styles.captureHidden}
+        />
+      );
+    }
+    return renderBaseHead();
+  }
+
+  // If rendering failed, fall back to base head
+  if (useSynthesized && renderFailed) {
+    return (
+      <RawHeadFallback
+        headIndex={geometry.baseHeadIndex}
+        preset={portraitPreset}
+        style={style}
+        showScanLine={isScanning}
+        scanProgress={scanProgress}
+      />
+    );
+  }
+
+  // Legacy/Fallback/Original Wireframe Look
   if (!NativeCanvas) {
     return (
       <ProceduralPortraitFallback
@@ -891,7 +1194,12 @@ export function ProceduralPortrait({
   }
 
   return (
-    <View style={[styles.container, style]} collapsable={false}>
+    <PortraitFrame
+      preset={portraitPreset}
+      headIndex={geometry.baseHeadIndex}
+      style={style}
+      overlay={overlay}
+    >
       <NativeCanvas
         gl={{ antialias: true, alpha: true }}
         camera={{ position: [0, 0, 1.2], fov: 45 }}
@@ -911,10 +1219,7 @@ export function ProceduralPortrait({
         
         <DataParticles seed={subjectId} corruption={geometry.corruptionLevel} />
       </NativeCanvas>
-      
-      {/* Vignette overlay */}
-      <View style={styles.vignette} pointerEvents="none" />
-    </View>
+    </PortraitFrame>
   );
 }
 
@@ -927,6 +1232,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0f14',
     overflow: 'hidden',
+  },
+  frameContent: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  captureHidden: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    opacity: 0,
   },
   canvas: {
     flex: 1,
@@ -960,6 +1274,21 @@ const styles = StyleSheet.create({
     borderWidth: 30,
     borderColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 8,
+  },
+  scanLineContainer: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 4,
+    zIndex: 10,
+  },
+  scanLine: {
+    height: 2,
+    backgroundColor: '#00ffaa',
+    shadowColor: '#00ffaa',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
   },
 });
 

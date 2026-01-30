@@ -12,6 +12,7 @@ import { getSubjectGreeting, CommunicationStyle, COMMUNICATION_STYLE_DESCRIPTION
 import { getSubjectCredentials, getCredentialTypeName, getExpirationStatus } from '../../data/credentialTypes';
 import { styles } from './intel/IntelPanel.styles';
 import { calculateQuestionBPM, generateDefaultResponse } from './intel/helpers/interrogation';
+import { ProceduralPortrait } from '../ui/ProceduralPortrait';
 // Stripped-down build: verification drawer removed.
 
 // Phase 4: Interaction phase type
@@ -449,6 +450,7 @@ export const IntelPanel = ({
     if (mode === 'dossier') {
       const dossierUnlocked = hudStage === 'full' && dossierRevealed;
       const dossierHasContent = dossierUnlocked && !!data.dossier;
+      const showProceduralPortrait = data.useProceduralPortrait || (!data.profilePic && !!data.id);
 
       return (
         <View style={styles.investigationCard}>
@@ -460,7 +462,15 @@ export const IntelPanel = ({
             {dossierHasContent ? (
               <View style={{ flex: 1 }}>
                 <View style={styles.dossierPreviewHeader}>
-                  {data.profilePic ? (
+                  {showProceduralPortrait ? (
+                    <ProceduralPortrait
+                      subjectId={data.id}
+                      subjectType={data.subjectType}
+                      isAnomaly={data.subjectType === 'REPLICANT'}
+                      portraitPreset="dossier"
+                      style={styles.dossierPreviewPhoto}
+                    />
+                  ) : data.profilePic ? (
                     <Image source={data.profilePic} style={styles.dossierPreviewPhoto} />
                   ) : (
                     <View style={styles.dossierPreviewPhoto} />

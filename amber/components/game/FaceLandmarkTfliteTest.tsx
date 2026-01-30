@@ -56,6 +56,7 @@ type ImageRun = {
   landmarkSample: string;
   previewImage: ReturnType<typeof useImage> | null;
   maskImage: ReturnType<typeof useImage> | null;
+  edgeImage: ReturnType<typeof useImage> | null;
   inputWidth: number;
   inputHeight: number;
   landmarks: Array<{ x: number; y: number; z: number }>;
@@ -90,6 +91,7 @@ const IMAGE_SOURCES = [
     asset: require('../../assets/ai-portraits/timothy_itayi_humanoid_robot_face_plates_and_seams_visible_me_b66526ea-6817-4949-9792-8be4981abf9e_0.png'),
   },
 ];
+const ACTIVE_SOURCES = IMAGE_SOURCES.slice(0, 3);
 const PREVIEW_WIDTH = 120;
 const CROP_TWEAK = {
   scale: 1.12,
@@ -120,6 +122,7 @@ const EDGE_SETTINGS = {
   threshold: 0.22,
   softness: 0.05,
 };
+const USE_GPU_EDGES = false;
 
 const SOBEL_SHADER = Skia.RuntimeEffect.Make(`
 uniform shader image;
@@ -725,6 +728,7 @@ const buildInputFromImage = (
     inputWidth: width,
     inputHeight: height,
     previewImage: previewImage ?? null,
+    pixels,
   };
 };
 
@@ -843,6 +847,150 @@ const buildLandmarkMaskImage = (
   surface.flush();
   return surface.makeImageSnapshot();
 };
+
+const buildLandmarkMask = (
+  landmarks: Array<{ x: number; y: number; z: number }>,
+  width: number,
+  height: number
+) => {
+  const image = buildLandmarkMaskImage(landmarks, width, height);
+  if (!image) return { maskImage: null, maskArray: null };
+  const imageInfo = {
+    width,
+    height,
+    colorType: ColorType.RGBA_8888,
+    alphaType: AlphaType.Premul,
+  };
+  const pixels = image.readPixels(0, 0, imageInfo);
+  if (!pixels || !(pixels instanceof Uint8Array)) {
+    return { maskImage: image, maskArray: null };
+  }
+  const maskArray = new Float32Array(width * height);
+  for (let i = 0; i < width * height; i++) {
+    maskArray[i] = pixels[i * 4] / 255;
+  }
+  return { maskImage: image, maskArray };
+};
+
+const computeSobelEdges = (
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  mask: Float32Array,
+  step: number
+) => {
+  const out = new Float32Array(width * height);
+  const getGray = (x: number, y: number) => {
+    const idx = (y * width + x) * 4;
+    const r = pixels[idx];
+    const g = pixels[idx + 1];
+    const b = pixels[idx + 2];
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  };
+  for (let y = step; y < height - step; y++) {
+    for (let x = step; x < width - step; x++) {
+      const gx = (
+        -1 * getGray(x - step, y - step) +
+        1 * getGray(x + step, y - step) +
+        -2 * getGray(x - step, y) +
+        2 * getGray(x + step, y) +
+        -1 * getGray(x - step, y + step) +
+        1 * getGray(x + step, y + step)
+      );
+      const gy = (
+        -1 * getGray(x - step, y - step) +
+        -2 * getGray(x, y - step) +
+        -1 * getGray(x + step, y - step) +
+        1 * getGray(x - step, y + step) +
+        2 * getGray(x, y + step) +
+        1 * getGray(x + step, y + step)
+      );
+      const magnitude = Math.min(1, Math.sqrt(gx * gx + gy * gy));
+      out[y * width + x] = magnitude * mask[y * width + x];
+    }
+  }
+  return out;
+};
+
+const blurGray = (pixels: Uint8Array, width: number, height: number, radius: number) => {
+  const out = new Float32Array(width * height);
+  const getGray = (x: number, y: number) => {
+    const idx = (y * width + x) * 4;
+    const r = pixels[idx];
+    const g = pixels[idx + 1];
+    const b = pixels[idx + 2];
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  };
+  const size = radius * 2 + 1;
+  const denom = size * size;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0;
+      for (let ky = -radius; ky <= radius; ky++) {
+        const yy = clamp(y + ky, 0, height - 1);
+        for (let kx = -radius; kx <= radius; kx++) {
+          const xx = clamp(x + kx, 0, width - 1);
+          sum += getGray(xx, yy);
+        }
+      }
+      out[y * width + x] = sum / denom;
+    }
+  }
+  return out;
+};
+
+const computeDoG = (
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  mask: Float32Array
+) => {
+  const small = blurGray(pixels, width, height, 1);
+  const large = blurGray(pixels, width, height, 3);
+  const out = new Float32Array(width * height);
+  for (let i = 0; i < width * height; i++) {
+    const value = Math.abs(small[i] - large[i]);
+    out[i] = Math.min(1, value) * mask[i];
+  }
+  return out;
+};
+
+const blendEdges = (
+  fine: Float32Array,
+  coarse: Float32Array,
+  dog: Float32Array,
+  width: number,
+  height: number
+) => {
+  const out = new Float32Array(width * height);
+  for (let i = 0; i < width * height; i++) {
+    const value = fine[i] * 0.6 + coarse[i] * 0.4 + dog[i] * 0.5;
+    out[i] = Math.min(1, value);
+  }
+  return out;
+};
+
+const buildEdgeImage = (edges: Float32Array, width: number, height: number) => {
+  const rgba = new Uint8Array(width * height * 4);
+  for (let i = 0; i < width * height; i++) {
+    const value = Math.round(Math.max(0, Math.min(1, edges[i])) * 255);
+    const idx = i * 4;
+    rgba[idx] = value;
+    rgba[idx + 1] = value;
+    rgba[idx + 2] = value;
+    rgba[idx + 3] = value;
+  }
+  return Skia.Image.MakeImage(
+    {
+      width,
+      height,
+      colorType: ColorType.RGBA_8888,
+      alphaType: AlphaType.Premul,
+    },
+    Skia.Data.fromBytes(rgba),
+    width * 4
+  );
+};
 const buildPath = (
   landmarks: Array<{ x: number; y: number; z: number }>,
   inputWidth: number,
@@ -933,20 +1081,16 @@ export function FaceLandmarkTfliteTest({
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [runs, setRuns] = useState<ImageRun[]>([]);
   const runStageRef = useRef<'none' | 'landmarks' | 'segmentation'>('none');
-  const imageNeutral = useImage(IMAGE_SOURCES[0].asset);
-  const imageCyborg = useImage(IMAGE_SOURCES[1].asset);
-  const imageUncanny = useImage(IMAGE_SOURCES[2].asset);
-  const imageAlien = useImage(IMAGE_SOURCES[3].asset);
-  const imageRobot = useImage(IMAGE_SOURCES[4].asset);
+  const imageNeutral = useImage(ACTIVE_SOURCES[0].asset);
+  const imageCyborg = useImage(ACTIVE_SOURCES[1].asset);
+  const imageUncanny = useImage(ACTIVE_SOURCES[2].asset);
   const images = useMemo(
     () => [
-      { ...IMAGE_SOURCES[0], image: imageNeutral },
-      { ...IMAGE_SOURCES[1], image: imageCyborg },
-      { ...IMAGE_SOURCES[2], image: imageUncanny },
-      { ...IMAGE_SOURCES[3], image: imageAlien },
-      { ...IMAGE_SOURCES[4], image: imageRobot },
+      { ...ACTIVE_SOURCES[0], image: imageNeutral },
+      { ...ACTIVE_SOURCES[1], image: imageCyborg },
+      { ...ACTIVE_SOURCES[2], image: imageUncanny },
     ],
-    [imageAlien, imageCyborg, imageNeutral, imageRobot, imageUncanny]
+    [imageCyborg, imageNeutral, imageUncanny]
   );
 
   const inputInfo = useMemo(() => {
@@ -1102,6 +1246,7 @@ export function FaceLandmarkTfliteTest({
       }
 
       let maskImage: ReturnType<typeof useImage> | null = null;
+      let maskArray: Float32Array | null = null;
       if (segMask) {
         const resizedMask = sampleSegMaskForCrop(
           segMask.mask,
@@ -1113,9 +1258,21 @@ export function FaceLandmarkTfliteTest({
           inputWidth,
           inputHeight
         );
+        maskArray = resizedMask;
         maskImage = buildMaskImage(resizedMask, inputWidth, inputHeight);
       } else {
-        maskImage = buildLandmarkMaskImage(points, inputWidth, inputHeight);
+        const fallback = buildLandmarkMask(points, inputWidth, inputHeight);
+        maskImage = fallback.maskImage;
+        maskArray = fallback.maskArray;
+      }
+
+      let edgeImage: ReturnType<typeof useImage> | null = null;
+      if (!USE_GPU_EDGES && maskArray && imageInput?.pixels) {
+        const fine = computeSobelEdges(imageInput.pixels, inputWidth, inputHeight, maskArray, 1);
+        const coarse = computeSobelEdges(imageInput.pixels, inputWidth, inputHeight, maskArray, 2);
+        const dog = computeDoG(imageInput.pixels, inputWidth, inputHeight, maskArray);
+        const blended = blendEdges(fine, coarse, dog, inputWidth, inputHeight);
+        edgeImage = buildEdgeImage(blended, inputWidth, inputHeight);
       }
 
       runResults.push({
@@ -1134,6 +1291,7 @@ export function FaceLandmarkTfliteTest({
         landmarkSample,
         previewImage,
         maskImage,
+        edgeImage,
         inputWidth,
         inputHeight,
         landmarks: points,
@@ -1199,7 +1357,7 @@ export function FaceLandmarkTfliteTest({
       <View style={styles.panel}>
         <Text style={styles.title}>TFLite Face Landmark</Text>
         <Text style={styles.line}>IMAGES LOADING</Text>
-        <Text style={styles.line}>{IMAGE_SOURCES.length} portraits</Text>
+        <Text style={styles.line}>{ACTIVE_SOURCES.length} portraits</Text>
       </View>
     );
   }
@@ -1266,7 +1424,7 @@ export function FaceLandmarkTfliteTest({
                   height={previewHeight}
                   fit="fill"
                 />
-                {run.maskImage && SOBEL_SHADER && (
+                {USE_GPU_EDGES && run.maskImage && SOBEL_SHADER && (
                   <Fill>
                     <Shader
                       source={SOBEL_SHADER}
@@ -1290,6 +1448,17 @@ export function FaceLandmarkTfliteTest({
                       />
                     </Shader>
                   </Fill>
+                )}
+                {!USE_GPU_EDGES && run.edgeImage && (
+                  <SkiaImage
+                    image={run.edgeImage}
+                    x={0}
+                    y={0}
+                    width={previewWidth}
+                    height={previewHeight}
+                    fit="fill"
+                    opacity={0.6}
+                  />
                 )}
                 {contourPath && (
                   <Path

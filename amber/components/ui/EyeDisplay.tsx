@@ -9,6 +9,7 @@ import { BUILD_SEQUENCE } from '../../constants/animations';
 import { Theme } from '../../constants/theme';
 import { DecisionStamp } from '../game/DecisionStamp';
 import { ProceduralPortrait } from './ProceduralPortrait';
+import { FaceLandmarkTfliteTest } from '../game/FaceLandmarkTfliteTest';
 import { ScanlineOverlay } from './CRTScreen';
 
 const CircularBorder = ({ active, delay = 0 }: { active: boolean, delay?: number }) => {
@@ -76,6 +77,7 @@ export const EyeDisplay = ({
   biometricsRevealed = false,
   // Procedural portrait props
   useProceduralPortrait = false,
+  baseImageIdOverride,
   subjectId,
   subjectType,
   isAnomaly = false,
@@ -107,6 +109,7 @@ export const EyeDisplay = ({
   biometricsRevealed?: boolean,
   // Procedural portrait props
   useProceduralPortrait?: boolean,
+  baseImageIdOverride?: number,
   subjectId?: string,
   subjectType?: string,
   isAnomaly?: boolean,
@@ -462,13 +465,11 @@ export const EyeDisplay = ({
           ]}>
             {/* Procedural Portrait Mode */}
             {shouldUseProcedural && subjectId ? (
-              <ProceduralPortrait
-                subjectId={subjectId}
-                subjectType={subjectType}
-                isAnomaly={isAnomaly}
-                isScanning={isIdentityScanning || identityScanHoldActive}
+              <FaceLandmarkTfliteTest
                 scanProgress={isIdentityScanning ? 1 : (identityScanHoldActive ? 0.5 : 0)}
-                portraitPreset="scanner"
+                isScanning={isIdentityScanning || identityScanHoldActive}
+                mode="portrait"
+                activeIndex={baseImageIdOverride ?? 0}
                 style={styles.video}
               />
             ) : eyeScannerActive ? (

@@ -58,6 +58,53 @@ export const portraitFragmentShader = `
     return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
   }
 
+  float fbm(vec2 st) {
+    float value = 0.0;
+    float amplitude = 0.5;
+    float frequency = 1.0;
+    for (int i = 0; i < 4; i++) {
+      value += amplitude * noise(st * frequency);
+      frequency *= 2.0;
+      amplitude *= 0.5;
+    }
+    return value;
+  }
+
+  vec2 random2(vec2 st) {
+    st = vec2(
+      dot(st, vec2(127.1, 311.7)),
+      dot(st, vec2(269.5, 183.3))
+    );
+    return fract(sin(st) * 43758.5453123);
+  }
+
+  float worley(vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+    float minDist = 1.0;
+    for (int y = -1; y <= 1; y++) {
+      for (int x = -1; x <= 1; x++) {
+        vec2 neighbor = vec2(float(x), float(y));
+        vec2 point = random2(i + neighbor);
+        vec2 diff = neighbor + point - f;
+        float dist = dot(diff, diff);
+        minDist = min(minDist, dist);
+      }
+    }
+    return sqrt(minDist);
+  }
+
+  float interleavedGradientNoise(vec2 st) {
+    return fract(52.9829189 * fract(dot(st, vec2(0.06711056, 0.00583715))));
+  }
+
+  float blueNoise(vec2 st) {
+    vec2 pixel = floor(st);
+    float hi = interleavedGradientNoise(pixel);
+    float low = interleavedGradientNoise(floor(pixel * 0.25));
+    return fract(hi - low + 1.0);
+  }
+
   // UV Warp Logic
   vec2 applyWarp(vec2 uv) {
     vec2 targetUv = uv;
@@ -156,9 +203,18 @@ export const portraitFragmentShader = `
     float freckleZone = smoothstep(0.3, 0.1, abs(vUv.x - 0.5)) * smoothstep(0.4, 0.6, vUv.y) * smoothstep(0.8, 0.6, vUv.y);
     color = mix(color, color * 0.6, freckleMask * uFreckleDensity * freckleZone);
 
-    // 2. Details: Pores (high frequency noise)
-    float poreNoise = random(vUv * 200.0);
-    color *= (1.0 - poreNoise * uPoreStrength * 0.1);
+    // 2. Details: Skin texture (perlin + worley + blue noise)
+    float perlinNoise = fbm(vUv * 4.0 + vec2(uBlemishSeed, uBlemishSeed * 1.7));
+    float perlinMask = smoothstep(0.2, 0.8, perlinNoise);
+    color *= 0.96 + perlinMask * 0.08;
+
+    float worleyNoise = worley(vUv * 18.0 + vec2(uBlemishSeed * 1.3, uBlemishSeed * 2.1));
+    float poreMask = 1.0 - smoothstep(0.05, 0.25, worleyNoise);
+    color *= 1.0 - poreMask * uPoreStrength * 0.18;
+
+    float blue = blueNoise(vUv * 512.0 + vec2(uBlemishSeed * 13.7, uBlemishSeed * 9.3));
+    float grain = (blue - 0.5) * uPoreStrength * 0.06;
+    color += grain;
 
     // 3. Cyber: Barcode/Stamps
     if (uBarcodeIndex > 0.0) {

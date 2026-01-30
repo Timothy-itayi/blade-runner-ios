@@ -5,6 +5,7 @@ import { HUDBox } from '../ui/HUDBox';
 import { TypewriterText } from '../ui/ScanData';
 import { BUILD_SEQUENCE } from '../../constants/animations';
 import { ProceduralPortrait } from '../ui/ProceduralPortrait';
+import { FaceLandmarkTfliteTest } from './FaceLandmarkTfliteTest';
 
 export const CommLinkPanel = ({ 
   dialogue, 
@@ -13,6 +14,7 @@ export const CommLinkPanel = ({
   subjectType,
   isAnomaly = false,
   useProceduralPortrait = true,
+  baseImageIdOverride,
 }: { 
   dialogue?: string, 
   hudStage: 'none' | 'wireframe' | 'outline' | 'full',
@@ -20,6 +22,7 @@ export const CommLinkPanel = ({
   subjectType?: string,
   isAnomaly?: boolean,
   useProceduralPortrait?: boolean,
+  baseImageIdOverride?: number,
 }) => {
   if (hudStage === 'none') return null;
 
@@ -41,11 +44,11 @@ export const CommLinkPanel = ({
       <View style={styles.content}>
         {showPortrait && (
           <View style={styles.portraitFrame}>
-            <ProceduralPortrait
-              subjectId={subjectId as string}
-              subjectType={subjectType}
-              isAnomaly={isAnomaly}
-              portraitPreset="comms"
+            <FaceLandmarkTfliteTest
+              mode="portrait"
+              activeIndex={baseImageIdOverride ?? 0}
+              isScanning={false}
+              scanProgress={0}
               style={styles.portraitImage}
             />
           </View>

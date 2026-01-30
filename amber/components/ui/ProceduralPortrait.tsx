@@ -11,7 +11,7 @@ import { View, StyleSheet, Text, Animated, LayoutChangeEvent, StyleProp, ViewSty
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { Image as ExpoImage } from 'expo-image';
-import { PortraitCache } from '../../utils/PortraitCache';
+import { PortraitCache, PortraitRecipe } from '../../utils/PortraitCache';
 import { SynthesizedPortrait } from './SynthesizedPortrait';
 import {
   PORTRAIT_GENERATOR_VERSION,
@@ -964,6 +964,8 @@ export interface ProceduralPortraitProps {
   style?: any;
   portraitPreset?: PortraitPreset;
   outputSize?: number;
+  /** Optional base image override (0-2 for ai portraits). */
+  baseImageIdOverride?: number;
   /** Use template as geometry reference: one base face + subject variation. Default true. */
   useTemplateGeometry?: boolean;
   /** Use synthesized shader portrait. Default true. */
@@ -979,6 +981,7 @@ export function ProceduralPortrait({
   style,
   portraitPreset = 'scanner',
   outputSize,
+  baseImageIdOverride,
   useTemplateGeometry = true,
   useSynthesized = true,
 }: ProceduralPortraitProps) {
@@ -986,26 +989,56 @@ export function ProceduralPortrait({
   const [needsRender, setNeedsRender] = useState(false);
   const [, setQueueTick] = useState(0);
   const [renderFailed, setRenderFailed] = useState(false);
+  const [portraitRecipe, setPortraitRecipe] = useState<PortraitRecipe | null>(null);
   const generatorVersion = PORTRAIT_GENERATOR_VERSION;
   const targetSize = outputSize || PORTRAIT_OUTPUT_SIZES[portraitPreset];
 
+  const recipeSeed = portraitRecipe?.seed ?? subjectId;
+  const baseImageId = baseImageIdOverride ?? portraitRecipe?.baseImageId;
   const geometry = useMemo(
     () =>
       useTemplateGeometry
-        ? getTemplateBasedGeometry(subjectId, subjectType, isAnomaly)
-        : generateFaceGeometry(subjectId),
-    [subjectId, subjectType, isAnomaly, useTemplateGeometry]
+        ? getTemplateBasedGeometry(recipeSeed, subjectType, isAnomaly, baseImageId)
+        : generateFaceGeometry(recipeSeed, subjectType, isAnomaly, baseImageId),
+    [recipeSeed, subjectType, isAnomaly, useTemplateGeometry, baseImageId]
   );
   const traits = useMemo(
-    () => generateVisualTraits(subjectId, subjectType, isAnomaly),
-    [subjectId, subjectType, isAnomaly]
+    () => generateVisualTraits(recipeSeed, subjectType, isAnomaly),
+    [recipeSeed, subjectType, isAnomaly]
   );
 
   useEffect(() => {
     setCachedUri(null);
     setNeedsRender(false);
     setRenderFailed(false);
+    setPortraitRecipe(null);
   }, [subjectId, generatorVersion, targetSize]);
+
+  useEffect(() => {
+    let active = true;
+    const loadRecipe = async () => {
+      const recipe = await PortraitCache.getRecipe(subjectId);
+      if (active) {
+        setPortraitRecipe(recipe);
+      }
+    };
+    loadRecipe();
+    return () => {
+      active = false;
+    };
+  }, [subjectId]);
+
+  useEffect(() => {
+    if (portraitRecipe) return;
+    PortraitCache.ensureRecipe({
+      subjectId,
+      seed: subjectId,
+      archetype: subjectType,
+      baseImageId: baseImageIdOverride ?? geometry.baseHeadIndex,
+    }).then((recipe) => {
+      if (recipe) setPortraitRecipe(recipe);
+    });
+  }, [portraitRecipe, subjectId, subjectType, geometry.baseHeadIndex, baseImageIdOverride]);
 
   useEffect(() => {
     if (useSynthesized) {

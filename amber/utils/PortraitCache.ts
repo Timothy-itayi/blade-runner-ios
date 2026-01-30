@@ -7,6 +7,7 @@ import {
 
 const CACHE_DIR = `${FileSystem.cacheDirectory}portraits/`;
 const INDEX_PATH = `${CACHE_DIR}index.json`;
+const RECIPE_PATH = `${CACHE_DIR}recipes.json`;
 
 type CacheEntry = {
   key: string;
@@ -24,7 +25,21 @@ type CacheIndex = {
   entries: Record<string, CacheEntry>;
 };
 
+export type PortraitRecipe = {
+  subjectId: string;
+  seed: string;
+  archetype?: string;
+  baseImageId: number;
+  createdAt: number;
+  updatedAt: number;
+};
+
+type RecipeIndex = {
+  entries: Record<string, PortraitRecipe>;
+};
+
 const emptyIndex = (): CacheIndex => ({ entries: {} });
+const emptyRecipeIndex = (): RecipeIndex => ({ entries: {} });
 const safeId = (id: string) => encodeURIComponent(id);
 
 const getKeyParts = ({
@@ -43,6 +58,7 @@ const getBudgetForSize = (size: number) =>
   PORTRAIT_CACHE_BUDGETS[size] ?? PORTRAIT_CACHE_BUDGETS[256];
 
 let cacheIndex: CacheIndex | null = null;
+let recipeIndex: RecipeIndex | null = null;
 let initPromise: Promise<void> | null = null;
 
 const queueListeners = new Set<() => void>();
@@ -68,9 +84,29 @@ const loadIndex = async () => {
   }
 };
 
+const loadRecipes = async () => {
+  try {
+    const info = await FileSystem.getInfoAsync(RECIPE_PATH);
+    if (!info.exists) {
+      recipeIndex = emptyRecipeIndex();
+      return;
+    }
+    const raw = await FileSystem.readAsStringAsync(RECIPE_PATH);
+    const parsed = JSON.parse(raw);
+    recipeIndex = parsed && typeof parsed === 'object' ? parsed : emptyRecipeIndex();
+  } catch {
+    recipeIndex = emptyRecipeIndex();
+  }
+};
+
 const saveIndex = async () => {
   if (!cacheIndex) return;
   await FileSystem.writeAsStringAsync(INDEX_PATH, JSON.stringify(cacheIndex));
+};
+
+const saveRecipes = async () => {
+  if (!recipeIndex) return;
+  await FileSystem.writeAsStringAsync(RECIPE_PATH, JSON.stringify(recipeIndex));
 };
 
 const touchEntry = async (key: string) => {
@@ -139,9 +175,50 @@ export const PortraitCache = {
         await FileSystem.makeDirectoryAsync(CACHE_DIR, { intermediates: true });
       }
       await loadIndex();
+      await loadRecipes();
       await pruneCache();
     })();
     return initPromise;
+  },
+
+  async getRecipe(subjectId: string) {
+    await this.init();
+    if (!recipeIndex) {
+      await loadRecipes();
+    }
+    return recipeIndex?.entries[subjectId] ?? null;
+  },
+
+  async saveRecipe(recipe: Omit<PortraitRecipe, 'createdAt' | 'updatedAt'>) {
+    await this.init();
+    if (!recipeIndex) {
+      recipeIndex = emptyRecipeIndex();
+    }
+    const existing = recipeIndex.entries[recipe.subjectId];
+    const createdAt = existing?.createdAt || Date.now();
+    recipeIndex.entries[recipe.subjectId] = {
+      ...recipe,
+      createdAt,
+      updatedAt: Date.now(),
+    };
+    await saveRecipes();
+    return recipeIndex.entries[recipe.subjectId];
+  },
+
+  async ensureRecipe(recipe: Omit<PortraitRecipe, 'createdAt' | 'updatedAt'>) {
+    const existing = await this.getRecipe(recipe.subjectId);
+    if (!existing) {
+      return this.saveRecipe(recipe);
+    }
+    if (existing.baseImageId !== recipe.baseImageId || existing.archetype !== recipe.archetype) {
+      return this.saveRecipe({
+        subjectId: existing.subjectId,
+        seed: recipe.seed || existing.seed,
+        archetype: recipe.archetype ?? existing.archetype,
+        baseImageId: recipe.baseImageId,
+      });
+    }
+    return existing;
   },
 
   getKey({ subjectId, size, version, headSetVersion }: PortraitCacheKey) {
@@ -221,6 +298,7 @@ export const PortraitCache = {
     if (dirInfo.exists) {
       await FileSystem.deleteAsync(CACHE_DIR, { idempotent: true });
       cacheIndex = emptyIndex();
+      recipeIndex = emptyRecipeIndex();
       initPromise = null;
     }
   },

@@ -1,18 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LayoutChangeEvent, ScrollView, StyleSheet, Text, View, StyleProp, ViewStyle } from 'react-native';
 import { Tensor, useTensorflowModel } from 'react-native-fast-tflite';
 import {
   AlphaType,
   Canvas,
   ColorType,
   Fill,
+  Group,
   Image as SkiaImage,
   ImageShader,
+  LinearGradient,
+  RadialGradient,
   Path,
   Shader,
   Skia,
   useImage,
+  vec,
 } from '@shopify/react-native-skia';
+import { SeededRandom } from '../../utils/seededRandom';
 
 type SupportedTypedArray =
   | Float32Array
@@ -43,6 +48,9 @@ type RunSummary = {
 type ImageRun = {
   key: string;
   label: string;
+  baseImageId: string;
+  seed: string;
+  archetype: 'human' | 'cyborg' | 'uncanny';
   imageStatus: string;
   imageSize: string;
   crop: string;
@@ -68,16 +76,19 @@ const IMAGE_SOURCES = [
   {
     key: 'neutral',
     label: 'neutral-expression',
+    archetype: 'human' as const,
     asset: require('../../assets/ai-portraits/timothy_itayi_neutral_expression_facing_camera_head_and_shoul_0f9d1137-478a-44d0-bd39-d600c34db2cc_3.png'),
   },
   {
     key: 'cyborg',
     label: 'cyborg-implants',
+    archetype: 'cyborg' as const,
     asset: require('../../assets/ai-portraits/timothy_itayi_human_cyborg_hybrid_partial_facial_implants_exp_c337c6ba-b3cb-4046-9554-357c27634711_3.png'),
   },
   {
     key: 'uncanny',
     label: 'uncanny',
+    archetype: 'uncanny' as const,
     asset: require('../../assets/ai-portraits/timothy_itayi_synthetic_human_replicant_slightly_uncanny_feat_5902affe-5785-43a1-8928-41222ec93cbe_3.png'),
   },
   {
@@ -92,6 +103,75 @@ const IMAGE_SOURCES = [
   },
 ];
 const ACTIVE_SOURCES = IMAGE_SOURCES.slice(0, 3);
+const TEXTURE_KEYS = [
+  'blueMetalDiff',
+  'blueMetalDisp',
+  'leatherRed',
+  'rockWallDiff',
+  'rockWallDisp',
+  'concrete206',
+  'grunge336',
+  'grunge342',
+  'inkPaint399',
+  'metal264',
+  'metal295',
+  'soil125',
+  'soil130',
+  'soil146',
+  'stone165',
+] as const;
+
+type TextureKey = (typeof TEXTURE_KEYS)[number];
+
+const TEXTURE_ASSETS: Record<TextureKey, number> = {
+  blueMetalDiff: require('../../assets/textures/blue_metal_plate_diff_1k.jpg'),
+  blueMetalDisp: require('../../assets/textures/blue_metal_plate_disp_1k.png'),
+  leatherRed: require('../../assets/textures/leather_red_02_coll1_1k.png'),
+  rockWallDiff: require('../../assets/textures/rock_wall_16_diff_1k.jpg'),
+  rockWallDisp: require('../../assets/textures/rock_wall_16_disp_1k.png'),
+  concrete206: require('../../assets/textures/Texturelabs_Concrete_206S.jpg'),
+  grunge336: require('../../assets/textures/Texturelabs_Grunge_336S.jpg'),
+  grunge342: require('../../assets/textures/Texturelabs_Grunge_342S.jpg'),
+  inkPaint399: require('../../assets/textures/Texturelabs_InkPaint_399S.jpg'),
+  metal264: require('../../assets/textures/Texturelabs_Metal_264S.jpg'),
+  metal295: require('../../assets/textures/Texturelabs_Metal_295S.jpg'),
+  soil125: require('../../assets/textures/Texturelabs_Soil_125S.jpg'),
+  soil130: require('../../assets/textures/Texturelabs_Soil_130S.jpg'),
+  soil146: require('../../assets/textures/Texturelabs_Soil_146S.jpg'),
+  stone165: require('../../assets/textures/Texturelabs_Stone_165S.jpg'),
+};
+
+const TEXTURE_POOL_PRIMARY: Record<'human' | 'cyborg' | 'uncanny', TextureKey[]> = {
+  human: [
+    'leatherRed',
+    'grunge336',
+    'grunge342',
+    'inkPaint399',
+    'concrete206',
+    'soil125',
+    'soil130',
+    'soil146',
+    'stone165',
+    'rockWallDiff',
+    'rockWallDisp',
+  ],
+  cyborg: ['metal264', 'metal295', 'blueMetalDiff', 'blueMetalDisp'],
+  uncanny: ['soil146'],
+};
+const TEXTURE_POOL_SECONDARY: Record<'human' | 'cyborg' | 'uncanny', TextureKey[]> = {
+  human: [
+    'grunge336',
+    'grunge342',
+    'inkPaint399',
+    'concrete206',
+    'soil125',
+    'soil130',
+    'soil146',
+    'stone165',
+  ],
+  cyborg: ['metal295', 'metal264', 'blueMetalDiff'],
+  uncanny: ['soil146'],
+};
 const PREVIEW_WIDTH = 120;
 const CROP_TWEAK = {
   scale: 1.12,
@@ -118,11 +198,130 @@ const FACE_OVAL_INDICES = [
 ];
 
 const EDGE_SETTINGS = {
-  strength: 1.35,
-  threshold: 0.22,
-  softness: 0.05,
+  strength: 1.9,
+  threshold: 0.18,
+  softness: 0.06,
 };
 const USE_GPU_EDGES = false;
+const USE_TEXTURE_OVERLAY = true;
+const SHOW_LANDMARK_OVERLAY = false;
+const EDGE_BLEND = {
+  fine: 0.75,
+  mid: 0.55,
+  coarse: 0.5,
+  dog: 0.7,
+  threshold: 0.8,
+  thresholdLevel: 0.22,
+  thresholdSoftness: 0.07,
+};
+const ARCHETYPE_EDGE_SCALE: Record<'human' | 'cyborg' | 'uncanny', number> = {
+  human: 0.9,
+  cyborg: 1.7,
+  uncanny: 1.1,
+};
+const ARCHETYPE_EDGE_BIAS: Record<'human' | 'cyborg' | 'uncanny', Partial<typeof EDGE_BLEND>> = {
+  human: { threshold: 0.6, dog: 0.4 },
+  cyborg: { threshold: 0.95, coarse: 0.65, dog: 0.8 },
+  uncanny: { threshold: 0.75, dog: 0.6 },
+};
+const ARCHETYPE_EDGE_OPACITY: Record<'human' | 'cyborg' | 'uncanny', number> = {
+  human: 0.32,
+  cyborg: 0.55,
+  uncanny: 0.42,
+};
+const ARCHETYPE_EDGE_BLEND_MODE: Record<'human' | 'cyborg' | 'uncanny', 'multiply' | 'softLight'> = {
+  human: 'softLight',
+  cyborg: 'multiply',
+  uncanny: 'multiply',
+};
+const ARCHETYPE_TINT: Record<
+  'human' | 'cyborg' | 'uncanny',
+  { color: string; opacity: number; blendMode: 'softLight' | 'overlay' | 'multiply' | 'screen' }
+> = {
+  human: { color: '#9bb37a', opacity: 0.24, blendMode: 'multiply' },
+  cyborg: { color: '#1f2430', opacity: 0.35, blendMode: 'multiply' },
+  uncanny: { color: '#e9e3ef', opacity: 0.22, blendMode: 'screen' },
+};
+const ARCHETYPE_TEXTURE_STRENGTH: Record<'human' | 'cyborg' | 'uncanny', number> = {
+  human: 0.45,
+  cyborg: 0.65,
+  uncanny: 0.52,
+};
+const ARCHETYPE_TINT_SECOND: Record<
+  'human' | 'cyborg' | 'uncanny',
+  { color: string; opacity: number; blendMode: 'color' | 'overlay' | 'softLight' }
+> = {
+  human: { color: '#6d8b5a', opacity: 0.18, blendMode: 'color' },
+  cyborg: { color: '#5aa5b8', opacity: 0.24, blendMode: 'color' },
+  uncanny: { color: '#b8a0d8', opacity: 0.2, blendMode: 'color' },
+};
+const ARCHETYPE_TEXTURE_SECOND_STRENGTH: Record<'human' | 'cyborg' | 'uncanny', number> = {
+  human: 0.22,
+  cyborg: 0.45,
+  uncanny: 0.26,
+};
+const ARCHETYPE_LIGHTING: Record<
+  'human' | 'cyborg' | 'uncanny',
+  {
+    warm: string;
+    cool: string;
+    shadow: string;
+    highlight: string;
+    colorOpacity: number;
+    shadowOpacity: number;
+    highlightOpacity: number;
+  }
+> = {
+  human: {
+    warm: '#e6d7a2',
+    cool: '#8fa86f',
+    shadow: '#141a12',
+    highlight: '#fff0bf',
+    colorOpacity: 0.45,
+    shadowOpacity: 0.38,
+    highlightOpacity: 0.3,
+  },
+  cyborg: {
+    warm: '#f1b98c',
+    cool: '#6cc8ff',
+    shadow: '#131a24',
+    highlight: '#ffe0b8',
+    colorOpacity: 0.42,
+    shadowOpacity: 0.3,
+    highlightOpacity: 0.22,
+  },
+  uncanny: {
+    warm: '#e8d6e8',
+    cool: '#c8d6e8',
+    shadow: '#1d2330',
+    highlight: '#f0e8f5',
+    colorOpacity: 0.06,
+    shadowOpacity: 0.02,
+    highlightOpacity: 0.04,
+  },
+};
+const HUMAN_FACE_EFFECTS = {
+  blotchOpacity: 0.18,
+  underEyeOpacity: 0.35,
+  cheekOpacity: 0.28,
+  underEyeColor: 'rgba(20, 24, 18, 0.85)',
+  cheekColor: 'rgba(162, 94, 94, 0.85)',
+  noseBridgeColor: 'rgba(255, 244, 200, 0.9)',
+};
+const UNCANNY_FACE_EFFECTS = {
+  eyeTintColor: 'rgba(160, 200, 160, 0.85)',
+  lipTintColor: 'rgba(140, 90, 170, 0.75)',
+  eyeTintOpacity: 0.18,
+  lipTintOpacity: 0.22,
+  soilOpacity: 0.6,
+  stoneOpacity: 0.45,
+  waxOpacity: 0.1,
+  eyeGlowOpacity: 0.35,
+  eyeSheenOpacity: 0.25,
+  eyeGlowColor: 'rgba(196, 168, 96, 0.9)',
+  eyeSheenBright: 'rgba(240, 205, 120, 0.95)',
+  eyeSheenDark: 'rgba(120, 90, 50, 0.6)',
+};
 
 const SOBEL_SHADER = Skia.RuntimeEffect.Make(`
 uniform shader image;
@@ -955,19 +1154,59 @@ const computeDoG = (
   return out;
 };
 
-const blendEdges = (
-  fine: Float32Array,
-  coarse: Float32Array,
-  dog: Float32Array,
+const thresholdEdges = (
+  edges: Float32Array,
   width: number,
-  height: number
+  height: number,
+  threshold: number,
+  softness: number
 ) => {
   const out = new Float32Array(width * height);
   for (let i = 0; i < width * height; i++) {
-    const value = fine[i] * 0.6 + coarse[i] * 0.4 + dog[i] * 0.5;
+    const value = edges[i];
+    const low = threshold - softness;
+    const high = threshold + softness;
+    const t = clamp((value - low) / Math.max(0.0001, high - low), 0, 1);
+    out[i] = t;
+  }
+  return out;
+};
+
+const blendEdges = (
+  fine: Float32Array,
+  mid: Float32Array,
+  coarse: Float32Array,
+  dog: Float32Array,
+  thresholded: Float32Array,
+  width: number,
+  height: number,
+  weights: typeof EDGE_BLEND
+) => {
+  const out = new Float32Array(width * height);
+  for (let i = 0; i < width * height; i++) {
+    const value =
+      fine[i] * weights.fine +
+      mid[i] * weights.mid +
+      coarse[i] * weights.coarse +
+      dog[i] * weights.dog +
+      thresholded[i] * weights.threshold;
     out[i] = Math.min(1, value);
   }
   return out;
+};
+
+const resolveEdgeWeights = (archetype: ImageRun['archetype']) => {
+  const scale = ARCHETYPE_EDGE_SCALE[archetype];
+  const bias = ARCHETYPE_EDGE_BIAS[archetype];
+  return {
+    fine: (bias.fine ?? EDGE_BLEND.fine) * scale,
+    mid: (bias.mid ?? EDGE_BLEND.mid) * scale,
+    coarse: (bias.coarse ?? EDGE_BLEND.coarse) * scale,
+    dog: (bias.dog ?? EDGE_BLEND.dog) * scale,
+    threshold: (bias.threshold ?? EDGE_BLEND.threshold) * scale,
+    thresholdLevel: bias.thresholdLevel ?? EDGE_BLEND.thresholdLevel,
+    thresholdSoftness: bias.thresholdSoftness ?? EDGE_BLEND.thresholdSoftness,
+  };
 };
 
 const buildEdgeImage = (edges: Float32Array, width: number, height: number) => {
@@ -1010,6 +1249,30 @@ const buildPath = (
     path.moveTo(a.x * scaleX, a.y * scaleY);
     path.lineTo(b.x * scaleX, b.y * scaleY);
   }
+  return path;
+};
+
+const buildFaceOvalPath = (
+  landmarks: Array<{ x: number; y: number; z: number }>,
+  inputWidth: number,
+  inputHeight: number,
+  previewWidth: number,
+  previewHeight: number
+) => {
+  if (!landmarks.length || !inputWidth || !inputHeight) return null;
+  const scaleX = previewWidth / inputWidth;
+  const scaleY = previewHeight / inputHeight;
+  const path = Skia.Path.Make();
+  const first = landmarks[FACE_OVAL_INDICES[0]];
+  if (!first) return null;
+  path.moveTo(first.x * scaleX, first.y * scaleY);
+  for (let i = 1; i < FACE_OVAL_INDICES.length; i++) {
+    const point = landmarks[FACE_OVAL_INDICES[i]];
+    if (point) {
+      path.lineTo(point.x * scaleX, point.y * scaleY);
+    }
+  }
+  path.close();
   return path;
 };
 
@@ -1070,27 +1333,141 @@ const extractLandmarkOutputs = (
 type FaceLandmarkTfliteTestProps = {
   scanProgress?: number;
   isScanning?: boolean;
+  mode?: 'panel' | 'portrait';
+  activeIndex?: number;
+  style?: StyleProp<ViewStyle>;
 };
 
 export function FaceLandmarkTfliteTest({
   scanProgress = 0,
   isScanning = false,
+  mode = 'panel',
+  activeIndex = 0,
+  style,
 }: FaceLandmarkTfliteTestProps) {
   const modelState = useTensorflowModel(MODEL_ASSET);
   const segmentationState = useTensorflowModel(SEGMENT_MODEL_ASSET);
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [runs, setRuns] = useState<ImageRun[]>([]);
   const runStageRef = useRef<'none' | 'landmarks' | 'segmentation'>('none');
+  const [portraitLayout, setPortraitLayout] = useState({ width: 0, height: 0 });
   const imageNeutral = useImage(ACTIVE_SOURCES[0].asset);
   const imageCyborg = useImage(ACTIVE_SOURCES[1].asset);
   const imageUncanny = useImage(ACTIVE_SOURCES[2].asset);
+  const textureBlueMetalDiff = useImage(TEXTURE_ASSETS.blueMetalDiff);
+  const textureBlueMetalDisp = useImage(TEXTURE_ASSETS.blueMetalDisp);
+  const textureLeatherRed = useImage(TEXTURE_ASSETS.leatherRed);
+  const textureRockWallDiff = useImage(TEXTURE_ASSETS.rockWallDiff);
+  const textureRockWallDisp = useImage(TEXTURE_ASSETS.rockWallDisp);
+  const textureConcrete206 = useImage(TEXTURE_ASSETS.concrete206);
+  const textureGrunge336 = useImage(TEXTURE_ASSETS.grunge336);
+  const textureGrunge342 = useImage(TEXTURE_ASSETS.grunge342);
+  const textureInkPaint399 = useImage(TEXTURE_ASSETS.inkPaint399);
+  const textureMetal264 = useImage(TEXTURE_ASSETS.metal264);
+  const textureMetal295 = useImage(TEXTURE_ASSETS.metal295);
+  const textureSoil125 = useImage(TEXTURE_ASSETS.soil125);
+  const textureSoil130 = useImage(TEXTURE_ASSETS.soil130);
+  const textureSoil146 = useImage(TEXTURE_ASSETS.soil146);
+  const textureStone165 = useImage(TEXTURE_ASSETS.stone165);
+
+  const textureLookup = useMemo(
+    () => ({
+      blueMetalDiff: textureBlueMetalDiff,
+      blueMetalDisp: textureBlueMetalDisp,
+      leatherRed: textureLeatherRed,
+      rockWallDiff: textureRockWallDiff,
+      rockWallDisp: textureRockWallDisp,
+      concrete206: textureConcrete206,
+      grunge336: textureGrunge336,
+      grunge342: textureGrunge342,
+      inkPaint399: textureInkPaint399,
+      metal264: textureMetal264,
+      metal295: textureMetal295,
+      soil125: textureSoil125,
+      soil130: textureSoil130,
+      soil146: textureSoil146,
+      stone165: textureStone165,
+    }),
+    [
+      textureBlueMetalDiff,
+      textureBlueMetalDisp,
+      textureLeatherRed,
+      textureRockWallDiff,
+      textureRockWallDisp,
+      textureConcrete206,
+      textureGrunge336,
+      textureGrunge342,
+      textureInkPaint399,
+      textureMetal264,
+      textureMetal295,
+      textureSoil125,
+      textureSoil130,
+      textureSoil146,
+      textureStone165,
+    ]
+  );
+
+  const texturePools = useMemo(
+    () => ({
+      human: {
+        primary: TEXTURE_POOL_PRIMARY.human.map((key) => textureLookup[key]).filter(Boolean),
+        secondary: TEXTURE_POOL_SECONDARY.human.map((key) => textureLookup[key]).filter(Boolean),
+      },
+      cyborg: {
+        primary: TEXTURE_POOL_PRIMARY.cyborg.map((key) => textureLookup[key]).filter(Boolean),
+        secondary: TEXTURE_POOL_SECONDARY.cyborg.map((key) => textureLookup[key]).filter(Boolean),
+      },
+      uncanny: {
+        primary: TEXTURE_POOL_PRIMARY.uncanny.map((key) => textureLookup[key]).filter(Boolean),
+        secondary: TEXTURE_POOL_SECONDARY.uncanny.map((key) => textureLookup[key]).filter(Boolean),
+      },
+    }),
+    [textureLookup]
+  );
+  const resolveTextureRecipe = (seed: string, archetype: ImageRun['archetype']) => {
+    const pools = texturePools[archetype];
+    const rng = new SeededRandom(`${seed}_texture`);
+    const pick = (pool: Array<ReturnType<typeof useImage> | null>) => {
+      const available = pool.filter(Boolean) as Array<NonNullable<ReturnType<typeof useImage>>>;
+      if (!available.length) return null;
+      return available[rng.int(0, available.length - 1)];
+    };
+    const primary = pick(pools.primary);
+    let secondary = pick(pools.secondary);
+    if (secondary && primary && secondary === primary && pools.secondary.length > 1) {
+      secondary = pick(pools.secondary);
+    }
+    return {
+      primary,
+      secondary,
+      primaryRepeat: rng.bool(0.8),
+      secondaryRepeat: rng.bool(0.6),
+      primaryScale: rng.range(0.25, 0.55),
+      secondaryScale: rng.range(0.35, 0.75),
+      primaryOpacity: rng.range(0.8, 1.1),
+      secondaryOpacity: rng.range(0.7, 0.95),
+    };
+  };
   const images = useMemo(
     () => [
-      { ...ACTIVE_SOURCES[0], image: imageNeutral },
-      { ...ACTIVE_SOURCES[1], image: imageCyborg },
-      { ...ACTIVE_SOURCES[2], image: imageUncanny },
+      {
+        ...ACTIVE_SOURCES[0],
+        image: imageNeutral,
+      },
+      {
+        ...ACTIVE_SOURCES[1],
+        image: imageCyborg,
+      },
+      {
+        ...ACTIVE_SOURCES[2],
+        image: imageUncanny,
+      },
     ],
-    [imageCyborg, imageNeutral, imageUncanny]
+    [
+      imageCyborg,
+      imageNeutral,
+      imageUncanny,
+    ]
   );
 
   const inputInfo = useMemo(() => {
@@ -1132,13 +1509,18 @@ export function FaceLandmarkTfliteTest({
     const targetAspect = landmarkDims.width / landmarkDims.height;
 
     for (const source of images) {
-      const srcWidth = source.image.width();
-      const srcHeight = source.image.height();
+      const image = source.image;
+      if (!image) {
+        continue;
+      }
+      const archetype = source.archetype ?? 'human';
+      const srcWidth = image.width();
+      const srcHeight = image.height();
       const fullRect: CropRect = { x: 0, y: 0, width: srcWidth, height: srcHeight };
 
       const segMask = (() => {
         if (!segmentModel || !segmentationOutput) return null;
-        const segmentInput = buildInputFromImage(source.image, segmentModel.inputs[0], fullRect);
+        const segmentInput = buildInputFromImage(image, segmentModel.inputs[0], fullRect);
         const segBuffer = segmentInput?.buffer ?? buildSyntheticInput(segmentModel.inputs[0]).buffer;
         const segOutputs = segmentModel.runSync([segBuffer]) as SupportedTypedArray[];
         const segData = segOutputs[0];
@@ -1204,7 +1586,7 @@ export function FaceLandmarkTfliteTest({
         }
       }
 
-      const imageInput = buildInputFromImage(source.image, inputTensor, refinedCrop);
+      const imageInput = buildInputFromImage(image, inputTensor, refinedCrop);
       const {
         buffer,
         normalization,
@@ -1269,15 +1651,28 @@ export function FaceLandmarkTfliteTest({
       let edgeImage: ReturnType<typeof useImage> | null = null;
       if (!USE_GPU_EDGES && maskArray && imageInput?.pixels) {
         const fine = computeSobelEdges(imageInput.pixels, inputWidth, inputHeight, maskArray, 1);
-        const coarse = computeSobelEdges(imageInput.pixels, inputWidth, inputHeight, maskArray, 2);
+        const mid = computeSobelEdges(imageInput.pixels, inputWidth, inputHeight, maskArray, 2);
+        const coarse = computeSobelEdges(imageInput.pixels, inputWidth, inputHeight, maskArray, 3);
         const dog = computeDoG(imageInput.pixels, inputWidth, inputHeight, maskArray);
-        const blended = blendEdges(fine, coarse, dog, inputWidth, inputHeight);
+        const weights = resolveEdgeWeights(archetype);
+        const thresholded = thresholdEdges(
+          fine,
+          inputWidth,
+          inputHeight,
+          weights.thresholdLevel,
+          weights.thresholdSoftness
+        );
+        const blended = blendEdges(fine, mid, coarse, dog, thresholded, inputWidth, inputHeight, weights);
         edgeImage = buildEdgeImage(blended, inputWidth, inputHeight);
       }
 
+      const seed = `${source.key}_${archetype}`;
       runResults.push({
         key: source.key,
         label: source.label,
+        baseImageId: source.key,
+        seed,
+        archetype,
         imageStatus,
         imageSize,
         crop,
@@ -1371,6 +1766,402 @@ export function FaceLandmarkTfliteTest({
     );
   }
 
+  if (mode === 'portrait') {
+    const portraitRun = runs.length ? runs[activeIndex % runs.length] : null;
+    const handleLayout = (event: LayoutChangeEvent) => {
+      const { width, height } = event.nativeEvent.layout;
+      if (width === portraitLayout.width && height === portraitLayout.height) return;
+      setPortraitLayout({ width, height });
+    };
+    const renderWidth = portraitLayout.width;
+    const renderHeight = portraitLayout.height;
+
+    return (
+      <View style={[styles.portraitContainer, style]} onLayout={handleLayout}>
+        {portraitRun && renderWidth > 0 && renderHeight > 0 ? (
+          (() => {
+            const previewWidth = renderWidth;
+            const previewHeight = renderHeight;
+            const contourPath = buildPath(
+              portraitRun.landmarks,
+              portraitRun.inputWidth,
+              portraitRun.inputHeight,
+              previewWidth,
+              previewHeight,
+              FACEMESH_CONTOURS
+            );
+            const lipPath = buildPath(
+              portraitRun.landmarks,
+              portraitRun.inputWidth,
+              portraitRun.inputHeight,
+              previewWidth,
+              previewHeight,
+              FACEMESH_LIPS
+            );
+            const nosePath = buildPath(
+              portraitRun.landmarks,
+              portraitRun.inputWidth,
+              portraitRun.inputHeight,
+              previewWidth,
+              previewHeight,
+              FACEMESH_NOSE
+            );
+            const irisPath = buildPath(
+              portraitRun.landmarks,
+              portraitRun.inputWidth,
+              portraitRun.inputHeight,
+              previewWidth,
+              previewHeight,
+              FACEMESH_IRISES
+            );
+            const faceOvalPath = buildFaceOvalPath(
+              portraitRun.landmarks,
+              portraitRun.inputWidth,
+              portraitRun.inputHeight,
+              previewWidth,
+              previewHeight
+            );
+            const featureEdgePath = (() => {
+              if (!irisPath && !lipPath && !nosePath) return null;
+              const path = Skia.Path.Make();
+              if (irisPath) path.addPath(irisPath);
+              if (lipPath) path.addPath(lipPath);
+              if (nosePath) path.addPath(nosePath);
+              return path;
+            })();
+            const humanBlotchTexture =
+              textureLookup.inkPaint399 || textureLookup.grunge336 || textureLookup.grunge342 || null;
+            const uncannySoilTexture = textureLookup.soil146 || null;
+            const uncannyStoneTexture = textureLookup.stone165 || null;
+            const textureRecipe = resolveTextureRecipe(portraitRun.seed, portraitRun.archetype);
+            const textureBase = ARCHETYPE_TEXTURE_STRENGTH[portraitRun.archetype];
+            const textureOpacity = isScanning
+              ? clamp(scanProgress, 0, 1) * (textureBase + 0.2) * (textureRecipe?.primaryOpacity ?? 1)
+              : textureBase * (textureRecipe?.primaryOpacity ?? 1);
+            const tint = ARCHETYPE_TINT[portraitRun.archetype];
+            const tintSecondary = ARCHETYPE_TINT_SECOND[portraitRun.archetype];
+            const textureSecondaryBase = ARCHETYPE_TEXTURE_SECOND_STRENGTH[portraitRun.archetype];
+            const textureSecondaryOpacity = isScanning
+              ? clamp(scanProgress, 0, 1) * (textureSecondaryBase + 0.15) * (textureRecipe?.secondaryOpacity ?? 1)
+              : textureSecondaryBase * (textureRecipe?.secondaryOpacity ?? 1);
+            const lighting = ARCHETYPE_LIGHTING[portraitRun.archetype];
+            const edgeOpacity = ARCHETYPE_EDGE_OPACITY[portraitRun.archetype];
+            const edgeBlendMode = ARCHETYPE_EDGE_BLEND_MODE[portraitRun.archetype];
+            const primaryTileWidth = textureRecipe?.primaryRepeat
+              ? previewWidth * (textureRecipe?.primaryScale ?? 1)
+              : previewWidth;
+            const primaryTileHeight = textureRecipe?.primaryRepeat
+              ? previewHeight * (textureRecipe?.primaryScale ?? 1)
+              : previewHeight;
+            const secondaryTileWidth = textureRecipe?.secondaryRepeat
+              ? previewWidth * (textureRecipe?.secondaryScale ?? 1)
+              : previewWidth;
+            const secondaryTileHeight = textureRecipe?.secondaryRepeat
+              ? previewHeight * (textureRecipe?.secondaryScale ?? 1)
+              : previewHeight;
+            const mixAmount = isScanning ? clamp(scanProgress, 0, 1) : 0;
+
+            return (
+              <Canvas style={{ width: previewWidth, height: previewHeight }}>
+                {faceOvalPath ? (
+                  <Group clip={faceOvalPath}>
+                    <SkiaImage
+                      image={portraitRun.previewImage}
+                      x={0}
+                      y={0}
+                      width={previewWidth}
+                      height={previewHeight}
+                      fit="fill"
+                    />
+                    {USE_GPU_EDGES && portraitRun.maskImage && SOBEL_SHADER && (
+                      <Group
+                        blendMode={edgeBlendMode}
+                        opacity={edgeOpacity}
+                        clip={portraitRun.archetype === 'human' ? featureEdgePath ?? undefined : undefined}
+                      >
+                        <Fill>
+                          <Shader
+                            source={SOBEL_SHADER}
+                            uniforms={{
+                              size: [previewWidth, previewHeight],
+                              strength: EDGE_SETTINGS.strength,
+                              threshold: EDGE_SETTINGS.threshold,
+                              softness: EDGE_SETTINGS.softness,
+                              mixAmount,
+                            }}
+                          >
+                            <ImageShader
+                              image={portraitRun.previewImage}
+                              fit="fill"
+                              rect={{ x: 0, y: 0, width: previewWidth, height: previewHeight }}
+                            />
+                            <ImageShader
+                              image={portraitRun.maskImage}
+                              fit="fill"
+                              rect={{ x: 0, y: 0, width: previewWidth, height: previewHeight }}
+                            />
+                          </Shader>
+                        </Fill>
+                      </Group>
+                    )}
+                    {!USE_GPU_EDGES && portraitRun.edgeImage && (
+                      <Group
+                        blendMode={edgeBlendMode}
+                        opacity={edgeOpacity}
+                        clip={portraitRun.archetype === 'human' ? featureEdgePath ?? undefined : undefined}
+                      >
+                        <SkiaImage
+                          image={portraitRun.edgeImage}
+                          x={0}
+                          y={0}
+                          width={previewWidth}
+                          height={previewHeight}
+                          fit="fill"
+                        />
+                      </Group>
+                    )}
+                    {portraitRun.archetype === 'human' && humanBlotchTexture && (
+                      <Group blendMode="softLight" opacity={HUMAN_FACE_EFFECTS.blotchOpacity}>
+                        <Fill>
+                          <ImageShader
+                            image={humanBlotchTexture}
+                            rect={{
+                              x: 0,
+                              y: 0,
+                              width: previewWidth * 1.8,
+                              height: previewHeight * 1.8,
+                            }}
+                            fit="cover"
+                            tx="repeat"
+                            ty="repeat"
+                          />
+                        </Fill>
+                      </Group>
+                    )}
+                    {USE_TEXTURE_OVERLAY && textureRecipe?.primary && (
+                      <Group blendMode="overlay" opacity={textureOpacity}>
+                        <Fill>
+                          <ImageShader
+                            image={textureRecipe.primary}
+                            rect={{ x: 0, y: 0, width: primaryTileWidth, height: primaryTileHeight }}
+                            fit="cover"
+                            tx={textureRecipe.primaryRepeat ? 'repeat' : 'clamp'}
+                            ty={textureRecipe.primaryRepeat ? 'repeat' : 'clamp'}
+                          />
+                        </Fill>
+                      </Group>
+                    )}
+                    {USE_TEXTURE_OVERLAY && textureRecipe?.secondary && (
+                      <Group blendMode="softLight" opacity={textureSecondaryOpacity}>
+                        <Fill>
+                          <ImageShader
+                            image={textureRecipe.secondary}
+                            rect={{ x: 0, y: 0, width: secondaryTileWidth, height: secondaryTileHeight }}
+                            fit="cover"
+                            tx={textureRecipe.secondaryRepeat ? 'repeat' : 'clamp'}
+                            ty={textureRecipe.secondaryRepeat ? 'repeat' : 'clamp'}
+                          />
+                        </Fill>
+                      </Group>
+                    )}
+                    {portraitRun.archetype === 'human' && (
+                      <>
+                        <Group blendMode="multiply" opacity={HUMAN_FACE_EFFECTS.underEyeOpacity}>
+                          <Fill>
+                            <RadialGradient
+                              c={vec(previewWidth * 0.36, previewHeight * 0.46)}
+                              r={previewWidth * 0.18}
+                              colors={[HUMAN_FACE_EFFECTS.underEyeColor, 'rgba(0,0,0,0)']}
+                            />
+                          </Fill>
+                        </Group>
+                        <Group blendMode="multiply" opacity={HUMAN_FACE_EFFECTS.underEyeOpacity}>
+                          <Fill>
+                            <RadialGradient
+                              c={vec(previewWidth * 0.64, previewHeight * 0.46)}
+                              r={previewWidth * 0.18}
+                              colors={[HUMAN_FACE_EFFECTS.underEyeColor, 'rgba(0,0,0,0)']}
+                            />
+                          </Fill>
+                        </Group>
+                        <Group blendMode="softLight" opacity={HUMAN_FACE_EFFECTS.cheekOpacity}>
+                          <Fill>
+                            <RadialGradient
+                              c={vec(previewWidth * 0.34, previewHeight * 0.62)}
+                              r={previewWidth * 0.22}
+                              colors={[HUMAN_FACE_EFFECTS.cheekColor, 'rgba(0,0,0,0)']}
+                            />
+                          </Fill>
+                        </Group>
+                        <Group blendMode="softLight" opacity={HUMAN_FACE_EFFECTS.cheekOpacity}>
+                          <Fill>
+                            <RadialGradient
+                              c={vec(previewWidth * 0.66, previewHeight * 0.62)}
+                              r={previewWidth * 0.22}
+                              colors={[HUMAN_FACE_EFFECTS.cheekColor, 'rgba(0,0,0,0)']}
+                            />
+                          </Fill>
+                        </Group>
+                        {nosePath && (
+                          <Group clip={nosePath} blendMode="screen" opacity={0.4}>
+                            <Fill color={HUMAN_FACE_EFFECTS.noseBridgeColor} />
+                          </Group>
+                        )}
+                        <Group blendMode="multiply" opacity={0.4}>
+                          <Fill>
+                            <LinearGradient
+                              start={vec(0, previewHeight * 0.55)}
+                              end={vec(0, previewHeight)}
+                              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.9)']}
+                            />
+                          </Fill>
+                        </Group>
+                      </>
+                    )}
+                    {portraitRun.archetype === 'uncanny' && (
+                      <>
+                        {(() => {
+                          const patternRng = new SeededRandom(`${portraitRun.seed}_uncannyPattern`);
+                          const soilScale = patternRng.range(0.18, 0.28);
+                          const stoneScale = patternRng.range(0.12, 0.2);
+                          const soilOffset = {
+                            x: patternRng.range(-previewWidth * 0.25, previewWidth * 0.25),
+                            y: patternRng.range(-previewHeight * 0.25, previewHeight * 0.25),
+                          };
+                          const stoneOffset = {
+                            x: patternRng.range(-previewWidth * 0.35, previewWidth * 0.35),
+                            y: patternRng.range(-previewHeight * 0.35, previewHeight * 0.35),
+                          };
+                          return (
+                            <>
+                              {uncannySoilTexture && (
+                                <Group blendMode="softLight" opacity={UNCANNY_FACE_EFFECTS.soilOpacity}>
+                                  <Fill>
+                                    <ImageShader
+                                      image={uncannySoilTexture}
+                                      rect={{
+                                        x: soilOffset.x,
+                                        y: soilOffset.y,
+                                        width: previewWidth * soilScale,
+                                        height: previewHeight * soilScale,
+                                      }}
+                                      fit="cover"
+                                      tx="repeat"
+                                      ty="repeat"
+                                    />
+                                  </Fill>
+                                </Group>
+                              )}
+                              {uncannyStoneTexture && (
+                                <Group blendMode="overlay" opacity={UNCANNY_FACE_EFFECTS.stoneOpacity}>
+                                  <Fill>
+                                    <ImageShader
+                                      image={uncannyStoneTexture}
+                                      rect={{
+                                        x: stoneOffset.x,
+                                        y: stoneOffset.y,
+                                        width: previewWidth * stoneScale,
+                                        height: previewHeight * stoneScale,
+                                      }}
+                                      fit="cover"
+                                      tx="repeat"
+                                      ty="repeat"
+                                    />
+                                  </Fill>
+                                </Group>
+                              )}
+                            </>
+                          );
+                        })()}
+                        {irisPath && (
+                          <Group clip={irisPath} blendMode="color" opacity={UNCANNY_FACE_EFFECTS.eyeTintOpacity}>
+                            <Fill color={UNCANNY_FACE_EFFECTS.eyeTintColor} />
+                          </Group>
+                        )}
+                        {irisPath && (
+                          <Group clip={irisPath} blendMode="screen" opacity={UNCANNY_FACE_EFFECTS.eyeGlowOpacity}>
+                            <Fill color={UNCANNY_FACE_EFFECTS.eyeGlowColor} />
+                          </Group>
+                        )}
+                        {irisPath && (
+                          <Group clip={irisPath} blendMode="softLight" opacity={UNCANNY_FACE_EFFECTS.eyeSheenOpacity}>
+                            <Fill>
+                              <LinearGradient
+                                start={vec(0, 0)}
+                                end={vec(previewWidth, previewHeight)}
+                                colors={[UNCANNY_FACE_EFFECTS.eyeSheenBright, UNCANNY_FACE_EFFECTS.eyeSheenDark]}
+                              />
+                            </Fill>
+                          </Group>
+                        )}
+                        {lipPath && (
+                          <Group clip={lipPath} blendMode="color" opacity={UNCANNY_FACE_EFFECTS.lipTintOpacity}>
+                            <Fill color={UNCANNY_FACE_EFFECTS.lipTintColor} />
+                          </Group>
+                        )}
+                        <Group blendMode="screen" opacity={UNCANNY_FACE_EFFECTS.waxOpacity}>
+                          <Fill>
+                            <LinearGradient
+                              start={vec(previewWidth * 0.1, 0)}
+                              end={vec(previewWidth * 0.9, previewHeight)}
+                              colors={['rgba(255,255,255,0.5)', 'rgba(255,255,255,0)']}
+                            />
+                          </Fill>
+                        </Group>
+                      </>
+                    )}
+                    <Group blendMode={tint.blendMode} opacity={tint.opacity}>
+                      <Fill color={tint.color} />
+                    </Group>
+                    <Group blendMode={tintSecondary.blendMode} opacity={tintSecondary.opacity}>
+                      <Fill color={tintSecondary.color} />
+                    </Group>
+                    <Group blendMode="softLight" opacity={lighting.colorOpacity}>
+                      <Fill>
+                        <LinearGradient
+                          start={vec(0, 0)}
+                          end={vec(previewWidth, previewHeight)}
+                          colors={[lighting.warm, lighting.cool]}
+                        />
+                      </Fill>
+                    </Group>
+                    <Group blendMode="multiply" opacity={lighting.shadowOpacity}>
+                      <Fill>
+                        <LinearGradient
+                          start={vec(0, 0)}
+                          end={vec(0, previewHeight)}
+                          colors={['rgba(0,0,0,0)', lighting.shadow]}
+                        />
+                      </Fill>
+                    </Group>
+                    <Group blendMode="screen" opacity={lighting.highlightOpacity}>
+                      <Fill>
+                        <LinearGradient
+                          start={vec(0, 0)}
+                          end={vec(previewWidth * 0.6, previewHeight * 0.4)}
+                          colors={[lighting.highlight, 'rgba(255,255,255,0)']}
+                        />
+                      </Fill>
+                    </Group>
+                  </Group>
+                ) : (
+                  <SkiaImage
+                    image={portraitRun.previewImage}
+                    x={0}
+                    y={0}
+                    width={previewWidth}
+                    height={previewHeight}
+                    fit="fill"
+                  />
+                )}
+              </Canvas>
+            );
+          })()
+        ) : null}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.panel}>
       <Text style={styles.title}>TFLite Face Landmark</Text>
@@ -1410,57 +2201,344 @@ export function FaceLandmarkTfliteTest({
           const lipPath = buildPath(run.landmarks, run.inputWidth, run.inputHeight, previewWidth, previewHeight, FACEMESH_LIPS);
           const nosePath = buildPath(run.landmarks, run.inputWidth, run.inputHeight, previewWidth, previewHeight, FACEMESH_NOSE);
           const irisPath = buildPath(run.landmarks, run.inputWidth, run.inputHeight, previewWidth, previewHeight, FACEMESH_IRISES);
+          const faceOvalPath = buildFaceOvalPath(run.landmarks, run.inputWidth, run.inputHeight, previewWidth, previewHeight);
+          const featureEdgePath = (() => {
+            if (!irisPath && !lipPath && !nosePath) return null;
+            const path = Skia.Path.Make();
+            if (irisPath) path.addPath(irisPath);
+            if (lipPath) path.addPath(lipPath);
+            if (nosePath) path.addPath(nosePath);
+            return path;
+          })();
+          const humanBlotchTexture =
+            textureLookup.inkPaint399 || textureLookup.grunge336 || textureLookup.grunge342 || null;
+          const uncannySoilTexture = textureLookup.soil146 || null;
+          const uncannyStoneTexture = textureLookup.stone165 || null;
+          const textureRecipe = resolveTextureRecipe(run.seed, run.archetype);
+          const textureBase = ARCHETYPE_TEXTURE_STRENGTH[run.archetype];
+          const textureOpacity = isScanning
+            ? clamp(scanProgress, 0, 1) * (textureBase + 0.2) * (textureRecipe?.primaryOpacity ?? 1)
+            : textureBase * (textureRecipe?.primaryOpacity ?? 1);
+          const tint = ARCHETYPE_TINT[run.archetype];
+          const tintSecondary = ARCHETYPE_TINT_SECOND[run.archetype];
+          const textureSecondaryBase = ARCHETYPE_TEXTURE_SECOND_STRENGTH[run.archetype];
+          const textureSecondaryOpacity = isScanning
+            ? clamp(scanProgress, 0, 1) * (textureSecondaryBase + 0.15) * (textureRecipe?.secondaryOpacity ?? 1)
+            : textureSecondaryBase * (textureRecipe?.secondaryOpacity ?? 1);
+          const lighting = ARCHETYPE_LIGHTING[run.archetype];
+          const edgeOpacity = ARCHETYPE_EDGE_OPACITY[run.archetype];
+          const edgeBlendMode = ARCHETYPE_EDGE_BLEND_MODE[run.archetype];
+          const primaryTileWidth = textureRecipe?.primaryRepeat
+            ? previewWidth * (textureRecipe?.primaryScale ?? 1)
+            : previewWidth;
+          const primaryTileHeight = textureRecipe?.primaryRepeat
+            ? previewHeight * (textureRecipe?.primaryScale ?? 1)
+            : previewHeight;
+          const secondaryTileWidth = textureRecipe?.secondaryRepeat
+            ? previewWidth * (textureRecipe?.secondaryScale ?? 1)
+            : previewWidth;
+          const secondaryTileHeight = textureRecipe?.secondaryRepeat
+            ? previewHeight * (textureRecipe?.secondaryScale ?? 1)
+            : previewHeight;
 
           const mixAmount = isScanning ? clamp(scanProgress, 0, 1) : 0;
+          const hasFaceClip = !!faceOvalPath;
 
           return (
             <View key={run.key} style={styles.previewItem}>
               <Canvas style={{ width: previewWidth, height: previewHeight }}>
-                <SkiaImage
-                  image={run.previewImage}
-                  x={0}
-                  y={0}
-                  width={previewWidth}
-                  height={previewHeight}
-                  fit="fill"
-                />
-                {USE_GPU_EDGES && run.maskImage && SOBEL_SHADER && (
-                  <Fill>
-                    <Shader
-                      source={SOBEL_SHADER}
-                      uniforms={{
-                        size: [previewWidth, previewHeight],
-                        strength: EDGE_SETTINGS.strength,
-                        threshold: EDGE_SETTINGS.threshold,
-                        softness: EDGE_SETTINGS.softness,
-                        mixAmount,
-                      }}
+                {hasFaceClip ? (
+                  <Group clip={faceOvalPath!}>
+                    <SkiaImage
+                      image={run.previewImage}
+                      x={0}
+                      y={0}
+                      width={previewWidth}
+                      height={previewHeight}
+                      fit="fill"
+                    />
+                  {USE_GPU_EDGES && run.maskImage && SOBEL_SHADER && (
+                    <Group
+                      blendMode={edgeBlendMode}
+                      opacity={edgeOpacity}
+                      clip={run.archetype === 'human' ? featureEdgePath ?? undefined : undefined}
                     >
-                      <ImageShader
-                        image={run.previewImage}
-                        fit="fill"
-                        rect={{ x: 0, y: 0, width: previewWidth, height: previewHeight }}
-                      />
-                      <ImageShader
-                        image={run.maskImage}
-                        fit="fill"
-                        rect={{ x: 0, y: 0, width: previewWidth, height: previewHeight }}
-                      />
-                    </Shader>
-                  </Fill>
-                )}
-                {!USE_GPU_EDGES && run.edgeImage && (
+                        <Fill>
+                          <Shader
+                            source={SOBEL_SHADER}
+                            uniforms={{
+                              size: [previewWidth, previewHeight],
+                              strength: EDGE_SETTINGS.strength,
+                              threshold: EDGE_SETTINGS.threshold,
+                              softness: EDGE_SETTINGS.softness,
+                              mixAmount,
+                            }}
+                          >
+                            <ImageShader
+                              image={run.previewImage}
+                              fit="fill"
+                              rect={{ x: 0, y: 0, width: previewWidth, height: previewHeight }}
+                            />
+                            <ImageShader
+                              image={run.maskImage}
+                              fit="fill"
+                              rect={{ x: 0, y: 0, width: previewWidth, height: previewHeight }}
+                            />
+                          </Shader>
+                        </Fill>
+                      </Group>
+                    )}
+                    {!USE_GPU_EDGES && run.edgeImage && (
+                      <Group
+                        blendMode={edgeBlendMode}
+                        opacity={edgeOpacity}
+                        clip={run.archetype === 'human' ? featureEdgePath ?? undefined : undefined}
+                      >
+                        <SkiaImage
+                          image={run.edgeImage}
+                          x={0}
+                          y={0}
+                          width={previewWidth}
+                          height={previewHeight}
+                          fit="fill"
+                        />
+                      </Group>
+                    )}
+                    {run.archetype === 'human' && humanBlotchTexture && (
+                      <Group blendMode="softLight" opacity={HUMAN_FACE_EFFECTS.blotchOpacity}>
+                        <Fill>
+                          <ImageShader
+                            image={humanBlotchTexture}
+                            rect={{
+                              x: 0,
+                              y: 0,
+                              width: previewWidth * 1.8,
+                              height: previewHeight * 1.8,
+                            }}
+                            fit="cover"
+                            tx="repeat"
+                            ty="repeat"
+                          />
+                        </Fill>
+                      </Group>
+                    )}
+                    {USE_TEXTURE_OVERLAY && textureRecipe?.primary && (
+                      <Group blendMode="overlay" opacity={textureOpacity}>
+                        <Fill>
+                          <ImageShader
+                            image={textureRecipe.primary}
+                            rect={{ x: 0, y: 0, width: primaryTileWidth, height: primaryTileHeight }}
+                            fit="cover"
+                            tx={textureRecipe.primaryRepeat ? 'repeat' : 'clamp'}
+                            ty={textureRecipe.primaryRepeat ? 'repeat' : 'clamp'}
+                          />
+                        </Fill>
+                      </Group>
+                    )}
+                    {USE_TEXTURE_OVERLAY && textureRecipe?.secondary && (
+                      <Group blendMode="softLight" opacity={textureSecondaryOpacity}>
+                        <Fill>
+                          <ImageShader
+                            image={textureRecipe.secondary}
+                            rect={{ x: 0, y: 0, width: secondaryTileWidth, height: secondaryTileHeight }}
+                            fit="cover"
+                            tx={textureRecipe.secondaryRepeat ? 'repeat' : 'clamp'}
+                            ty={textureRecipe.secondaryRepeat ? 'repeat' : 'clamp'}
+                          />
+                        </Fill>
+                      </Group>
+                    )}
+                    {run.archetype === 'human' && (
+                      <>
+                        <Group blendMode="multiply" opacity={HUMAN_FACE_EFFECTS.underEyeOpacity}>
+                          <Fill>
+                            <RadialGradient
+                              c={vec(previewWidth * 0.36, previewHeight * 0.46)}
+                              r={previewWidth * 0.18}
+                              colors={[HUMAN_FACE_EFFECTS.underEyeColor, 'rgba(0,0,0,0)']}
+                            />
+                          </Fill>
+                        </Group>
+                        <Group blendMode="multiply" opacity={HUMAN_FACE_EFFECTS.underEyeOpacity}>
+                          <Fill>
+                            <RadialGradient
+                              c={vec(previewWidth * 0.64, previewHeight * 0.46)}
+                              r={previewWidth * 0.18}
+                              colors={[HUMAN_FACE_EFFECTS.underEyeColor, 'rgba(0,0,0,0)']}
+                            />
+                          </Fill>
+                        </Group>
+                        <Group blendMode="softLight" opacity={HUMAN_FACE_EFFECTS.cheekOpacity}>
+                          <Fill>
+                            <RadialGradient
+                              c={vec(previewWidth * 0.34, previewHeight * 0.62)}
+                              r={previewWidth * 0.22}
+                              colors={[HUMAN_FACE_EFFECTS.cheekColor, 'rgba(0,0,0,0)']}
+                            />
+                          </Fill>
+                        </Group>
+                        <Group blendMode="softLight" opacity={HUMAN_FACE_EFFECTS.cheekOpacity}>
+                          <Fill>
+                            <RadialGradient
+                              c={vec(previewWidth * 0.66, previewHeight * 0.62)}
+                              r={previewWidth * 0.22}
+                              colors={[HUMAN_FACE_EFFECTS.cheekColor, 'rgba(0,0,0,0)']}
+                            />
+                          </Fill>
+                        </Group>
+                        {nosePath && (
+                          <Group clip={nosePath} blendMode="screen" opacity={0.4}>
+                            <Fill color={HUMAN_FACE_EFFECTS.noseBridgeColor} />
+                          </Group>
+                        )}
+                        <Group blendMode="multiply" opacity={0.4}>
+                          <Fill>
+                            <LinearGradient
+                              start={vec(0, previewHeight * 0.55)}
+                              end={vec(0, previewHeight)}
+                              colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.9)']}
+                            />
+                          </Fill>
+                        </Group>
+                      </>
+                    )}
+                    {run.archetype === 'uncanny' && (
+                      <>
+                        {(() => {
+                          const patternRng = new SeededRandom(`${run.seed}_uncannyPattern`);
+                          const soilScale = patternRng.range(0.18, 0.28);
+                          const stoneScale = patternRng.range(0.12, 0.2);
+                          const soilOffset = {
+                            x: patternRng.range(-previewWidth * 0.25, previewWidth * 0.25),
+                            y: patternRng.range(-previewHeight * 0.25, previewHeight * 0.25),
+                          };
+                          const stoneOffset = {
+                            x: patternRng.range(-previewWidth * 0.35, previewWidth * 0.35),
+                            y: patternRng.range(-previewHeight * 0.35, previewHeight * 0.35),
+                          };
+                          return (
+                            <>
+                              {uncannySoilTexture && (
+                                <Group blendMode="softLight" opacity={UNCANNY_FACE_EFFECTS.soilOpacity}>
+                                  <Fill>
+                                    <ImageShader
+                                      image={uncannySoilTexture}
+                                      rect={{
+                                        x: soilOffset.x,
+                                        y: soilOffset.y,
+                                        width: previewWidth * soilScale,
+                                        height: previewHeight * soilScale,
+                                      }}
+                                      fit="cover"
+                                      tx="repeat"
+                                      ty="repeat"
+                                    />
+                                  </Fill>
+                                </Group>
+                              )}
+                              {uncannyStoneTexture && (
+                                <Group blendMode="overlay" opacity={UNCANNY_FACE_EFFECTS.stoneOpacity}>
+                                  <Fill>
+                                    <ImageShader
+                                      image={uncannyStoneTexture}
+                                      rect={{
+                                        x: stoneOffset.x,
+                                        y: stoneOffset.y,
+                                        width: previewWidth * stoneScale,
+                                        height: previewHeight * stoneScale,
+                                      }}
+                                      fit="cover"
+                                      tx="repeat"
+                                      ty="repeat"
+                                    />
+                                  </Fill>
+                                </Group>
+                              )}
+                            </>
+                          );
+                        })()}
+                        {irisPath && (
+                          <Group clip={irisPath} blendMode="color" opacity={UNCANNY_FACE_EFFECTS.eyeTintOpacity}>
+                            <Fill color={UNCANNY_FACE_EFFECTS.eyeTintColor} />
+                          </Group>
+                        )}
+                        {irisPath && (
+                          <Group clip={irisPath} blendMode="screen" opacity={UNCANNY_FACE_EFFECTS.eyeGlowOpacity}>
+                            <Fill color={UNCANNY_FACE_EFFECTS.eyeGlowColor} />
+                          </Group>
+                        )}
+                        {irisPath && (
+                          <Group clip={irisPath} blendMode="softLight" opacity={UNCANNY_FACE_EFFECTS.eyeSheenOpacity}>
+                            <Fill>
+                              <LinearGradient
+                                start={vec(0, 0)}
+                                end={vec(previewWidth, previewHeight)}
+                                colors={[UNCANNY_FACE_EFFECTS.eyeSheenBright, UNCANNY_FACE_EFFECTS.eyeSheenDark]}
+                              />
+                            </Fill>
+                          </Group>
+                        )}
+                        {lipPath && (
+                          <Group clip={lipPath} blendMode="color" opacity={UNCANNY_FACE_EFFECTS.lipTintOpacity}>
+                            <Fill color={UNCANNY_FACE_EFFECTS.lipTintColor} />
+                          </Group>
+                        )}
+                        <Group blendMode="screen" opacity={UNCANNY_FACE_EFFECTS.waxOpacity}>
+                          <Fill>
+                            <LinearGradient
+                              start={vec(previewWidth * 0.1, 0)}
+                              end={vec(previewWidth * 0.9, previewHeight)}
+                              colors={['rgba(255,255,255,0.5)', 'rgba(255,255,255,0)']}
+                            />
+                          </Fill>
+                        </Group>
+                      </>
+                    )}
+                    <Group blendMode={tint.blendMode} opacity={tint.opacity}>
+                      <Fill color={tint.color} />
+                    </Group>
+                    <Group blendMode={tintSecondary.blendMode} opacity={tintSecondary.opacity}>
+                      <Fill color={tintSecondary.color} />
+                    </Group>
+                    <Group blendMode="softLight" opacity={lighting.colorOpacity}>
+                      <Fill>
+                        <LinearGradient
+                          start={vec(0, 0)}
+                          end={vec(previewWidth, previewHeight)}
+                          colors={[lighting.warm, lighting.cool]}
+                        />
+                      </Fill>
+                    </Group>
+                    <Group blendMode="multiply" opacity={lighting.shadowOpacity}>
+                      <Fill>
+                        <LinearGradient
+                          start={vec(0, 0)}
+                          end={vec(0, previewHeight)}
+                          colors={['rgba(0,0,0,0)', lighting.shadow]}
+                        />
+                      </Fill>
+                    </Group>
+                    <Group blendMode="screen" opacity={lighting.highlightOpacity}>
+                      <Fill>
+                        <LinearGradient
+                          start={vec(0, 0)}
+                          end={vec(previewWidth * 0.6, previewHeight * 0.4)}
+                          colors={[lighting.highlight, 'rgba(255,255,255,0)']}
+                        />
+                      </Fill>
+                    </Group>
+                  </Group>
+                ) : (
                   <SkiaImage
-                    image={run.edgeImage}
+                    image={run.previewImage}
                     x={0}
                     y={0}
                     width={previewWidth}
                     height={previewHeight}
                     fit="fill"
-                    opacity={0.6}
                   />
                 )}
-                {contourPath && (
+                {SHOW_LANDMARK_OVERLAY && contourPath && (
                   <Path
                     path={contourPath}
                     color="rgba(82, 212, 255, 0.75)"
@@ -1468,7 +2546,7 @@ export function FaceLandmarkTfliteTest({
                     strokeWidth={0.8}
                   />
                 )}
-                {nosePath && (
+                {SHOW_LANDMARK_OVERLAY && nosePath && (
                   <Path
                     path={nosePath}
                     color="rgba(255, 199, 64, 0.9)"
@@ -1476,7 +2554,7 @@ export function FaceLandmarkTfliteTest({
                     strokeWidth={0.9}
                   />
                 )}
-                {lipPath && (
+                {SHOW_LANDMARK_OVERLAY && lipPath && (
                   <Path
                     path={lipPath}
                     color="rgba(255, 112, 139, 0.9)"
@@ -1484,7 +2562,7 @@ export function FaceLandmarkTfliteTest({
                     strokeWidth={0.9}
                   />
                 )}
-                {irisPath && (
+                {SHOW_LANDMARK_OVERLAY && irisPath && (
                   <Path
                     path={irisPath}
                     color="rgba(118, 255, 184, 0.9)"
@@ -1495,6 +2573,7 @@ export function FaceLandmarkTfliteTest({
               </Canvas>
               <Text style={styles.previewLabel}>{run.label}</Text>
               <Text style={styles.previewMeta}>LM {run.landmarkCount ?? 'n/a'} P {run.presence?.toFixed(2) ?? 'n/a'}</Text>
+              <Text style={styles.previewMeta}>TYPE {run.archetype}</Text>
               <Text style={styles.previewMeta}>SRC {run.originalSize}</Text>
               <Text style={styles.previewMeta}>CROP {run.crop} {run.cropSource}</Text>
               <Text style={styles.previewMeta}>IN {run.inputSize}</Text>
@@ -1556,5 +2635,10 @@ const styles = StyleSheet.create({
   previewMeta: {
     color: '#6e5f4d',
     fontSize: 9,
+  },
+  portraitContainer: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
 });

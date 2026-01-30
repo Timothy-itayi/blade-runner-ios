@@ -99,6 +99,8 @@ export const GameScreen = ({
 }: GameScreenProps) => {
   const router = useRouter();
   const [identityScanHoldActive, setIdentityScanHoldActive] = useState(false);
+  const portraitBaseImageId = currentSubjectIndex % 3;
+  const forceProceduralPortrait = true;
   
   const handleMapPress = () => {
     router.push('/map');
@@ -209,10 +211,11 @@ export const GameScreen = ({
               identityScanComplete={identityScanUsed}
               onIdentityScanComplete={onIdentityScanComplete}
               biometricsRevealed={biometricsRevealed}
-              useProceduralPortrait={currentSubject.useProceduralPortrait}
+              useProceduralPortrait={forceProceduralPortrait}
               subjectId={currentSubject.id}
               subjectType={currentSubject.subjectType}
               isAnomaly={currentSubject.biometricData?.anomalyDetected}
+              baseImageIdOverride={portraitBaseImageId}
             />
             
             {/* Scanlines */}
@@ -250,7 +253,8 @@ export const GameScreen = ({
           subjectId={currentSubject.id}
           subjectType={currentSubject.subjectType}
           isAnomaly={currentSubject.biometricData?.anomalyDetected}
-          useProceduralPortrait={currentSubject.useProceduralPortrait}
+          useProceduralPortrait={forceProceduralPortrait}
+          baseImageIdOverride={portraitBaseImageId}
         />
       </View>
 

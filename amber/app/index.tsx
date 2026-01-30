@@ -35,6 +35,7 @@ import { createPatternTracker, PatternTracker } from '../utils/warningPatterns';
 import { useGameAudioContext } from '../contexts/AudioContext';
 
 const DEV_MODE = true; // Set to true to bypass onboarding and boot
+const SHOW_LANDMARK_TEST = false;
 const SINGLE_SUBJECT_MODE = true;
 const SINGLE_SUBJECT_ID = 'S1-01';
 
@@ -498,7 +499,7 @@ export default function MainScreen() {
               onIdentityScanComplete={() => setIsIdentityScanning(false)}
             />
 
-            {DEV_MODE && (
+            {DEV_MODE && SHOW_LANDMARK_TEST && (
               <FaceLandmarkTfliteTest
                 scanProgress={scanProgressValue}
                 isScanning={isScanning}

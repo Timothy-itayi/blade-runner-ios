@@ -1,6 +1,6 @@
 export type PortraitPreset = 'scanner' | 'comms' | 'dossier';
 
-export const PORTRAIT_GENERATOR_VERSION = 'v6';
+export const PORTRAIT_GENERATOR_VERSION = 'v9';
 export const PORTRAIT_HEADSET_VERSION = 'v1';
 
 export const PORTRAIT_OUTPUT_SIZES: Record<PortraitPreset, number> = {

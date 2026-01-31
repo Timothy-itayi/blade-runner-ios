@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const SAVE_KEY = '@amber_save';
 const SAVE_VERSION = 1;
 
-export type GamePhase = 'intro' | 'introVideo' | 'news_intro' | 'takeover' | 'boot' | 'briefing' | 'active';
+export type GamePhase = 'intro' | 'introVideo' | 'news_intro' | 'takeover' | 'boot' | 'logo' | 'briefing' | 'active';
 
 export interface ShiftStats {
   approved: number;

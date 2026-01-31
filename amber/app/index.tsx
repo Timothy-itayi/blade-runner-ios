@@ -12,6 +12,7 @@ type InteractionPhase = 'greeting' | 'credentials' | 'investigation';
 import { OnboardingModal } from '../components/boot/OnboardingModal';
 import { DemoOnboardModal } from '../components/demo-onboard/DemoOnboardModal';
 import { BootSequence } from '../components/boot/BootSequence';
+import AmberLogoScreen from '../components/boot/AmberLogoScreen';
 import { SystemTakeover } from '../components/boot/SystemTakeover';
 // Intro components
 import { HomeScreen } from '../components/intro/HomeScreen';
@@ -34,7 +35,7 @@ import { determineEquipmentFailures } from '../utils/equipmentFailures';
 import { createPatternTracker, PatternTracker } from '../utils/warningPatterns';
 import { useGameAudioContext } from '../contexts/AudioContext';
 
-const DEV_MODE = true; // Set to true to bypass onboarding and boot
+const DEV_MODE = false; // Set to true to bypass onboarding and boot
 const SHOW_LANDMARK_TEST = false;
 const SINGLE_SUBJECT_MODE = true; // When true, subject pool is first 3 subjects so advancing cycles the 3 procedural base faces
 
@@ -375,6 +376,10 @@ export default function MainScreen() {
   };
 
   const handleBootComplete = () => {
+    setGamePhase('logo');
+  };
+
+  const handleLogoComplete = () => {
     setGamePhase('briefing');
   };
 
@@ -449,6 +454,10 @@ export default function MainScreen() {
 
         {gamePhase === 'boot' && (
           <BootSequence onComplete={handleBootComplete} />
+        )}
+
+        {gamePhase === 'logo' && (
+          <AmberLogoScreen onComplete={handleLogoComplete} />
         )}
 
         {gamePhase === 'takeover' && (

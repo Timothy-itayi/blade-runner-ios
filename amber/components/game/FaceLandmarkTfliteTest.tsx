@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { LayoutChangeEvent, ScrollView, StyleSheet, Text, View, StyleProp, ViewStyle } from 'react-native';
 import { Tensor, useTensorflowModel } from 'react-native-fast-tflite';
 import {
@@ -103,6 +103,8 @@ const IMAGE_SOURCES = [
   },
 ];
 const ACTIVE_SOURCES = IMAGE_SOURCES.slice(0, 3);
+const PIPELINE_USE_SEGMENTATION = false;
+const PIPELINE_YIELD_BETWEEN_IMAGES = true;
 const TEXTURE_KEYS = [
   'blueMetalDiff',
   'blueMetalDisp',
@@ -202,7 +204,7 @@ const EDGE_SETTINGS = {
   threshold: 0.18,
   softness: 0.06,
 };
-const USE_GPU_EDGES = false;
+const USE_GPU_EDGES = true;
 const USE_TEXTURE_OVERLAY = true;
 const SHOW_LANDMARK_OVERLAY = false;
 const EDGE_BLEND = {
@@ -1338,194 +1340,90 @@ type FaceLandmarkTfliteTestProps = {
   style?: StyleProp<ViewStyle>;
 };
 
-export function FaceLandmarkTfliteTest({
-  scanProgress = 0,
-  isScanning = false,
-  mode = 'panel',
-  activeIndex = 0,
-  style,
-}: FaceLandmarkTfliteTestProps) {
+// Shared pipeline so scanner faces are preloaded in background; one provider at app root.
+type FacePipelineValue = {
+  runs: ImageRun[];
+  summary: RunSummary | null;
+  isReady: boolean;
+  modelState: ReturnType<typeof useTensorflowModel>;
+  segmentationState: ReturnType<typeof useTensorflowModel>;
+};
+
+const FacePipelineContext = createContext<FacePipelineValue>({
+  runs: [],
+  summary: null,
+  isReady: false,
+  modelState: { state: 'loading', model: undefined },
+  segmentationState: { state: 'loading', model: undefined },
+});
+
+function useFacePipeline(warmCacheActive: boolean): FacePipelineValue {
   const modelState = useTensorflowModel(MODEL_ASSET);
   const segmentationState = useTensorflowModel(SEGMENT_MODEL_ASSET);
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [runs, setRuns] = useState<ImageRun[]>([]);
   const runStageRef = useRef<'none' | 'landmarks' | 'segmentation'>('none');
-  const [portraitLayout, setPortraitLayout] = useState({ width: 0, height: 0 });
   const imageNeutral = useImage(ACTIVE_SOURCES[0].asset);
   const imageCyborg = useImage(ACTIVE_SOURCES[1].asset);
   const imageUncanny = useImage(ACTIVE_SOURCES[2].asset);
-  const textureBlueMetalDiff = useImage(TEXTURE_ASSETS.blueMetalDiff);
-  const textureBlueMetalDisp = useImage(TEXTURE_ASSETS.blueMetalDisp);
-  const textureLeatherRed = useImage(TEXTURE_ASSETS.leatherRed);
-  const textureRockWallDiff = useImage(TEXTURE_ASSETS.rockWallDiff);
-  const textureRockWallDisp = useImage(TEXTURE_ASSETS.rockWallDisp);
-  const textureConcrete206 = useImage(TEXTURE_ASSETS.concrete206);
-  const textureGrunge336 = useImage(TEXTURE_ASSETS.grunge336);
-  const textureGrunge342 = useImage(TEXTURE_ASSETS.grunge342);
-  const textureInkPaint399 = useImage(TEXTURE_ASSETS.inkPaint399);
-  const textureMetal264 = useImage(TEXTURE_ASSETS.metal264);
-  const textureMetal295 = useImage(TEXTURE_ASSETS.metal295);
-  const textureSoil125 = useImage(TEXTURE_ASSETS.soil125);
-  const textureSoil130 = useImage(TEXTURE_ASSETS.soil130);
-  const textureSoil146 = useImage(TEXTURE_ASSETS.soil146);
-  const textureStone165 = useImage(TEXTURE_ASSETS.stone165);
-
-  const textureLookup = useMemo(
-    () => ({
-      blueMetalDiff: textureBlueMetalDiff,
-      blueMetalDisp: textureBlueMetalDisp,
-      leatherRed: textureLeatherRed,
-      rockWallDiff: textureRockWallDiff,
-      rockWallDisp: textureRockWallDisp,
-      concrete206: textureConcrete206,
-      grunge336: textureGrunge336,
-      grunge342: textureGrunge342,
-      inkPaint399: textureInkPaint399,
-      metal264: textureMetal264,
-      metal295: textureMetal295,
-      soil125: textureSoil125,
-      soil130: textureSoil130,
-      soil146: textureSoil146,
-      stone165: textureStone165,
-    }),
-    [
-      textureBlueMetalDiff,
-      textureBlueMetalDisp,
-      textureLeatherRed,
-      textureRockWallDiff,
-      textureRockWallDisp,
-      textureConcrete206,
-      textureGrunge336,
-      textureGrunge342,
-      textureInkPaint399,
-      textureMetal264,
-      textureMetal295,
-      textureSoil125,
-      textureSoil130,
-      textureSoil146,
-      textureStone165,
-    ]
-  );
-
-  const texturePools = useMemo(
-    () => ({
-      human: {
-        primary: TEXTURE_POOL_PRIMARY.human.map((key) => textureLookup[key]).filter(Boolean),
-        secondary: TEXTURE_POOL_SECONDARY.human.map((key) => textureLookup[key]).filter(Boolean),
-      },
-      cyborg: {
-        primary: TEXTURE_POOL_PRIMARY.cyborg.map((key) => textureLookup[key]).filter(Boolean),
-        secondary: TEXTURE_POOL_SECONDARY.cyborg.map((key) => textureLookup[key]).filter(Boolean),
-      },
-      uncanny: {
-        primary: TEXTURE_POOL_PRIMARY.uncanny.map((key) => textureLookup[key]).filter(Boolean),
-        secondary: TEXTURE_POOL_SECONDARY.uncanny.map((key) => textureLookup[key]).filter(Boolean),
-      },
-    }),
-    [textureLookup]
-  );
-  const resolveTextureRecipe = (seed: string, archetype: ImageRun['archetype']) => {
-    const pools = texturePools[archetype];
-    const rng = new SeededRandom(`${seed}_texture`);
-    const pick = (pool: Array<ReturnType<typeof useImage> | null>) => {
-      const available = pool.filter(Boolean) as Array<NonNullable<ReturnType<typeof useImage>>>;
-      if (!available.length) return null;
-      return available[rng.int(0, available.length - 1)];
-    };
-    const primary = pick(pools.primary);
-    let secondary = pick(pools.secondary);
-    if (secondary && primary && secondary === primary && pools.secondary.length > 1) {
-      secondary = pick(pools.secondary);
-    }
-    return {
-      primary,
-      secondary,
-      primaryRepeat: rng.bool(0.8),
-      secondaryRepeat: rng.bool(0.6),
-      primaryScale: rng.range(0.25, 0.55),
-      secondaryScale: rng.range(0.35, 0.75),
-      primaryOpacity: rng.range(0.8, 1.1),
-      secondaryOpacity: rng.range(0.7, 0.95),
-    };
-  };
   const images = useMemo(
     () => [
-      {
-        ...ACTIVE_SOURCES[0],
-        image: imageNeutral,
-      },
-      {
-        ...ACTIVE_SOURCES[1],
-        image: imageCyborg,
-      },
-      {
-        ...ACTIVE_SOURCES[2],
-        image: imageUncanny,
-      },
+      { ...ACTIVE_SOURCES[0], image: imageNeutral },
+      { ...ACTIVE_SOURCES[1], image: imageCyborg },
+      { ...ACTIVE_SOURCES[2], image: imageUncanny },
     ],
-    [
-      imageCyborg,
-      imageNeutral,
-      imageUncanny,
-    ]
+    [imageCyborg, imageNeutral, imageUncanny]
   );
-
-  const inputInfo = useMemo(() => {
-    if (modelState.state !== 'loaded') return null;
-    return modelState.model.inputs[0];
-  }, [modelState]);
-  const segmentationInfo = useMemo(() => {
-    if (segmentationState.state !== 'loaded') return null;
-    return segmentationState.model.outputs[0];
-  }, [segmentationState]);
-
   useEffect(() => {
+    if (!warmCacheActive) return;
     if (modelState.state !== 'loaded') return;
     if (images.some((source) => !source.image)) return;
-    const segmentationReady = segmentationState.state === 'loaded';
+    const segmentationReady = PIPELINE_USE_SEGMENTATION && segmentationState.state === 'loaded';
     if (segmentationReady && runStageRef.current === 'segmentation') return;
     if (!segmentationReady && runStageRef.current === 'landmarks') return;
     runStageRef.current = segmentationReady ? 'segmentation' : 'landmarks';
 
-    const model = modelState.model;
-    const segmentModel = segmentationReady ? segmentationState.model : null;
-    const inputTensor = model.inputs[0];
-    if (!inputTensor) {
-      console.warn('[TFLite] No input tensors found for face_landmark.tflite');
-      return;
-    }
+    let cancelled = false;
 
-    const outputTensors = model.outputs;
-    const outputTensor = outputTensors[0];
-    const outputShapes = outputTensors.map((tensor) => formatShape(tensor.shape)).join(' | ');
-    const outputTypes = outputTensors.map((tensor) => tensor.dataType).join(' | ');
-    const segmentationOutput = segmentModel?.outputs[0];
-    const segmentationShape = segmentationOutput ? formatShape(segmentationOutput.shape) : 'loading';
+    const runPipeline = async () => {
+      const model = modelState.model;
+      const segmentModel = segmentationReady ? segmentationState.model : null;
+      const inputTensor = model.inputs[0];
+      if (!inputTensor) return;
 
-    const runResults: ImageRun[] = [];
-    let sampleSummary: Omit<RunSummary, 'runCount'> | null = null;
+      const outputTensors = model.outputs;
+      const outputTensor = outputTensors[0];
+      const outputShapes = outputTensors.map((t) => formatShape(t.shape)).join(' | ');
+      const outputTypes = outputTensors.map((t) => t.dataType).join(' | ');
+      const segmentationOutput = segmentModel?.outputs[0];
+      const segmentationShape = PIPELINE_USE_SEGMENTATION
+        ? segmentationOutput
+          ? formatShape(segmentationOutput.shape)
+          : 'loading'
+        : 'skipped';
 
-    const landmarkDims = resolveTensorDims(inputTensor);
-    const targetAspect = landmarkDims.width / landmarkDims.height;
+      const runResults: ImageRun[] = [];
+      let sampleSummary: Omit<RunSummary, 'runCount'> | null = null;
+      const landmarkDims = resolveTensorDims(inputTensor);
+      const targetAspect = landmarkDims.width / landmarkDims.height;
 
-    for (const source of images) {
-      const image = source.image;
-      if (!image) {
-        continue;
-      }
-      const archetype = source.archetype ?? 'human';
-      const srcWidth = image.width();
-      const srcHeight = image.height();
-      const fullRect: CropRect = { x: 0, y: 0, width: srcWidth, height: srcHeight };
+      for (const source of images) {
+        if (cancelled) return;
+        const image = source.image;
+        if (!image) continue;
+        const archetype = source.archetype ?? 'human';
+        const srcWidth = image.width();
+        const srcHeight = image.height();
+        const fullRect: CropRect = { x: 0, y: 0, width: srcWidth, height: srcHeight };
 
-      const segMask = (() => {
-        if (!segmentModel || !segmentationOutput) return null;
-        const segmentInput = buildInputFromImage(image, segmentModel.inputs[0], fullRect);
-        const segBuffer = segmentInput?.buffer ?? buildSyntheticInput(segmentModel.inputs[0]).buffer;
-        const segOutputs = segmentModel.runSync([segBuffer]) as SupportedTypedArray[];
-        const segData = segOutputs[0];
-        return buildSegmentationMask(segData, segmentationOutput);
-      })();
+        const segMask = (() => {
+          if (!segmentModel || !segmentationOutput) return null;
+          const segmentInput = buildInputFromImage(image, segmentModel.inputs[0], fullRect);
+          const segBuffer = segmentInput?.buffer ?? buildSyntheticInput(segmentModel.inputs[0]).buffer;
+          const segOutputs = segmentModel.runSync([segBuffer]) as SupportedTypedArray[];
+          const segData = segOutputs[0];
+          return buildSegmentationMask(segData, segmentationOutput);
+        })();
 
       let cropSource: ImageRun['cropSource'] = 'center';
       const cropRect = (() => {
@@ -1565,11 +1463,7 @@ export function FaceLandmarkTfliteTest({
         const maxY = Math.max(...points.map((p) => p.y));
         const normalized = maxX <= 2 && maxY <= 2;
         const adjustedPoints = normalized
-          ? points.map((p) => ({
-              x: p.x * landmarkDims.width,
-              y: p.y * landmarkDims.height,
-              z: p.z,
-            }))
+          ? points.map((p) => ({ x: p.x * landmarkDims.width, y: p.y * landmarkDims.height, z: p.z }))
           : points;
         const bbox = computeLandmarkBBox(adjustedPoints, FACE_OVAL_INDICES);
         if (bbox) {
@@ -1691,43 +1585,185 @@ export function FaceLandmarkTfliteTest({
         inputHeight,
         landmarks: points,
       });
+        if (!sampleSummary) {
+          sampleSummary = {
+            inputShape: formatShape(inputTensor.shape),
+            inputType: inputTensor.dataType,
+            normalization,
+            landmarksNormalized: normalizedLabel,
+            outputShapes,
+            outputTypes,
+            outputLength: outputData?.length ?? 0,
+            landmarkCount,
+            landmarkSample,
+            segmentationShape,
+          };
+        }
 
-      console.log(`[TFLite] image: ${source.label} ${imageStatus} ${imageSize}`);
-      console.log(`[TFLite] crop: ${crop} (${cropSource})`);
-      console.log(`[TFLite] presence: ${presenceValue ?? 'n/a'}`);
-      console.log(`[TFLite] output length: ${outputData?.length ?? 0}`);
-      if (landmarkCount) {
-        console.log(`[TFLite] landmarks: ${landmarkCount} sample ${landmarkSample}`);
-      } else {
-        console.log('[TFLite] landmark parsing failed');
+        if (PIPELINE_YIELD_BETWEEN_IMAGES) {
+          await new Promise((resolve) => requestAnimationFrame(() => resolve(null)));
+        }
       }
 
-      if (!sampleSummary) {
-        sampleSummary = {
-          inputShape: formatShape(inputTensor.shape),
-          inputType: inputTensor.dataType,
-          normalization,
-          landmarksNormalized: normalizedLabel,
-          outputShapes,
-          outputTypes,
-          outputLength: outputData?.length ?? 0,
-          landmarkCount,
-          landmarkSample,
-          segmentationShape,
-        };
+      if (cancelled) return;
+      setRuns(runResults);
+      if (sampleSummary) {
+        setSummary({ ...sampleSummary, runCount: runResults.length });
       }
-    }
+    };
 
-    setRuns(runResults);
-    if (sampleSummary) {
-      setSummary({ ...sampleSummary, runCount: runResults.length });
-    }
+    runPipeline();
+    return () => {
+      cancelled = true;
+    };
+  }, [images, modelState, segmentationState, warmCacheActive]);
 
-    console.log('[TFLite] face_landmark.tflite loaded');
-    console.log(`[TFLite] input: ${inputTensor.dataType} ${formatShape(inputTensor.shape)} (${runResults[0]?.landmarksNormalized ?? 'n/a'})`);
-    console.log(`[TFLite] output: ${outputTypes} ${outputShapes}`);
-    console.log(`[TFLite] segmentation output: ${segmentationShape}`);
-  }, [images, modelState, segmentationState]);
+  return {
+    runs,
+    summary,
+    isReady: runs.length >= 3,
+    modelState,
+    segmentationState,
+  };
+}
+
+export function FacePipelineProvider({
+  children,
+  warmCacheActive = true,
+}: {
+  children: React.ReactNode;
+  warmCacheActive?: boolean;
+}) {
+  const value = useFacePipeline(warmCacheActive);
+  return (
+    <FacePipelineContext.Provider value={value}>
+      {children}
+    </FacePipelineContext.Provider>
+  );
+}
+
+export function FaceLandmarkTfliteTest({
+  scanProgress = 0,
+  isScanning = false,
+  mode = 'panel',
+  activeIndex = 0,
+  style,
+}: FaceLandmarkTfliteTestProps) {
+  const pipeline = useContext(FacePipelineContext);
+  const { runs, summary, isReady: pipelineReady, modelState, segmentationState } = pipeline;
+  const inputInfo = useMemo(
+    () => (modelState.state === 'loaded' ? modelState.model.inputs[0] ?? null : null),
+    [modelState]
+  );
+  const segmentationInfo = useMemo(
+    () => (segmentationState.state === 'loaded' ? segmentationState.model.outputs[0] ?? null : null),
+    [segmentationState]
+  );
+  const [portraitLayout, setPortraitLayout] = useState({ width: 0, height: 0 });
+  const textureBlueMetalDiff = useImage(TEXTURE_ASSETS.blueMetalDiff);
+  const textureBlueMetalDisp = useImage(TEXTURE_ASSETS.blueMetalDisp);
+  const textureLeatherRed = useImage(TEXTURE_ASSETS.leatherRed);
+  const textureRockWallDiff = useImage(TEXTURE_ASSETS.rockWallDiff);
+  const textureRockWallDisp = useImage(TEXTURE_ASSETS.rockWallDisp);
+  const textureConcrete206 = useImage(TEXTURE_ASSETS.concrete206);
+  const textureGrunge336 = useImage(TEXTURE_ASSETS.grunge336);
+  const textureGrunge342 = useImage(TEXTURE_ASSETS.grunge342);
+  const textureInkPaint399 = useImage(TEXTURE_ASSETS.inkPaint399);
+  const textureMetal264 = useImage(TEXTURE_ASSETS.metal264);
+  const textureMetal295 = useImage(TEXTURE_ASSETS.metal295);
+  const textureSoil125 = useImage(TEXTURE_ASSETS.soil125);
+  const textureSoil130 = useImage(TEXTURE_ASSETS.soil130);
+  const textureSoil146 = useImage(TEXTURE_ASSETS.soil146);
+  const textureStone165 = useImage(TEXTURE_ASSETS.stone165);
+
+  const textureLookup = useMemo(
+    () => ({
+      blueMetalDiff: textureBlueMetalDiff,
+      blueMetalDisp: textureBlueMetalDisp,
+      leatherRed: textureLeatherRed,
+      rockWallDiff: textureRockWallDiff,
+      rockWallDisp: textureRockWallDisp,
+      concrete206: textureConcrete206,
+      grunge336: textureGrunge336,
+      grunge342: textureGrunge342,
+      inkPaint399: textureInkPaint399,
+      metal264: textureMetal264,
+      metal295: textureMetal295,
+      soil125: textureSoil125,
+      soil130: textureSoil130,
+      soil146: textureSoil146,
+      stone165: textureStone165,
+    }),
+    [
+      textureBlueMetalDiff,
+      textureBlueMetalDisp,
+      textureLeatherRed,
+      textureRockWallDiff,
+      textureRockWallDisp,
+      textureConcrete206,
+      textureGrunge336,
+      textureGrunge342,
+      textureInkPaint399,
+      textureMetal264,
+      textureMetal295,
+      textureSoil125,
+      textureSoil130,
+      textureSoil146,
+      textureStone165,
+    ]
+  );
+
+  const texturePools = useMemo(
+    () => ({
+      human: {
+        primary: TEXTURE_POOL_PRIMARY.human.map((key) => textureLookup[key]).filter(Boolean),
+        secondary: TEXTURE_POOL_SECONDARY.human.map((key) => textureLookup[key]).filter(Boolean),
+      },
+      cyborg: {
+        primary: TEXTURE_POOL_PRIMARY.cyborg.map((key) => textureLookup[key]).filter(Boolean),
+        secondary: TEXTURE_POOL_SECONDARY.cyborg.map((key) => textureLookup[key]).filter(Boolean),
+      },
+      uncanny: {
+        primary: TEXTURE_POOL_PRIMARY.uncanny.map((key) => textureLookup[key]).filter(Boolean),
+        secondary: TEXTURE_POOL_SECONDARY.uncanny.map((key) => textureLookup[key]).filter(Boolean),
+      },
+    }),
+    [textureLookup]
+  );
+  const resolveTextureRecipe = (seed: string, archetype: ImageRun['archetype']) => {
+    const pools = texturePools[archetype];
+    const rng = new SeededRandom(`${seed}_texture`);
+    const pick = (pool: Array<ReturnType<typeof useImage> | null>) => {
+      const available = pool.filter(Boolean) as Array<NonNullable<ReturnType<typeof useImage>>>;
+      if (!available.length) return null;
+      return available[rng.int(0, available.length - 1)];
+    };
+    const primary = pick(pools.primary);
+    let secondary = pick(pools.secondary);
+    if (secondary && primary && secondary === primary && pools.secondary.length > 1) {
+      secondary = pick(pools.secondary);
+    }
+    return {
+      primary,
+      secondary,
+      primaryRepeat: rng.bool(0.8),
+      secondaryRepeat: rng.bool(0.6),
+      primaryScale: rng.range(0.25, 0.55),
+      secondaryScale: rng.range(0.35, 0.75),
+      primaryOpacity: rng.range(0.8, 1.1),
+      secondaryOpacity: rng.range(0.7, 0.95),
+    };
+  };
+
+  if (
+    mode === 'portrait' &&
+    (modelState.state === 'loading' ||
+      modelState.state === 'error' ||
+      !pipelineReady ||
+      segmentationState.state === 'error')
+  ) {
+    return <View style={[styles.portraitContainer, style]} />;
+  }
 
   if (modelState.state === 'loading') {
     return (
@@ -1747,11 +1783,11 @@ export function FaceLandmarkTfliteTest({
       </View>
     );
   }
-  if (images.some((source) => !source.image)) {
+  if (!pipelineReady) {
     return (
       <View style={styles.panel}>
         <Text style={styles.title}>TFLite Face Landmark</Text>
-        <Text style={styles.line}>IMAGES LOADING</Text>
+        <Text style={styles.line}>PREPARING SCANNER</Text>
         <Text style={styles.line}>{ACTIVE_SOURCES.length} portraits</Text>
       </View>
     );
@@ -2176,8 +2212,11 @@ export function FaceLandmarkTfliteTest({
       {segmentationInfo && (
         <Text style={styles.line}>SEG OUT {summary?.segmentationShape ?? 'n/a'}</Text>
       )}
-      {segmentationState.state === 'loading' && (
+      {PIPELINE_USE_SEGMENTATION && segmentationState.state === 'loading' && (
         <Text style={styles.line}>SEGMENTATION LOADING</Text>
+      )}
+      {!PIPELINE_USE_SEGMENTATION && (
+        <Text style={styles.line}>SEGMENTATION SKIPPED</Text>
       )}
       {summary && (
         <>

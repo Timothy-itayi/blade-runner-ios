@@ -4,7 +4,7 @@ import { View, SafeAreaView, Animated } from 'react-native';
 import { GameScreen } from '../components/game/screen/GameScreen';
 import { ShiftTransition } from '../components/game/ShiftTransition';
 import { SettingsModal } from '../components/settings/SettingsModal';
-import { FaceLandmarkTfliteTest } from '../components/game/FaceLandmarkTfliteTest';
+import { FaceLandmarkTfliteTest, FacePipelineProvider } from '../components/game/FaceLandmarkTfliteTest';
 // Citation is rendered as an inline strip (diegetic), not a modal.
 // Phase 4: Subject interaction phase type
 type InteractionPhase = 'greeting' | 'credentials' | 'investigation';
@@ -36,8 +36,7 @@ import { useGameAudioContext } from '../contexts/AudioContext';
 
 const DEV_MODE = true; // Set to true to bypass onboarding and boot
 const SHOW_LANDMARK_TEST = false;
-const SINGLE_SUBJECT_MODE = true;
-const SINGLE_SUBJECT_ID = 'S1-01';
+const SINGLE_SUBJECT_MODE = true; // When true, subject pool is first 3 subjects so advancing cycles the 3 procedural base faces
 
 export default function MainScreen() {
   const { lives, setLives, resetLives } = useGameStore();
@@ -51,11 +50,10 @@ export default function MainScreen() {
   const [decisionHistory, setDecisionHistory] = useState<Record<string, 'APPROVE' | 'DENY'>>({});
   const [isNewGame, setIsNewGame] = useState(true);
   
-  // Phase 5: Subject pool (full roster)
+  // Phase 5: Subject pool (full roster). Use first 3 subjects in single-subject mode so advancing cycles through the 3 procedural base faces.
   const [subjectPool, setSubjectPool] = useState<SubjectData[]>(() => {
     if (!SINGLE_SUBJECT_MODE) return SUBJECTS;
-    const single = SUBJECTS.find((subject) => subject.id === SINGLE_SUBJECT_ID) ?? SUBJECTS[0];
-    return single ? [single] : [];
+    return SUBJECTS.slice(0, 3);
   });
   
   // Phase 2: BPM monitoring state
@@ -438,6 +436,7 @@ export default function MainScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <FacePipelineProvider warmCacheActive={DEV_MODE || gamePhase !== 'active'}>
       <View style={styles.container}>
         {gamePhase === 'intro' && (
           <HomeScreen
@@ -533,6 +532,7 @@ export default function MainScreen() {
           </Animated.View>
         )}
       </View>
+      </FacePipelineProvider>
     </SafeAreaView>
   );
 }

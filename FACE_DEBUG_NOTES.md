@@ -16,6 +16,9 @@ Our ambition is to take a small set of scanned faces and process them so that we
 - **Why bother?**  
   This approach lets us get variety in the game’s NPCs, and quickly adapt to changes in art direction, without hand-crafting every portrait from scratch.
 
+**Status update:**  
+The face pipeline is now wired into the main UI (scanner + comms portrait). This means what you see in the live game is the same processing stack we test here.
+
 ---
 
 ## Step-by-Step: How the Face Pipeline Works
@@ -62,12 +65,18 @@ Our ambition is to take a small set of scanned faces and process them so that we
 ## Current Pipeline Settings
 
 - We’re only using the first 3 portraits (for speed and testing purposes)
-- GPU-based Sobel is OFF (it crashes), so edges use CPU filtering only
+- GPU-based Sobel is ON (CPU edges are removed)
+- Segmentation is currently skipped in the live pipeline to reduce stalls
 - Texture overlay is ON (per-image, masked)
 - Edge blend weights are archetype-tuned (human softer, cyborg harder) and globally stronger.
 - Color grading is archetype-tinted (mask-clipped), with darker tints for human/cyborg and lighter for uncanny.
 - Texture strength is archetype-scaled, with two layered textures per subject for stronger remixing.
 - Hue shift overlay is applied per archetype (mask-clipped).
+
+## Near-Term Roadmap (Plain English)
+
+- Add more baseline faces so the pipeline has more raw material to remix.
+- Add more style passes so each base face can look radically different (different texture sets, tone grades, and lighting moods).
 
 ---
 

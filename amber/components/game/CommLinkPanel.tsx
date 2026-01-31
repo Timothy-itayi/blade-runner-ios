@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { Theme } from '../../constants/theme';
 import { HUDBox } from '../ui/HUDBox';
-import { TypewriterText } from '../ui/ScanData';
+import { SkiaTypewriterText } from '../ui/ScanData';
 import { BUILD_SEQUENCE } from '../../constants/animations';
 import { ProceduralPortrait } from '../ui/ProceduralPortrait';
 import { FaceLandmarkTfliteTest } from './FaceLandmarkTfliteTest';
@@ -31,12 +31,12 @@ export const CommLinkPanel = ({
   return (
     <HUDBox hudStage={hudStage} style={styles.container} buildDelay={BUILD_SEQUENCE.header}>
       <View style={styles.header}>
-        <TypewriterText 
-          text="LIVE COMM-LINK TRANSCRIPTION" 
-          active={true} 
+        <SkiaTypewriterText
+          text="LIVE COMM-LINK TRANSCRIPTION"
+          active={true}
           delay={BUILD_SEQUENCE.header}
           style={styles.label}
-          showCursor={false}
+          numberOfLines={1}
         />
         <View style={styles.pulseDot} />
       </View>
@@ -55,11 +55,12 @@ export const CommLinkPanel = ({
         )}
         <View style={[styles.dialogueBlock, showPortrait && styles.dialogueBlockWithPortrait]}>
           {dialogue ? (
-            <TypewriterText 
-              text={`"${dialogue}"`} 
-              active={hudStage === 'full'} 
-              delay={BUILD_SEQUENCE.header + 500} 
+            <SkiaTypewriterText
+              text={`"${dialogue}"`}
+              active={hudStage === 'full'}
+              delay={BUILD_SEQUENCE.header + 500}
               style={styles.dialogueText}
+              numberOfLines={3}
             />
           ) : (
             <Text style={[styles.dialogueText, { opacity: 0.3 }]}>[ NO ACTIVE TRANSMISSION ]</Text>

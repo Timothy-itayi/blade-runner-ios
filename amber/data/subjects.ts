@@ -222,6 +222,14 @@ export interface SubjectData {
     APPROVE: Outcome;
     DENY: Outcome;
   };
+
+  // Director metadata (optional)
+  seed?: number;
+  truthFlags?: import('../types/subjectSeed').SubjectTruthFlags;
+  exceptionTags?: import('../types/subjectSeed').ExceptionTag[];
+  intendedOutcome?: 'APPROVE' | 'DENY';
+  requiredChecks?: import('../utils/requiredChecks').RequiredCheck[];
+  evidenceOutputs?: Partial<Record<import('../types/evidence').EvidenceKind, string[]>>;
   
   // Dossier
   dossier?: {

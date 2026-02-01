@@ -1,6 +1,8 @@
 import { Theme } from './theme';
+import type { DirectiveRule } from '../types/directive';
+import { DIRECTIVES } from '../data/directives';
 
-export const SUBJECTS_PER_SHIFT = 4;
+export const SUBJECTS_PER_SHIFT = 9;
 
 export interface ShiftData {
   id: number;
@@ -10,6 +12,7 @@ export interface ShiftData {
   authorityLabel: string;
   briefing: string;
   directive: string; // Like Papers Please - must follow or get citation
+  directiveModel?: DirectiveRule;
   unlockedChecks: ('DATABASE' | 'CREDENTIAL' | 'MEDICAL' | 'TURING')[];
   activeRules: string[];
 }
@@ -25,7 +28,8 @@ export const SHIFTS: ShiftData[] = [
     stationName: 'AMBER DEPOT PERIMETER',
     authorityLabel: 'DEPOT SECURITY',
     briefing: 'Standard transit verification in effect. Verify all personnel requesting depot access.',
-    directive: 'DENY ALL SUBJECTS WITH ACTIVE WARRANTS',
+    directive: DIRECTIVES.SHIFT_1.text.join('\n'),
+    directiveModel: DIRECTIVES.SHIFT_1,
     unlockedChecks: ['DATABASE'],
     activeRules: ['CHECK_WARRANTS'],
   },
@@ -39,7 +43,8 @@ export const SHIFTS: ShiftData[] = [
     stationName: 'AMBER DEPOT PERIMETER',
     authorityLabel: 'DEPOT SECURITY',
     briefing: 'Infiltration depth increasing. High level of deceptive patterns observed.',
-    directive: 'VERIFY ALL CREDENTIALS BEFORE APPROVAL',
+    directive: DIRECTIVES.SHIFT_2.text.join('\n'),
+    directiveModel: DIRECTIVES.SHIFT_2,
     unlockedChecks: ['DATABASE', 'CREDENTIAL'],
     activeRules: ['CHECK_WARRANTS', 'CHECK_CREDENTIALS'],
   },
@@ -53,7 +58,8 @@ export const SHIFTS: ShiftData[] = [
     stationName: 'AMBER DEPOT PERIMETER',
     authorityLabel: 'DEPOT SECURITY',
     briefing: 'Final security tier breach imminent. No unauthorized entities permitted.',
-    directive: 'DENY ALL SYNTHETIC ENTITIES (REPLICANTS, ROBOTS)',
+    directive: DIRECTIVES.SHIFT_3.text.join('\n'),
+    directiveModel: DIRECTIVES.SHIFT_3,
     unlockedChecks: ['DATABASE', 'CREDENTIAL', 'TURING'],
     activeRules: ['CHECK_WARRANTS', 'DENY_SYNTHETIC', 'TURING_TEST'],
   },

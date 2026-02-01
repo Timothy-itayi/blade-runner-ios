@@ -8,21 +8,17 @@ import { MapTheme } from '../constants/mapTheme';
 import { Theme } from '../constants/theme';
 import { MechanicalButton } from '../components/ui/MechanicalUI';
 import { HUDBox } from '../components/ui/HUDBox';
+import { useGameStore } from '../store/gameStore';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const METAL_TEXTURE = require('../assets/textures/Texturelabs_Metal_264S.jpg');
-
-// Placeholder data: only center (YOU) node until we record real decisions
-const DEMO_NODES: MapNode[] = [
-  { id: 'player', type: 'player', label: 'YOU', state: 'approved-clean' },
-];
-const DEMO_EDGES: MapEdge[] = [];
 
 export default function MapScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
   const [mapLayout, setMapLayout] = useState({ width: SCREEN_WIDTH - 32, height: SCREEN_HEIGHT * 0.5 });
+  const decisionLog = useGameStore((state) => state.decisionLog);
 
   const handleBack = () => {
     router.back();
@@ -39,16 +35,46 @@ export default function MapScreen() {
     setSelectedNode(prev => prev?.id === node.id ? null : node);
   };
 
+  const { nodes, edges } = useMemo(() => {
+    const subjectNodes: MapNode[] = [];
+    const subjectEdges: MapEdge[] = [];
+    decisionLog.forEach((entry, index) => {
+      const decisionLabel = entry.decision === 'APPROVE' ? 'APPROVED' : 'DENIED';
+      const state: NodeState =
+        entry.decision === 'APPROVE'
+          ? (entry.correct ? 'approved-clean' : 'approved-harm')
+          : (entry.correct ? 'denied-clean' : 'denied-harm');
+      const nodeId = `subject-${entry.subjectId}-${index}`;
+      subjectNodes.push({
+        id: nodeId,
+        type: 'subject',
+        label: `${entry.subjectName} — ${decisionLabel}`,
+        state,
+        subjectId: entry.subjectId,
+      });
+      subjectEdges.push({
+        id: `edge-${nodeId}`,
+        from: 'player',
+        to: nodeId,
+        type: 'decision',
+      });
+    });
+    return {
+      nodes: [{ id: 'player', type: 'player', label: 'YOU', state: 'approved-clean' }, ...subjectNodes],
+      edges: subjectEdges,
+    };
+  }, [decisionLog]);
+
   // Stats from nodes (subject count only)
   const stats = useMemo(() => {
-    const subjects = DEMO_NODES.filter(n => n.type === 'subject');
+    const subjects = nodes.filter(n => n.type === 'subject');
     return {
       total: subjects.length,
       approved: subjects.filter(n => n.state.startsWith('approved')).length,
       denied: subjects.filter(n => n.state.startsWith('denied')).length,
       harm: subjects.filter(n => n.state.includes('harm')).length,
     };
-  }, []);
+  }, [nodes]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -103,8 +129,8 @@ export default function MapScreen() {
         <View style={styles.mapContainer} onLayout={handleMapLayout}>
           <View style={styles.mapBorder}>
             <NodeMap
-              nodes={DEMO_NODES}
-              edges={DEMO_EDGES}
+              nodes={nodes}
+              edges={edges}
               width={mapLayout.width - 4} // subtract border width
               height={mapLayout.height - 4} // subtract border width
               showGrid={true}

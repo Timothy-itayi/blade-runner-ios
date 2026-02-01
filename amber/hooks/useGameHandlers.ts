@@ -3,7 +3,6 @@ import { ShiftData } from '../constants/shifts';
 import { Outcome } from '../data/subjects';
 import { ShiftDecision } from '../components/game/ShiftTransition';
 import { getNarrativeMessage, getSubjectData } from '../utils/gameHelpers';
-import { SUBJECTS } from '../data/subjects';
 import { isEndOfShift } from '../constants/shifts';
 import { useGameStore } from '../store/gameStore';
 import { evaluateConsequence, Consequence } from '../types/consequence';
@@ -47,7 +46,7 @@ interface GameHandlersProps {
   setWarningTracker?: (tracker: import('../utils/warningPatterns').PatternTracker) => void; // Phase 3: Update pattern tracker
   
   // Phase 5: Subject pool size
-  subjectPoolSize?: number; // If not provided, uses SUBJECTS.length
+  subjectPoolSize?: number;
   getNextSubjectIndex?: (currentIndex: number, poolSize: number) => number;
 }
 
@@ -130,6 +129,12 @@ export const useGameHandlers = (props: GameHandlersProps) => {
 
     // Lives system: wrong decisions cost 1 life
     const store = useGameStore.getState();
+    store.addDecisionLog({
+      subjectId: currentSubject.id,
+      subjectName: currentSubject.name,
+      decision: type,
+      correct,
+    });
     if (consequence.type === 'NONE') {
       // Clean decision: no life loss
     } else if (consequence.type === 'WARNING') {
@@ -198,7 +203,7 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     // This will be handled by the component that uses this hook
     // by calling setGatheredInformation(createEmptyInformation())
 
-    const poolSize = subjectPoolSize || SUBJECTS.length;
+    const poolSize = subjectPoolSize || 1;
     const nextIndex = getNextSubjectIndex
       ? getNextSubjectIndex(currentSubjectIndex, poolSize)
       : (currentSubjectIndex + 1) % poolSize;

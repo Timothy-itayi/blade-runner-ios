@@ -39,8 +39,23 @@ export const portraitFragmentShader = `
   uniform float uScratchIntensity;
   uniform float uGlowStrength;
   uniform float uScanlineIntensity;
+
+  // Overlay texture params
+  uniform sampler2D uOverlayTex;
+  uniform float uOverlayMix;
+  uniform float uOverlayScale;
+  uniform float uOverlayRotation;
   
   varying vec2 vUv;
+
+  vec2 rotateUv(vec2 uv, float angle) {
+    float s = sin(angle);
+    float c = cos(angle);
+    uv -= 0.5;
+    uv = mat2(c, -s, s, c) * uv;
+    uv += 0.5;
+    return uv;
+  }
 
   // Helper: Random/Noise
   float random(vec2 st) {
@@ -233,6 +248,13 @@ export const portraitFragmentShader = `
 
     // 5. Tone
     color = applyTone(color);
+
+    // 5.5 Overlay texture (grunge/glass/leather)
+    vec2 overlayUv = (vUv - 0.5) * uOverlayScale + 0.5;
+    overlayUv = rotateUv(overlayUv, uOverlayRotation);
+    vec3 overlayColor = texture2D(uOverlayTex, overlayUv).rgb;
+    float overlayLuma = dot(overlayColor, vec3(0.2126, 0.7152, 0.0722));
+    color = mix(color, color * (0.75 + overlayLuma * 0.6), uOverlayMix);
 
     // 6. Scanlines
     float scanline = sin(vUv.y * 800.0) * 0.5 + 0.5;

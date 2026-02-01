@@ -237,6 +237,57 @@ export const deviceStyles = StyleSheet.create({
   terminalGreen: {
     color: '#5aba6a',
   },
+  settingsScreen: {
+    flex: 1,
+    width: '100%',
+    paddingVertical: 8,
+  },
+  settingsTitle: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
+    fontWeight: '700',
+    color: Theme.colors.textPrimary,
+    letterSpacing: 2,
+  },
+  settingsSub: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: Theme.colors.textDim,
+    letterSpacing: 1,
+    marginTop: 2,
+    marginBottom: 16,
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: Theme.colors.textDim,
+  },
+  settingsRowPressed: {
+    backgroundColor: 'rgba(90, 186, 106, 0.15)',
+    borderColor: '#5aba6a',
+  },
+  settingsLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    color: Theme.colors.textDim,
+    letterSpacing: 1,
+  },
+  settingsSwitch: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    letterSpacing: 2,
+  },
+  settingsSwitchOn: {
+    color: '#5aba6a',
+  },
+  settingsSwitchOff: {
+    color: Theme.colors.textDim,
+  },
   ledContainer: {
     position: 'absolute',
     right: 16,

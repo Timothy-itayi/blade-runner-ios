@@ -6,3 +6,12 @@ export const HEAD_ASSETS = [
 
 export const getHeadAsset = (index: number) =>
   HEAD_ASSETS[index % HEAD_ASSETS.length];
+
+export const OVERLAY_ASSETS = [
+  require('../../assets/textures/Texturelabs_Glass_127S.jpg'),
+  require('../../assets/textures/Texturelabs_Grunge_342S.jpg'),
+  require('../../assets/textures/leather_red_02_coll1_1k.png'),
+];
+
+export const getOverlayAsset = (index: number) =>
+  OVERLAY_ASSETS[index % OVERLAY_ASSETS.length];

@@ -9,6 +9,7 @@ const FACT_LABELS: Record<string, string> = {
   TRANSIT_LOG: 'FLAGGED TRANSIT',
   IDENTITY_SCAN: 'IDENTITY UNVERIFIED',
   INTERROGATION: 'STATEMENT UNVERIFIED',
+  DIRECTIVE: 'DIRECTIVE VIOLATION',
 };
 
 function getConsequenceColor(consequence: Consequence): string {

@@ -65,6 +65,10 @@ export interface FaceGeometry {
 
   // PORTRAIT SYNTHESIS PARAMS (Option 1)
   baseHeadIndex: number; // 0-23
+  overlayVariant: number;
+  overlayIntensity: number;
+  overlayScale: number;
+  overlayRotation: number;
   warp: {
     jawTaper: number;
     cheekFullness: number;
@@ -156,6 +160,8 @@ type SynthStyleProfile = {
   };
   barcodeChance: number;
 };
+
+const OVERLAY_VARIANTS = 3;
 
 const SYNTH_STYLE_PROFILES: Record<string, SynthStyleProfile> = {
   DEFAULT: {
@@ -562,6 +568,10 @@ export function generateFaceGeometry(
 
     // PORTRAIT SYNTHESIS PARAMS
     baseHeadIndex: baseHeadIndexOverride ?? rng.int(0, 2), // 3 ai portraits available
+    overlayVariant: rng.int(0, OVERLAY_VARIANTS - 1),
+    overlayIntensity: rng.range(0.12, 0.45),
+    overlayScale: rng.range(0.75, 1.45),
+    overlayRotation: rng.range(-0.6, 0.6),
     warp: {
       jawTaper: rng.range(-0.12, 0.12),
       cheekFullness: rng.range(-0.09, 0.09),
@@ -732,6 +742,10 @@ export function getTemplateBasedGeometry(
     
     // PORTRAIT SYNTHESIS PARAMS
     baseHeadIndex: baseHeadIndexOverride ?? rng.int(0, 2),
+    overlayVariant: rng.int(0, OVERLAY_VARIANTS - 1),
+    overlayIntensity: rng.range(0.12, 0.45),
+    overlayScale: rng.range(0.75, 1.45),
+    overlayRotation: rng.range(-0.6, 0.6),
     warp: {
       jawTaper: rng.range(-0.12, 0.12),
       cheekFullness: rng.range(-0.09, 0.09),

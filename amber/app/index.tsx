@@ -24,13 +24,12 @@ import { getSubjectData } from '../utils/gameHelpers';
 import { saveGame, loadGame, clearSave, hasSaveData as checkHasSaveData, getSaveInfo, SaveData, GamePhase } from '../utils/saveManager';
 // Constants
 import { styles } from '../styles/game/MainScreen.styles';
-import { SUBJECTS } from '../data/subjects';
 // Phase 5: Subject Manager
-import { createDefaultSubjectPool, getSubjectByIndex, SubjectManagerConfig } from '../utils/subjectManager';
+import { createDefaultSubjectPool, getSubjectByIndex } from '../utils/subjectManager';
 import { SubjectData } from '../data/subjects';
 import { getShiftForSubject, isEndOfShift } from '../constants/shifts';
 import { useGameStore } from '../store/gameStore';
-import { createEmptyInformation, MEMORY_SLOT_CAPACITY } from '../types/information';
+import { createEmptyInformation, GatheredInformation, MEMORY_SLOT_CAPACITY } from '../types/information';
 import { determineEquipmentFailures } from '../utils/equipmentFailures';
 import { createPatternTracker, PatternTracker } from '../utils/warningPatterns';
 import { useGameAudioContext } from '../contexts/AudioContext';
@@ -41,6 +40,7 @@ const SINGLE_SUBJECT_MODE = true; // When true, subject pool is first 3 subjects
 
 export default function MainScreen() {
   const { lives, setLives, resetLives } = useGameStore();
+  const decisionLog = useGameStore((state) => state.decisionLog);
   const { playGameSoundtrack, stopGameSoundtrack } = useGameAudioContext();
   
   const [gamePhase, setGamePhase] = useState<GamePhase>(DEV_MODE ? 'active' : 'intro');
@@ -51,10 +51,11 @@ export default function MainScreen() {
   const [decisionHistory, setDecisionHistory] = useState<Record<string, 'APPROVE' | 'DENY'>>({});
   const [isNewGame, setIsNewGame] = useState(true);
   
-  // Phase 5: Subject pool (full roster). Use first 3 subjects in single-subject mode so advancing cycles through the 3 procedural base faces.
+  // Phase 5: Subject pool. Use first 3 subjects in single-subject mode so advancing cycles the base faces.
   const [subjectPool, setSubjectPool] = useState<SubjectData[]>(() => {
-    if (!SINGLE_SUBJECT_MODE) return SUBJECTS;
-    return SUBJECTS.slice(0, 3);
+    const basePool = createDefaultSubjectPool();
+    if (!SINGLE_SUBJECT_MODE) return basePool;
+    return basePool.slice(0, 3);
   });
   
   // Phase 2: BPM monitoring state
@@ -196,6 +197,16 @@ export default function MainScreen() {
     setWarningTracker, // Phase 3: Update pattern tracker
   });
 
+  const handleInformationUpdate = (infoUpdate: Partial<GatheredInformation>) => {
+    setGatheredInformation((prev) => ({
+      ...prev,
+      ...infoUpdate,
+      timestamps: { ...prev.timestamps, ...infoUpdate.timestamps },
+      lastExtracted: { ...prev.lastExtracted, ...infoUpdate.lastExtracted },
+      activeServices: infoUpdate.activeServices ?? prev.activeServices,
+    }));
+  };
+
   const handleMainMenu = async () => {
     // Stop game soundtrack
     stopGameSoundtrack();
@@ -276,6 +287,7 @@ export default function MainScreen() {
         infractions,
         shiftStats,
         decisionHistory,
+        decisionLog,
         subjectsProcessed,
         lives,
       });
@@ -287,7 +299,7 @@ export default function MainScreen() {
     if (!isLoadingFromSave && (gamePhase === 'active' || gamePhase === 'briefing')) {
       performSave();
     }
-  }, [currentSubjectIndex, totalCorrectDecisions, infractions, gamePhase]);
+  }, [currentSubjectIndex, totalCorrectDecisions, infractions, gamePhase, decisionLog]);
 
   useEffect(() => {
     if (gamePhase === 'boot' && !isLoadingFromSave) {
@@ -326,6 +338,7 @@ export default function MainScreen() {
     const savedData = await loadGame();
     if (savedData) {
       setIsLoadingFromSave(true);
+      useGameStore.getState().setDecisionLog(savedData.decisionLog || []);
       setCurrentSubjectIndex(savedData.currentSubjectIndex);
       setTotalCorrectDecisions(savedData.totalCorrectDecisions);
       setTotalAccuracy(savedData.totalAccuracy);
@@ -362,6 +375,7 @@ export default function MainScreen() {
     setHasSave(false);
     setIsNewGame(true);
     resetLives();
+    useGameStore.getState().clearDecisionLog();
     setTimeout(() => {
       setGamePhase('boot');
     }, 1000);
@@ -505,6 +519,8 @@ export default function MainScreen() {
               isIdentityScanning={isIdentityScanning}
               identityScanUsed={false}
               onIdentityScanComplete={() => setIsIdentityScanning(false)}
+              gatheredInformation={gatheredInformation}
+              onInformationUpdate={handleInformationUpdate}
             />
 
             {DEV_MODE && SHOW_LANDMARK_TEST && (
@@ -532,10 +548,6 @@ export default function MainScreen() {
             <SettingsModal
               visible={showSettings}
               onClose={() => setShowSettings(false)}
-              operatorId="OP-7734"
-              currentShift={currentShift.id}
-              totalSubjectsProcessed={currentSubjectIndex}
-              accuracy={totalAccuracy}
               shiftData={currentShift}
             />
           </Animated.View>

@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { GLView } from 'expo-gl';
 import { portraitVertexShader, portraitFragmentShader } from './PortraitShader';
 import { FaceGeometry } from '../../utils/faceGenerator';
-import { getHeadAsset } from './portraitAssets';
+import { getHeadAsset, getOverlayAsset } from './portraitAssets';
 
 interface SynthesizedPortraitProps {
   geometry: FaceGeometry;
@@ -24,6 +24,8 @@ function PortraitMesh({ geometry, onCapture, onCaptureError, isStatic }: Synthes
   
   const assetModule = getHeadAsset(geometry.baseHeadIndex);
   const baseTex = useTexture(assetModule) as THREE.Texture;
+  const overlayModule = getOverlayAsset(geometry.overlayVariant ?? 0);
+  const overlayTex = useTexture(overlayModule) as THREE.Texture;
 
   useEffect(() => {
     if (baseTex) {
@@ -33,6 +35,17 @@ function PortraitMesh({ geometry, onCapture, onCaptureError, isStatic }: Synthes
       invalidate();
     }
   }, [baseTex, invalidate]);
+
+  useEffect(() => {
+    if (overlayTex) {
+      overlayTex.minFilter = THREE.LinearFilter;
+      overlayTex.magFilter = THREE.LinearFilter;
+      overlayTex.wrapS = THREE.RepeatWrapping;
+      overlayTex.wrapT = THREE.RepeatWrapping;
+      overlayTex.needsUpdate = true;
+      invalidate();
+    }
+  }, [overlayTex, invalidate]);
   
   const uniforms = useMemo(() => {
     return {
@@ -62,8 +75,13 @@ function PortraitMesh({ geometry, onCapture, onCaptureError, isStatic }: Synthes
       uScratchIntensity: { value: geometry.cyber.scratchIntensity },
       uGlowStrength: { value: geometry.cyber.glowStrength },
       uScanlineIntensity: { value: geometry.cyber.scanlineIntensity },
+
+      uOverlayTex: { value: overlayTex },
+      uOverlayMix: { value: geometry.overlayIntensity },
+      uOverlayScale: { value: geometry.overlayScale },
+      uOverlayRotation: { value: geometry.overlayRotation },
     };
-  }, [baseTex, geometry]);
+  }, [baseTex, overlayTex, geometry]);
 
   // Update texture uniform when it changes
   useEffect(() => {
@@ -72,6 +90,13 @@ function PortraitMesh({ geometry, onCapture, onCaptureError, isStatic }: Synthes
       materialRef.current.needsUpdate = true;
     }
   }, [baseTex]);
+
+  useEffect(() => {
+    if (materialRef.current && overlayTex) {
+      materialRef.current.uniforms.uOverlayTex.value = overlayTex;
+      materialRef.current.needsUpdate = true;
+    }
+  }, [overlayTex]);
 
   useFrame((state) => {
     if (materialRef.current && !isStatic) {

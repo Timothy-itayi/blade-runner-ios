@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SAVE_KEY = '@amber_save';
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;
 
 export type GamePhase = 'intro' | 'introVideo' | 'news_intro' | 'takeover' | 'boot' | 'logo' | 'briefing' | 'active';
 
@@ -20,6 +20,12 @@ export interface SaveData {
   infractions: number;
   shiftStats: ShiftStats;
   decisionHistory: Record<string, 'APPROVE' | 'DENY'>;
+  decisionLog: Array<{
+    subjectId: string;
+    subjectName: string;
+    decision: 'APPROVE' | 'DENY';
+    correct: boolean;
+  }>;
   subjectsProcessed: number;
   lives: number;
   timestamp: number;

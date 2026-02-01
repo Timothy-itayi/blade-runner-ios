@@ -8,6 +8,7 @@
 import { GatheredInformation } from './information';
 import { SubjectData } from '../data/subjects';
 import { ShiftData } from '../constants/shifts';
+import { getMissingRequiredChecks, getRequiredChecks } from '../utils/requiredChecks';
 
 export type ConsequenceType = 'NONE' | 'WARNING' | 'CITATION' | 'SERIOUS_INFRACTION';
 
@@ -15,11 +16,13 @@ export interface MissedInformation {
   // Note: These are *fact categories* revealed by services, not “buttons the player forgot to press”.
   // They’re used for diegetic reporting (“ACTIVE WARRANT”, etc.) without coaching.
   type:
+    | 'DATABASE'
     | 'WARRANT'
     | 'IDENTITY_SCAN'
     | 'TRANSIT_LOG'
     | 'INCIDENT_HISTORY'
-    | 'INTERROGATION';
+    | 'INTERROGATION'
+    | 'DIRECTIVE';
   description: string;
   reveal: string; // What would have been revealed
   impact: string; // How it would have affected the decision
@@ -52,99 +55,67 @@ export const evaluateConsequence = (
   let message = '';
   let consequenceType: ConsequenceType = 'NONE';
 
-  // Check directive compliance
-  const directive = currentShift.directive;
-  const directiveLower = directive.toLowerCase();
-  
-  // Analyze what information was missed and its impact
-  // 1. Warrant Check
-  if (!gatheredInfo.warrantCheck && subject.warrants !== 'NONE') {
-    missedInfo.push({
-      type: 'WARRANT',
-      description: 'Warrant check not performed',
-      reveal: `Warrant check would have revealed: ${subject.warrants}`,
-      impact: decision === 'APPROVE' 
-        ? 'Subject entered with active warrant. Should have been denied.'
-        : 'Warrant information would have confirmed denial decision.',
-    });
-    if (decision === 'APPROVE') {
-      severity += 40;
-    }
-  }
-  
-  // Check directive: DENY ALL SUBJECTS WITH ACTIVE WARRANTS
-  if (directiveLower.includes('deny') && directiveLower.includes('warrant')) {
-    if (subject.warrants !== 'NONE' && decision === 'APPROVE') {
-      if (gatheredInfo.warrantCheck) {
-        // Warrant was checked but still approved - direct violation
-        severity += 60;
-        if (!message) {
-          message = 'Directive violation: Approved subject with active warrant despite directive to deny all warrants.';
-        }
-      }
-    }
-  }
+  // Only violations now: missing required checks for the shift.
+  const requiredChecks = subject.requiredChecks?.length
+    ? subject.requiredChecks
+    : getRequiredChecks(currentShift);
+  const missingChecks = getMissingRequiredChecks(gatheredInfo, requiredChecks);
 
-  // 2. Identity Scan (eye scan - reveals dossier/identity)
-  if (!gatheredInfo.identityScan && subject.dossier) {
-    // Identity scan reveals dossier which can be cross-referenced with credentials
-    // Missing identity scan means can't verify dossier information
-    if (decision === 'APPROVE') {
+  missingChecks.forEach((check) => {
+    if (check === 'DATABASE') {
       missedInfo.push({
-        type: 'IDENTITY_SCAN',
-        description: 'Identity scan not performed',
-        reveal: `Identity scan would have revealed dossier information for credential verification`,
-        impact: 'Subject approved without identity verification against credentials.',
+        type: 'DATABASE',
+        description: 'Database check not performed',
+        reveal: 'Database check would have revealed the subject record',
+        impact: 'Decision made without database verification.',
       });
-      severity += 20;
+      severity += 25;
+      return;
     }
-  }
 
-  // 3. Transit Log
-  if (!gatheredInfo.transitLog && subject.databaseQuery?.travelHistory) {
-    const hasFlaggedTravel = subject.databaseQuery.travelHistory.some(t => t.flagged);
-    if (hasFlaggedTravel && decision === 'APPROVE') {
+    if (check === 'WARRANT') {
+      const warrantDetail = subject.warrants && subject.warrants !== 'NONE' ? subject.warrants : 'NONE';
+      missedInfo.push({
+        type: 'WARRANT',
+        description: 'Warrant check not performed',
+        reveal: `Warrant status: ${warrantDetail}`,
+        impact: 'Decision made without warrant verification.',
+      });
+      severity += 25;
+      return;
+    }
+
+    if (check === 'TRANSIT') {
       missedInfo.push({
         type: 'TRANSIT_LOG',
         description: 'Transit log not checked',
-        reveal: `Transit log would have revealed flagged travel entries`,
-        impact: 'Subject with flagged travel history was approved.',
+        reveal: 'Transit log would have revealed travel history',
+        impact: 'Decision made without transit verification.',
       });
-      severity += 30;
+      severity += 25;
+      return;
     }
-  }
 
-  // 4. Incident History
-  if (!gatheredInfo.incidentHistory && subject.incidents > 0) {
-    if (decision === 'APPROVE') {
+    if (check === 'INCIDENT') {
       missedInfo.push({
         type: 'INCIDENT_HISTORY',
-        description: 'Incident history not checked',
-        reveal: `Incident history would have revealed: ${subject.incidents} prior incident(s)`,
-        impact: 'Subject with incident history was approved without review.',
+        description: 'Incident record not checked',
+        reveal: 'Incident record would have revealed discrepancies',
+        impact: 'Decision made without incident verification.',
       });
       severity += 25;
     }
-  }
+  });
 
-  // 5. Directive Compliance - DENY SYNTHETIC ENTITIES
-  if (directiveLower.includes('deny') && (directiveLower.includes('synthetic') || directiveLower.includes('replicant') || directiveLower.includes('robot'))) {
-    const isSynthetic = subject.subjectType === 'REPLICANT' || 
-                        subject.bioScanData?.biologicalType === 'REPLICANT' ||
-                        subject.subjectType === 'ROBOT_CYBORG';
-    if (isSynthetic && decision === 'APPROVE') {
-      // With health scan removed, synthetic status is still known to the system (subject record).
-      severity += 70;
-      if (!message) {
-        message = 'Directive violation: Approved synthetic entity despite directive to deny all synthetic entities.';
-      }
-    }
-  }
-  
-  // 6. Directive Compliance - VERIFY ALL CREDENTIALS
-  if (directiveLower.includes('verify') && directiveLower.includes('credential')) {
-    // This would require checking if credentials were verified
-    // For now, we'll note it but not penalize heavily
+  if (subject.intendedOutcome && subject.intendedOutcome !== decision) {
+    missedInfo.push({
+      type: 'DIRECTIVE',
+      description: 'Directive exception missed',
+      reveal: `Correct action: ${subject.intendedOutcome}`,
+      impact: `Decision ${decision} violated directive.`,
+    });
+    severity += 45;
+    message = message || 'Directive violation: decision conflicts with mandate.';
   }
 
   // Determine consequence type based on severity and cumulative infractions

@@ -18,6 +18,13 @@ export interface Citation {
   severity: 'WARNING' | 'CITATION' | 'FINAL_WARNING';
 }
 
+export interface DecisionLogEntry {
+  subjectId: string;
+  subjectName: string;
+  decision: 'APPROVE' | 'DENY';
+  correct: boolean;
+}
+
 interface GameStore {
   // Lives system
   lives: number;
@@ -38,6 +45,12 @@ interface GameStore {
   addCitation: (reason: string, severity?: Citation['severity']) => void;
   clearCitations: () => void;
   getCitationCount: () => number;
+
+  // Consequence map decisions
+  decisionLog: DecisionLogEntry[];
+  addDecisionLog: (entry: DecisionLogEntry) => void;
+  clearDecisionLog: () => void;
+  setDecisionLog: (entries: DecisionLogEntry[]) => void;
   
 }
 
@@ -101,4 +114,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   })),
   clearCitations: () => set({ citations: [] }),
   getCitationCount: () => get().citations.length,
+
+  // Consequence map decisions
+  decisionLog: [],
+  addDecisionLog: (entry) => set((state) => ({
+    decisionLog: [...state.decisionLog, entry],
+  })),
+  clearDecisionLog: () => set({ decisionLog: [] }),
+  setDecisionLog: (entries) => set({ decisionLog: entries }),
 }));

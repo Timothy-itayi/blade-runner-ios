@@ -20,8 +20,8 @@ interface MechanicalButtonProps {
   ledColor?: 'green' | 'red' | 'yellow' | 'blue';
   /** LED active state (defaults to !disabled) */
   ledActive?: boolean;
-  /** Button variant */
-  variant?: 'standard' | 'toggle' | 'key';
+  /** Button variant: inset = sunk into panel (no drop shadow, recessed borders) */
+  variant?: 'standard' | 'toggle' | 'key' | 'inset';
 }
 
 export const MechanicalButton = ({ 
@@ -63,10 +63,14 @@ export const MechanicalButton = ({
         return styles.buttonToggle;
       case 'key':
         return styles.buttonKey;
+      case 'inset':
+        return styles.buttonInset;
       default:
         return {};
     }
   };
+
+  const isInset = variant === 'inset';
 
   return (
     <TouchableOpacity
@@ -88,8 +92,8 @@ export const MechanicalButton = ({
         </View>
       )}
 
-      {/* Button shadow/depth */}
-      <View style={styles.buttonShadow} />
+      {/* Button shadow/depth - omit for inset (sunk) variant */}
+      {!isInset && <View style={styles.buttonShadow} />}
       
       {/* Main button body - sinks in when pressed (scale + slight down), not pop-up */}
       <Animated.View style={[
@@ -129,8 +133,8 @@ export const MechanicalButton = ({
           />
         </View>
 
-        {/* Highlight edge (top-left light) */}
-        <View style={styles.buttonHighlight} />
+        {/* Highlight edge (top-left light) - reversed for inset */}
+        <View style={[styles.buttonHighlight, isInset && styles.buttonHighlightInset]} />
         
         {/* Button face */}
         <View style={styles.buttonTop}>
@@ -244,6 +248,21 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     height: 50,
     minWidth: 50,
+  },
+  buttonInset: {
+    borderTopColor: 'rgba(0,0,0,0.5)',
+    borderLeftColor: 'rgba(0,0,0,0.4)',
+    borderBottomColor: 'rgba(255,255,255,0.15)',
+    borderRightColor: 'rgba(255,255,255,0.1)',
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  buttonHighlightInset: {
+    top: undefined,
+    bottom: 0,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   buttonActive: {
     borderColor: '#fff',

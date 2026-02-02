@@ -269,7 +269,7 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     }
 
     setCurrentSubjectIndex(nextIndex);
-    setTimeout(triggerScan, 1200);
+    setTimeout(triggerScan, 200);
   };
 
   return {

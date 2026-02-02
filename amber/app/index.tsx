@@ -150,7 +150,7 @@ export default function MainScreen() {
 
     Animated.timing(scanProgress, {
       toValue: 1,
-      duration: 4500,
+      duration: 2500,
       useNativeDriver: true,
     }).start(() => {
       setIsScanning(false);
@@ -196,7 +196,7 @@ export default function MainScreen() {
     setEstablishedBPM(72);
     // Phase 5: Reset eye scanner
     setEyeScannerActive(false);
-    setTimeout(triggerScan, 500);
+    setTimeout(triggerScan, 200);
   };
 
   // Use game handlers hook

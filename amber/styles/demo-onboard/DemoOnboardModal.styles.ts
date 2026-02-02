@@ -17,6 +17,7 @@ export const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
+    minHeight: 220,
     borderWidth: 1,
     borderColor: Theme.colors.border,
     backgroundColor: 'rgba(13, 17, 23, 0.85)',

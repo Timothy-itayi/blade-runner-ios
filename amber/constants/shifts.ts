@@ -2,7 +2,8 @@ import { Theme } from './theme';
 import type { DirectiveRule } from '../types/directive';
 import { DIRECTIVES } from '../data/directives';
 
-export const SUBJECTS_PER_SHIFT = 9;
+export const SUBJECTS_PER_SHIFT = 7;
+export const DEMO_FINAL_SHIFT = 3; // Demo ends after this shift
 
 export interface ShiftData {
   id: number;
@@ -19,7 +20,9 @@ export interface ShiftData {
 
 export const SHIFTS: ShiftData[] = [
   // =============================================================================
-  // SHIFT 1: CLEARANCE CHECK (Subjects 1-4)
+  // SHIFT 1: CLEARANCE CHECK (7 subjects)
+  // Simple warrant check. Deny anyone with an active warrant.
+  // 1 alert expected
   // =============================================================================
   {
     id: 1,
@@ -27,29 +30,33 @@ export const SHIFTS: ShiftData[] = [
     chapter: 'Clearance Check',
     stationName: 'AMBER DEPOT PERIMETER',
     authorityLabel: 'DEPOT SECURITY',
-    briefing: 'Standard transit verification in effect. Verify all personnel requesting depot access.',
+    briefing: 'Standard transit verification in effect. Deny anyone with an active warrant.',
     directive: DIRECTIVES.SHIFT_1.text.join('\n'),
     directiveModel: DIRECTIVES.SHIFT_1,
     unlockedChecks: ['DATABASE'],
     activeRules: ['CHECK_WARRANTS'],
   },
   // =============================================================================
-  // SHIFT 2: COMPROMISE (Subjects 5-8)
+  // SHIFT 2: SCRUTINY (7 subjects)
+  // Engineers denied except medical staff
+  // 2 alerts expected
   // =============================================================================
   {
     id: 2,
     timeBlock: '12:00',
-    chapter: 'Compromise',
+    chapter: 'Scrutiny',
     stationName: 'AMBER DEPOT PERIMETER',
     authorityLabel: 'DEPOT SECURITY',
-    briefing: 'Infiltration depth increasing. High level of deceptive patterns observed.',
+    briefing: 'New directive from Central. Engineers require additional scrutiny. Medical staff are exempt.',
     directive: DIRECTIVES.SHIFT_2.text.join('\n'),
     directiveModel: DIRECTIVES.SHIFT_2,
     unlockedChecks: ['DATABASE', 'CREDENTIAL'],
-    activeRules: ['CHECK_WARRANTS', 'CHECK_CREDENTIALS'],
+    activeRules: ['CHECK_WARRANTS', 'CHECK_OCCUPATION'],
   },
   // =============================================================================
-  // SHIFT 3: LOCKDOWN (Subjects 9-12)
+  // SHIFT 3: LOCKDOWN (7 subjects)
+  // All denied except VIP and diplomatic clearance
+  // Mixed alerts and subjects
   // =============================================================================
   {
     id: 3,
@@ -57,11 +64,11 @@ export const SHIFTS: ShiftData[] = [
     chapter: 'Lockdown',
     stationName: 'AMBER DEPOT PERIMETER',
     authorityLabel: 'DEPOT SECURITY',
-    briefing: 'Final security tier breach imminent. No unauthorized entities permitted.',
+    briefing: 'Full lockdown in effect. Deny all transit unless VIP or diplomatic clearance is confirmed.',
     directive: DIRECTIVES.SHIFT_3.text.join('\n'),
     directiveModel: DIRECTIVES.SHIFT_3,
-    unlockedChecks: ['DATABASE', 'CREDENTIAL', 'TURING'],
-    activeRules: ['CHECK_WARRANTS', 'DENY_SYNTHETIC', 'TURING_TEST'],
+    unlockedChecks: ['DATABASE', 'CREDENTIAL'],
+    activeRules: ['CHECK_WARRANTS', 'CHECK_CLEARANCE'],
   },
 ];
 

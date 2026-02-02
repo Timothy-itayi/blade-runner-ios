@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SAVE_KEY = '@amber_save';
-const SAVE_VERSION = 2;
+const SAVE_VERSION = 3;
 
 export type GamePhase = 'intro' | 'introVideo' | 'news_intro' | 'takeover' | 'boot' | 'logo' | 'briefing' | 'active';
 
@@ -26,8 +26,26 @@ export interface SaveData {
     decision: 'APPROVE' | 'DENY';
     correct: boolean;
   }>;
+  alertLog?: Array<{
+    subjectId: string;
+    subjectName: string;
+    scenario: import('../types/alertScenario').AlertScenario;
+    outcome: import('../store/gameStore').AlertOutcome;
+    resolvedAt?: number;
+    collateralCount?: number;
+    negotiationMethod?: 'INTIMIDATE' | 'PERSUADE' | 'REASON';
+    interceptUsed?: boolean;
+    detonateUsed?: boolean;
+  }>;
+  propagandaFeed?: Array<{
+    id: string;
+    subjectId: string;
+    headline: string;
+    body: string;
+    timestamp: number;
+    outcome: import('../store/gameStore').AlertOutcome;
+  }>;
   subjectsProcessed: number;
-  lives: number;
   timestamp: number;
 }
 

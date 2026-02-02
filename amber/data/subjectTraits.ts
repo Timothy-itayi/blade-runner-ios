@@ -10,7 +10,7 @@ import { SubjectType, HierarchyTier } from './subjects';
 // TRAIT DEFINITIONS
 // =============================================================================
 
-export type OriginPlanet = 'MARS' | 'EUROPA' | 'TITAN' | 'GANYMEDE' | 'CALLISTO';
+export type OriginPlanet = 'DISTRICT 1' | 'DISTRICT 2' | 'DISTRICT 3' | 'DISTRICT 4' | 'DISTRICT 5';
 
 export interface SubjectTraits {
   subjectType: SubjectType;
@@ -39,11 +39,11 @@ export const HIERARCHY_TIERS: HierarchyTier[] = [
 ];
 
 export const ORIGIN_PLANETS: OriginPlanet[] = [
-  'MARS',
-  'EUROPA',
-  'TITAN',
-  'GANYMEDE',
-  'CALLISTO',
+  'DISTRICT 1',
+  'DISTRICT 2',
+  'DISTRICT 3',
+  'DISTRICT 4',
+  'DISTRICT 5',
 ];
 
 // =============================================================================
@@ -152,35 +152,35 @@ export function generateNameFromTraits(
   traits: SubjectTraits,
   sex: 'M' | 'F' | 'X'
 ): string {
-  // Name pools based on origin planet and hierarchy
+  // Name pools based on district and hierarchy (grounded names)
   const namePrefixes: Record<OriginPlanet, { M: string[]; F: string[] }> = {
-    MARS: {
-      M: ['Marcus', 'Terra', 'Red', 'Colony'],
-      F: ['Mara', 'Ares', 'Rust', 'Dust'],
+    'DISTRICT 1': {
+      M: ['James', 'Daniel', 'Luis', 'Ethan'],
+      F: ['Sarah', 'Emily', 'Hannah', 'Maya'],
     },
-    EUROPA: {
-      M: ['Erik', 'Ice', 'Frost', 'Crystal'],
-      F: ['Elena', 'Frost', 'Ice', 'Glacier'],
+    'DISTRICT 2': {
+      M: ['Omar', 'Caleb', 'Marcus', 'Noah'],
+      F: ['Priya', 'Nina', 'Jasmine', 'Olivia'],
     },
-    TITAN: {
-      M: ['Titan', 'Corp', 'Nexus', 'Prime'],
-      F: ['Terra', 'Corp', 'Nexus', 'Prime'],
+    'DISTRICT 3': {
+      M: ['Kevin', 'Victor', 'Evan', 'Tommy'],
+      F: ['Laura', 'Grace', 'Lena', 'Ava'],
     },
-    GANYMEDE: {
-      M: ['Gan', 'Jove', 'Outer', 'Rim'],
-      F: ['Gan', 'Jove', 'Outer', 'Rim'],
+    'DISTRICT 4': {
+      M: ['Jordan', 'Casey', 'Taylor', 'Avery'],
+      F: ['Morgan', 'Riley', 'Quinn', 'Casey'],
     },
-    CALLISTO: {
-      M: ['Cal', 'Deep', 'Far', 'Edge'],
-      F: ['Cal', 'Deep', 'Far', 'Edge'],
+    'DISTRICT 5': {
+      M: ['Hugo', 'Cal', 'Reed', 'Cole'],
+      F: ['Nora', 'Iris', 'Clara', 'Zoe'],
     },
   };
 
   const nameSuffixes: Record<HierarchyTier, string[]> = {
-    LOWER: ['Worker', 'Unit', 'Gen', 'Block'],
-    MIDDLE: ['Tech', 'Admin', 'Sector', 'Level'],
-    UPPER: ['Executive', 'Director', 'Chief', 'Prime'],
-    VIP: ['Ambassador', 'Chancellor', 'Senator', 'Prime'],
+    LOWER: ['Miller', 'Carter', 'Reed', 'Brooks'],
+    MIDDLE: ['Lopez', 'Nguyen', 'Patel', 'Shaw'],
+    UPPER: ['Pierce', 'Bennett', 'Clark', 'Sutton'],
+    VIP: ['Sinclair', 'Sterling', 'Harrington', 'Prescott'],
   };
 
   const prefixes = namePrefixes[traits.originPlanet][sex];
@@ -197,11 +197,11 @@ export function generateNameFromTraits(
  */
 export function generateIdCodeFromTraits(traits: SubjectTraits): string {
   const planetCodes: Record<OriginPlanet, string> = {
-    MARS: 'MA',
-    EUROPA: 'EU',
-    TITAN: 'TP',
-    GANYMEDE: 'GA',
-    CALLISTO: 'CA',
+    'DISTRICT 1': 'D1',
+    'DISTRICT 2': 'D2',
+    'DISTRICT 3': 'D3',
+    'DISTRICT 4': 'D4',
+    'DISTRICT 5': 'D5',
   };
 
   const tierCodes: Record<HierarchyTier, string> = {
@@ -255,11 +255,11 @@ export function generateReasonForVisit(traits: SubjectTraits): string {
       'High-level consultation',
     ],
     VIP: [
-      'Diplomatic summit',
-      'Corporate merger',
-      'Interplanetary treaty',
-      'Executive retreat',
-      'VIP exclusive event',
+      'Executive briefing',
+      'Closed council meeting',
+      'Security summit',
+      'Private negotiation',
+      'VIP clearance review',
     ],
   };
 

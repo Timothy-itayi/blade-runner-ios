@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useCallback, useState, useRef, useEffect } from 'react';
-import { Audio } from 'expo-av';
+import React, { createContext, useContext, useMemo } from 'react';
 
 interface GameAudioContextType {
   playBootSequence: () => void;
@@ -16,156 +15,20 @@ interface GameAudioContextType {
 const GameAudioContext = createContext<GameAudioContextType | null>(null);
 
 export const GameAudioProvider = ({ children }: { children: React.ReactNode }) => {
-  const [sfxEnabled, setSfxEnabled] = useState(true);
-  const bootSoundRef = useRef<Audio.Sound | null>(null);
-  const soundtrackRef = useRef<Audio.Sound | null>(null);
-
-  // Configure audio mode on mount
-  useEffect(() => {
-    Audio.setAudioModeAsync({
-      playsInSilentModeIOS: true,
-      staysActiveInBackground: false,
-      shouldDuckAndroid: true,
-    });
-  }, []);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      bootSoundRef.current?.unloadAsync();
-      soundtrackRef.current?.unloadAsync();
-    };
-  }, []);
-
-  // Stop all sounds when muted
-  useEffect(() => {
-    if (!sfxEnabled) {
-      bootSoundRef.current?.stopAsync();
-      soundtrackRef.current?.stopAsync();
-    }
-  }, [sfxEnabled]);
-
-  const playBootSequence = useCallback(async () => {
-    if (!sfxEnabled) return;
-    try {
-      if (bootSoundRef.current) {
-        await bootSoundRef.current.unloadAsync();
-      }
-      const { sound } = await Audio.Sound.createAsync(
-        require('../assets/sound-effects/main-menu/boot-sequence.mp3')
-      );
-      bootSoundRef.current = sound;
-      await sound.playAsync();
-    } catch (e) {
-      console.warn('Failed to play boot sequence:', e);
-    }
-  }, [sfxEnabled]);
-
-  const stopBootSequence = useCallback(async () => {
-    try {
-      if (bootSoundRef.current) {
-        await bootSoundRef.current.stopAsync();
-        await bootSoundRef.current.unloadAsync();
-        bootSoundRef.current = null;
-      }
-    } catch (e) {
-      console.warn('Failed to stop boot sequence:', e);
-    }
-  }, []);
-
-  const playButtonSound = useCallback(async () => {
-    if (!sfxEnabled) return;
-    try {
-      const { sound } = await Audio.Sound.createAsync(
-        require('../assets/sound-effects/main-menu/main-ui-button.mp3')
-      );
-      await sound.playAsync();
-      // Auto-unload after playing
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-        }
-      });
-    } catch (e) {
-      console.warn('Failed to play button sound:', e);
-    }
-  }, [sfxEnabled]);
-
-  const playLoadingSound = useCallback(async () => {
-    if (!sfxEnabled) return;
-    try {
-      const { sound } = await Audio.Sound.createAsync(
-        require('../assets/sound-effects/main-menu/main-ui-loading.mp3')
-      );
-      await sound.playAsync();
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-        }
-      });
-    } catch (e) {
-      console.warn('Failed to play loading sound:', e);
-    }
-  }, [sfxEnabled]);
-
-  const playDecisionSound = useCallback(async () => {
-    if (!sfxEnabled) return;
-    try {
-      const { sound } = await Audio.Sound.createAsync(
-        require('../assets/sound-effects/main-menu/digital-interface.mp3')
-      );
-      await sound.playAsync();
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync();
-        }
-      });
-    } catch (e) {
-      console.warn('Failed to play decision sound:', e);
-    }
-  }, [sfxEnabled]);
-
-  const playGameSoundtrack = useCallback(async () => {
-    if (!sfxEnabled) return;
-    try {
-      if (soundtrackRef.current) {
-        await soundtrackRef.current.unloadAsync();
-      }
-      const { sound } = await Audio.Sound.createAsync(
-        require('../assets/sound-effects/main-menu/main-game-soundtrack.mp3'),
-        { isLooping: true, volume: 0.3 }
-      );
-      soundtrackRef.current = sound;
-      await sound.playAsync();
-    } catch (e) {
-      console.warn('Failed to play game soundtrack:', e);
-    }
-  }, [sfxEnabled]);
-
-  const stopGameSoundtrack = useCallback(async () => {
-    try {
-      if (soundtrackRef.current) {
-        await soundtrackRef.current.stopAsync();
-        await soundtrackRef.current.unloadAsync();
-        soundtrackRef.current = null;
-      }
-    } catch (e) {
-      console.warn('Failed to stop game soundtrack:', e);
-    }
-  }, []);
+  const contextValue = useMemo<GameAudioContextType>(() => ({
+    playBootSequence: () => {},
+    stopBootSequence: () => {},
+    playButtonSound: () => {},
+    playLoadingSound: () => {},
+    playDecisionSound: () => {},
+    playGameSoundtrack: () => {},
+    stopGameSoundtrack: () => {},
+    sfxEnabled: false,
+    setSfxEnabled: () => {},
+  }), []);
 
   return (
-    <GameAudioContext.Provider value={{
-      playBootSequence,
-      stopBootSequence,
-      playButtonSound,
-      playLoadingSound,
-      playDecisionSound,
-      playGameSoundtrack,
-      stopGameSoundtrack,
-      sfxEnabled,
-      setSfxEnabled,
-    }}>
+    <GameAudioContext.Provider value={contextValue}>
       {children}
     </GameAudioContext.Provider>
   );

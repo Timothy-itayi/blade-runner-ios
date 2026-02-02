@@ -120,7 +120,7 @@ export const createSubjectEvidence = (seed: SubjectSeed): SubjectEvidence => {
     incidents,
     databaseQuery: {
       travelHistory,
-      lastSeenLocation: rng.pick(['AMBER DEPOT', 'EARTH ORBIT', 'TITAN TERMINAL', 'MARS YARD']),
+      lastSeenLocation: rng.pick(['AMBER CHECKPOINT', 'CENTRAL HUB', 'DISTRICT 3 TERMINAL', 'DISTRICT 1 YARD']),
       lastSeenDate: formatDate(rng),
       discrepancies,
     },

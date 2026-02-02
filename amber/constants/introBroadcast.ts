@@ -54,7 +54,3 @@ export const INTRO_TICKER_ITEMS = [
   'THE SYSTEM PROTECTS',
 ];
 
-// Audio file reference (to be created)
-export const INTRO_AUDIO = {
-  narration: require('../assets/news/anchor-narration/shift1-news-2.mp3'), // Placeholder - use existing audio for now
-};

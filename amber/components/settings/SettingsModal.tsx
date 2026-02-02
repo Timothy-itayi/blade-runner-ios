@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Modal, Pressable, StyleSheet } from 'react-native';
 import { Theme } from '../../constants/theme';
-import { useGameAudioContext } from '../../contexts/AudioContext';
 
 interface SettingsModalProps {
   visible: boolean;
@@ -20,12 +19,6 @@ export const SettingsModal = ({
   onClose,
   shiftData,
 }: SettingsModalProps) => {
-  const { sfxEnabled, setSfxEnabled } = useGameAudioContext();
-
-  const handleToggleSfx = () => {
-    setSfxEnabled(!sfxEnabled);
-  };
-
   return (
     <Modal
       visible={visible}
@@ -50,17 +43,6 @@ export const SettingsModal = ({
                   {shiftData?.directive || 'VERIFY ALL SUBJECTS'}
                 </Text>
               </View>
-            </View>
-
-            {/* Sound Settings */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>SOUND</Text>
-              <TouchableOpacity style={styles.optionButton} onPress={handleToggleSfx}>
-                <Text style={styles.optionText}>SFX: {sfxEnabled ? 'ON' : 'OFF'}</Text>
-                <Text style={[styles.optionArrow, !sfxEnabled && styles.optionOff]}>
-                  {sfxEnabled ? '▶' : '◼'}
-                </Text>
-              </TouchableOpacity>
             </View>
 
             {/* Beta Notice */}

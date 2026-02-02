@@ -80,13 +80,7 @@ interface MainMenuProps {
   hasSaveData?: boolean;
   saveShiftNumber?: number;
   fadeAnim: Animated.Value;
-  musicVolume: number;
-  sfxVolume: number;
-  onMusicVolumeChange: (value: number) => void;
-  onSfxVolumeChange: (value: number) => void;
 }
-
-type ScreenView = 'menu' | 'settings';
 
 export const MainMenu = ({
   onStart,
@@ -94,14 +88,9 @@ export const MainMenu = ({
   hasSaveData,
   saveShiftNumber,
   fadeAnim,
-  musicVolume,
-  sfxVolume,
-  onMusicVolumeChange,
-  onSfxVolumeChange,
 }: MainMenuProps) => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isReady, setIsReady] = useState(false);
-  const [screenView, setScreenView] = useState<ScreenView>('menu');
   const panelStartY = useSharedValue(0);
   const panelTranslateY = useSharedValue(0);
 
@@ -123,11 +112,6 @@ export const MainMenu = ({
       id: 'new-game',
       label: hasSaveData ? 'NEW GAME' : 'START',
       onPress: onStart,
-    },
-    {
-      id: 'settings',
-      label: 'SETTINGS',
-      onPress: () => setScreenView((prev) => (prev === 'settings' ? 'menu' : 'settings')),
     },
   ];
 
@@ -215,45 +199,15 @@ export const MainMenu = ({
                       <View style={styles.screenReflection} />
 
                       <View style={styles.terminalContainer}>
-                        {screenView === 'menu' ? (
-                          <View style={styles.terminalTextWrapper}>
-                            <TerminalText
-                              text="Welcome to Amber"
-                              typingSpeed={80}
-                              onComplete={handleTypingComplete}
-                              showSystemReady={false}
-                              style={styles.terminalGreen}
-                            />
-                          </View>
-                        ) : (
-                          <View style={styles.settingsScreen}>
-                            <Text style={styles.settingsTitle}>AMBER SECURITY</Text>
-                            <Text style={styles.settingsSub}>CONFIG</Text>
-                            <Pressable
-                              onPress={() => {
-                                const isOn = musicVolume > 0 || sfxVolume > 0;
-                                onMusicVolumeChange(isOn ? 0 : 1);
-                                onSfxVolumeChange(isOn ? 0 : 1);
-                              }}
-                              style={({ pressed }) => [
-                                styles.settingsRow,
-                                pressed && styles.settingsRowPressed,
-                              ]}
-                            >
-                              <Text style={styles.settingsLabel}>SOUND</Text>
-                              <Text
-                                style={[
-                                  styles.settingsSwitch,
-                                  musicVolume > 0 || sfxVolume > 0
-                                    ? styles.settingsSwitchOn
-                                    : styles.settingsSwitchOff,
-                                ]}
-                              >
-                                {musicVolume > 0 || sfxVolume > 0 ? 'ON' : 'OFF'}
-                              </Text>
-                            </Pressable>
-                          </View>
-                        )}
+                        <View style={styles.terminalTextWrapper}>
+                          <TerminalText
+                            text="Welcome to Amber"
+                            typingSpeed={80}
+                            onComplete={handleTypingComplete}
+                            showSystemReady={false}
+                            style={styles.terminalGreen}
+                          />
+                        </View>
                       </View>
                     </View>
                   </View>
@@ -267,9 +221,7 @@ export const MainMenu = ({
 
                 <View style={styles.screenLabelRow}>
                   <Text style={[styles.screenLabel, styles.screenLabelLeft]}>AMBER</Text>
-                  <Text style={styles.screenLabel}>
-                    {screenView === 'settings' ? 'SETTINGS' : 'MAIN MENU'}
-                  </Text>
+                  <Text style={styles.screenLabel}>MAIN MENU</Text>
                 </View>
               </View>
             </View>

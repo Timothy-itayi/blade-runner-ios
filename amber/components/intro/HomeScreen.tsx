@@ -5,7 +5,6 @@ import { MessageThread } from './MessageThread';
 import { IntroAlertModal } from './IntroAlertModal';
 import { MainMenu } from './MainMenu';
 import { INTRO_MESSAGES, ALERT_DELAY, INTERRUPTED_MESSAGE } from '../../constants/intro';
-import { useIntroAudio } from '../../hooks/useIntroAudio';
 
 interface HomeScreenProps {
   onComplete: () => void;
@@ -15,20 +14,7 @@ interface HomeScreenProps {
 }
 
 export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumber }: HomeScreenProps) => {
-  // Audio settings
-  const [musicVolume, setMusicVolume] = useState(1);
-  const [sfxVolume, setSfxVolume] = useState(1);
   const [showConfirmNewGame, setShowConfirmNewGame] = useState(false);
-
-  // Audio hook
-  const {
-    playMenuSoundtrack,
-    fadeOutMenuSoundtrack,
-    playTextReceive,
-    playMessageSent,
-    playAmberAlert,
-    killAllAudio,
-  } = useIntroAudio({ musicVolume, sfxVolume });
 
   // Phase state
   const [phase, setPhase] = useState<'menu' | 'messages'>('menu');
@@ -82,9 +68,6 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
       `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
     );
     
-    // Start menu soundtrack
-    playMenuSoundtrack();
-    
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 800,
@@ -135,7 +118,6 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
         useNativeDriver: true,
       }),
     ]).start(() => {
-      fadeOutMenuSoundtrack();
       onContinue?.();
     });
   };
@@ -161,10 +143,8 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
         
         if (msg.sender === 'wife') {
           setWifeIsTyping(false);
-          playTextReceive(); // Play receive sound for wife's messages
         } else {
           clearPlayerTyping();
-          playMessageSent(); // Play sent sound for player's messages
         }
         
           setVisibleIndices(prev => [...prev, index]);
@@ -223,7 +203,6 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
       // Show as bubble with "sending" status
       setFailedMessage(INTERRUPTED_MESSAGE);
       setFailedMessageStatus('sending');
-      playMessageSent(); // Play sent sound
     }, sendTime);
 
     // Message fails to send
@@ -236,8 +215,6 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
     setTimeout(() => {
       if (isDismantling) return;
       clearInterval(cursorInterval);
-      fadeOutMenuSoundtrack(600); // Fade music as alert appears
-      playAmberAlert(); // Start alert sound (loops until authenticate)
         setShowAlert(true);
         Animated.parallel([
         Animated.timing(alertOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
@@ -280,7 +257,6 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
 
   const handleAuthenticate = () => {
     setIsDismantling(true);
-    killAllAudio();
     Animated.timing(alertOpacity, { toValue: 0, duration: 150, useNativeDriver: true }).start();
     
     setTimeout(() => {
@@ -335,10 +311,6 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
           hasSaveData={hasSaveData}
           saveShiftNumber={saveShiftNumber}
           fadeAnim={fadeAnim}
-          musicVolume={musicVolume}
-          sfxVolume={sfxVolume}
-          onMusicVolumeChange={setMusicVolume}
-          onSfxVolumeChange={setSfxVolume}
         />
 
         {/* Confirmation Modal for New Game */}

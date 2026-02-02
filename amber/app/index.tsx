@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { View, SafeAreaView, Animated } from 'react-native';
+import { useRouter } from 'expo-router';
 // Game components
 import { GameScreen } from '../components/game/screen/GameScreen';
 import { ShiftTransition } from '../components/game/ShiftTransition';
@@ -27,21 +28,24 @@ import { styles } from '../styles/game/MainScreen.styles';
 // Phase 5: Subject Manager
 import { createDefaultSubjectPool, getSubjectByIndex } from '../utils/subjectManager';
 import { SubjectData } from '../data/subjects';
-import { getShiftForSubject, isEndOfShift } from '../constants/shifts';
+import { getShiftForSubject, isEndOfShift, DEMO_FINAL_SHIFT } from '../constants/shifts';
 import { useGameStore } from '../store/gameStore';
+import { AmberAlertModal } from '../components/game/AmberAlertModal';
 import { createEmptyInformation, GatheredInformation, MEMORY_SLOT_CAPACITY } from '../types/information';
 import { determineEquipmentFailures } from '../utils/equipmentFailures';
 import { createPatternTracker, PatternTracker } from '../utils/warningPatterns';
-import { useGameAudioContext } from '../contexts/AudioContext';
 
 const DEV_MODE = false; // Set to true to bypass onboarding and boot
 const SHOW_LANDMARK_TEST = false;
-const SINGLE_SUBJECT_MODE = true; // When true, subject pool is first 3 subjects so advancing cycles the 3 procedural base faces
+const SINGLE_SUBJECT_MODE = false; // When true, subject pool is first 3 subjects so advancing cycles the 3 procedural base faces
 
 export default function MainScreen() {
-  const { lives, setLives, resetLives } = useGameStore();
+  const router = useRouter();
   const decisionLog = useGameStore((state) => state.decisionLog);
-  const { playGameSoundtrack, stopGameSoundtrack } = useGameAudioContext();
+  const alertLog = useGameStore((state) => state.alertLog);
+  const resolveAlert = useGameStore((state) => state.resolveAlert);
+  const addPropaganda = useGameStore((state) => state.addPropaganda);
+  const propagandaFeed = useGameStore((state) => state.propagandaFeed);
   
   const [gamePhase, setGamePhase] = useState<GamePhase>(DEV_MODE ? 'active' : 'intro');
   const [hasSave, setHasSave] = useState(false);
@@ -118,7 +122,6 @@ export default function MainScreen() {
     setInfractions,
     triggerConsequence,
     setTriggerConsequence,
-    messageHistory,
     setMessageHistory,
     shiftDecisions,
     setShiftDecisions,
@@ -128,6 +131,9 @@ export default function MainScreen() {
   // Phase 5: Use subject pool instead of hardcoded SUBJECTS
   const currentSubject = getSubjectByIndex(currentSubjectIndex, subjectPool);
   const activeDirective = currentShift.directive;
+  const pendingAlert = useMemo(() => {
+    return alertLog.find(entry => entry.outcome === 'PENDING') || null;
+  }, [alertLog]);
 
   const gameOpacity = useRef(new Animated.Value(DEV_MODE ? 1 : 0)).current;
 
@@ -163,6 +169,36 @@ export default function MainScreen() {
     [subjectPool]
   );
 
+  const handleShiftContinue = () => {
+    setShowShiftTransition(false);
+    setHasDecision(false);
+    setShiftStats({ approved: 0, denied: 0, correct: 0 });
+    setShiftDecisions([]);
+
+    const nextIndex = getNextSubjectIndexSequential(currentSubjectIndex, subjectPool.length);
+    setCurrentSubjectIndex(nextIndex);
+    setScanningHands(false);
+    setScanningIris(false);
+    setDossierRevealed(false); // Reset dossier for new subject
+    setSubjectResponse(''); // Reset subject response
+    setShowInterrogate(false); // Reset interrogation modal state
+    
+    // Phase 2: Reset information tracking for new subject with equipment failures
+    const nextSubject = getSubjectByIndex(nextIndex, subjectPool);
+    const equipmentFailures = determineEquipmentFailures(nextSubject.id);
+    setGatheredInformation(createEmptyInformation(equipmentFailures));
+    setInterrogationBPM(null); // Reset BPM
+    setIsInterrogationActive(false); // Reset interrogation state
+    // Phase 3: Reset warning pattern tracker for new shift
+    setWarningTracker(createPatternTracker());
+    // Phase 4: Reset to greeting phase
+    setInteractionPhase('greeting');
+    setEstablishedBPM(72);
+    // Phase 5: Reset eye scanner
+    setEyeScannerActive(false);
+    setTimeout(triggerScan, 500);
+  };
+
   // Use game handlers hook
   const { handleDecision, nextSubject } = useGameHandlers({
     setInfractions,
@@ -181,6 +217,7 @@ export default function MainScreen() {
     setCurrentSubjectIndex,
     setBiometricsRevealed,
     setSubjectsProcessed,
+    onShiftAdvance: handleShiftContinue,
     currentSubjectIndex,
     currentSubject,
     currentShift,
@@ -189,7 +226,6 @@ export default function MainScreen() {
     totalAccuracy,
     infractions,
     triggerConsequence,
-    // lives handled via store
     triggerScan,
     gatheredInformation, // Phase 3: Pass gathered information for consequence evaluation
     onWarningPattern: () => {}, // Modal removed: no popup when approving without checking
@@ -208,9 +244,6 @@ export default function MainScreen() {
   };
 
   const handleMainMenu = async () => {
-    // Stop game soundtrack
-    stopGameSoundtrack();
-    
     // Clear save data so Continue button doesn't appear
     await clearSave();
     setHasSave(false);
@@ -246,34 +279,21 @@ export default function MainScreen() {
     setGamePhase('intro');
   };
 
-  const handleShiftContinue = () => {
-    setShowShiftTransition(false);
-    setHasDecision(false);
-    setShiftStats({ approved: 0, denied: 0, correct: 0 });
-    setShiftDecisions([]);
-
-    const nextIndex = getNextSubjectIndexSequential(currentSubjectIndex, subjectPool.length);
-    setCurrentSubjectIndex(nextIndex);
-    setScanningHands(false);
-    setScanningIris(false);
-    setDossierRevealed(false); // Reset dossier for new subject
-    setSubjectResponse(''); // Reset subject response
-    setShowInterrogate(false); // Reset interrogation modal state
-    
-    // Phase 2: Reset information tracking for new subject with equipment failures
-    const nextSubject = getSubjectByIndex(nextIndex, subjectPool);
-    const equipmentFailures = determineEquipmentFailures(nextSubject.id);
-    setGatheredInformation(createEmptyInformation(equipmentFailures));
-    setInterrogationBPM(null); // Reset BPM
-    setIsInterrogationActive(false); // Reset interrogation state
-    // Phase 3: Reset warning pattern tracker for new shift
-    setWarningTracker(createPatternTracker());
-    // Phase 4: Reset to greeting phase
-    setInteractionPhase('greeting');
-    setEstablishedBPM(72);
-    // Phase 5: Reset eye scanner
-    setEyeScannerActive(false);
-    setTimeout(triggerScan, 500);
+  const handleIgnoreAlert = () => {
+    if (!pendingAlert) return;
+    const now = Date.now();
+    resolveAlert(pendingAlert.subjectId, {
+      outcome: 'IGNORED',
+      resolvedAt: now,
+    });
+    addPropaganda({
+      id: `PR-${now}-${pendingAlert.subjectId}`,
+      subjectId: pendingAlert.subjectId,
+      headline: pendingAlert.scenario.propaganda.headline,
+      body: pendingAlert.scenario.propaganda.body,
+      timestamp: now,
+      outcome: 'IGNORED',
+    });
   };
 
   // Auto-save function
@@ -288,8 +308,9 @@ export default function MainScreen() {
         shiftStats,
         decisionHistory,
         decisionLog,
+        alertLog,
+        propagandaFeed,
         subjectsProcessed,
-        lives,
       });
     }
   };
@@ -299,24 +320,13 @@ export default function MainScreen() {
     if (!isLoadingFromSave && (gamePhase === 'active' || gamePhase === 'briefing')) {
       performSave();
     }
-  }, [currentSubjectIndex, totalCorrectDecisions, infractions, gamePhase, decisionLog]);
+  }, [currentSubjectIndex, totalCorrectDecisions, infractions, gamePhase, decisionLog, alertLog, propagandaFeed]);
 
   useEffect(() => {
     if (gamePhase === 'boot' && !isLoadingFromSave) {
       performSave();
     }
   }, [gamePhase]);
-
-  // Game over: no lives remaining
-  useEffect(() => {
-    if (gamePhase !== 'active') return;
-    if (lives > 0) return;
-    clearSave();
-    setHasSave(false);
-    setIsNewGame(true);
-    setHudStage('none');
-    setGamePhase('intro');
-  }, [lives, gamePhase]);
 
   // Check for saved game on mount
   useEffect(() => {
@@ -339,6 +349,8 @@ export default function MainScreen() {
     if (savedData) {
       setIsLoadingFromSave(true);
       useGameStore.getState().setDecisionLog(savedData.decisionLog || []);
+      useGameStore.getState().setAlertLog(savedData.alertLog || []);
+      useGameStore.getState().setPropagandaFeed(savedData.propagandaFeed || []);
       setCurrentSubjectIndex(savedData.currentSubjectIndex);
       setTotalCorrectDecisions(savedData.totalCorrectDecisions);
       setTotalAccuracy(savedData.totalAccuracy);
@@ -346,7 +358,6 @@ export default function MainScreen() {
       setShiftStats(savedData.shiftStats);
       setDecisionHistory(savedData.decisionHistory);
       setSubjectsProcessed(savedData.subjectsProcessed);
-      setLives(savedData.lives ?? 3);
       setIsNewGame(false); // Not a new game if loading from save
 
       if (savedData.gamePhase === 'active') {
@@ -374,7 +385,6 @@ export default function MainScreen() {
     await clearSave();
     setHasSave(false);
     setIsNewGame(true);
-    resetLives();
     useGameStore.getState().clearDecisionLog();
     setTimeout(() => {
       setGamePhase('boot');
@@ -399,9 +409,6 @@ export default function MainScreen() {
 
   const handleBriefingComplete = () => {
     setGamePhase('active');
-    playGameSoundtrack();
-    
-    resetLives();
     
     Animated.sequence([
       Animated.timing(gameOpacity, { toValue: 0.4, duration: 150, useNativeDriver: true }),
@@ -522,6 +529,12 @@ export default function MainScreen() {
               gatheredInformation={gatheredInformation}
               onInformationUpdate={handleInformationUpdate}
             />
+            <AmberAlertModal
+              visible={!!pendingAlert}
+              alert={pendingAlert}
+              onHandle={() => router.push('/map')}
+              onIgnore={handleIgnoreAlert}
+            />
 
             {DEV_MODE && SHOW_LANDMARK_TEST && (
               <FaceLandmarkTfliteTest
@@ -536,11 +549,9 @@ export default function MainScreen() {
                 nextShift={getShiftForSubject(getNextSubjectIndexSequential(currentSubjectIndex, subjectPool.length))}
                 approvedCount={shiftStats.approved}
                 deniedCount={shiftStats.denied}
-                totalAccuracy={totalAccuracy}
-                messageHistory={messageHistory}
                 shiftDecisions={shiftDecisions}
                 onContinue={handleShiftContinue}
-                isEndOfDemo={currentShift.id === 1}
+                isEndOfDemo={currentShift.id === DEMO_FINAL_SHIFT}
                 onMainMenu={handleMainMenu}
               />
             )}

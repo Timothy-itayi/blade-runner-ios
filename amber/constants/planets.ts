@@ -5,37 +5,26 @@ export interface Planet {
   name: string;
   safetyLevel: PlanetSafetyLevel;
   description: string;
-  realWorldAnalog: string; // Country it's based on
+  realWorldAnalog: string; // Region it's based on
 }
 
-// Safe planets (like developed, stable countries)
+// Safe districts (stable zones)
 export const SAFE_PLANETS: Planet[] = [
-  { name: 'EARTH', safetyLevel: 'SAFE', description: 'Capital world, highly regulated', realWorldAnalog: 'USA/UK' },
-  { name: 'LUNA', safetyLevel: 'SAFE', description: 'Earth\'s moon, established colony', realWorldAnalog: 'Japan' },
-  { name: 'MARS', safetyLevel: 'SAFE', description: 'Major colony, stable governance', realWorldAnalog: 'Canada' },
-  { name: 'EUROPA', safetyLevel: 'SAFE', description: 'Research hub, high security', realWorldAnalog: 'Switzerland' },
-  { name: 'TITAN', safetyLevel: 'SAFE', description: 'Corporate stronghold, regulated', realWorldAnalog: 'Singapore' },
-  { name: 'GANYMEDE', safetyLevel: 'SAFE', description: 'Trading post, well-monitored', realWorldAnalog: 'Netherlands' },
+  { name: 'CENTRAL HUB', safetyLevel: 'SAFE', description: 'Administrative core, heavily regulated', realWorldAnalog: 'Capitol' },
+  { name: 'DISTRICT 1', safetyLevel: 'SAFE', description: 'Commerce and finance zone', realWorldAnalog: 'Downtown' },
+  { name: 'DISTRICT 2', safetyLevel: 'SAFE', description: 'Civic and residential zone', realWorldAnalog: 'Midtown' },
 ];
 
-// Moderate planets (like developing or politically complex countries)
+// Moderate districts (complex or tense zones)
 export const MODERATE_PLANETS: Planet[] = [
-  { name: 'CALLISTO', safetyLevel: 'MODERATE', description: 'Mining colony, some instability', realWorldAnalog: 'Brazil' },
-  { name: 'IO', safetyLevel: 'MODERATE', description: 'Volatile environment, frequent conflicts', realWorldAnalog: 'India' },
-  { name: 'ENCELADUS', safetyLevel: 'MODERATE', description: 'Remote outpost, limited oversight', realWorldAnalog: 'Mexico' },
-  { name: 'TRITON', safetyLevel: 'MODERATE', description: 'Border world, smuggling routes', realWorldAnalog: 'Thailand' },
-  { name: 'PHOBOS', safetyLevel: 'MODERATE', description: 'Martian moon, mixed population', realWorldAnalog: 'Turkey' },
-  { name: 'DEIMOS', safetyLevel: 'MODERATE', description: 'Martian moon, industrial zone', realWorldAnalog: 'South Africa' },
+  { name: 'DISTRICT 3', safetyLevel: 'MODERATE', description: 'Industrial zone, frequent labor disputes', realWorldAnalog: 'Factory belt' },
+  { name: 'DISTRICT 4', safetyLevel: 'MODERATE', description: 'Transit and logistics zone', realWorldAnalog: 'Port district' },
 ];
 
-// Dangerous planets (like authoritarian or conflict zones)
+// Dangerous districts (restricted or unstable zones)
 export const DANGEROUS_PLANETS: Planet[] = [
-  { name: 'CERES', safetyLevel: 'DANGEROUS', description: 'Authoritarian regime, restricted access', realWorldAnalog: 'North Korea' },
-  { name: 'ERIS', safetyLevel: 'DANGEROUS', description: 'Pirate haven, no governance', realWorldAnalog: 'Somalia' },
-  { name: 'PLUTO', safetyLevel: 'DANGEROUS', description: 'Isolated dictatorship, human rights violations', realWorldAnalog: 'Myanmar' },
-  { name: 'CHARON', safetyLevel: 'DANGEROUS', description: 'Pluto\'s moon, black market hub', realWorldAnalog: 'Venezuela' },
-  { name: 'MAKEMAKE', safetyLevel: 'DANGEROUS', description: 'Warlord territory, lawless', realWorldAnalog: 'Afghanistan' },
-  { name: 'HAUMEA', safetyLevel: 'DANGEROUS', description: 'Criminal syndicate control', realWorldAnalog: 'Russia' },
+  { name: 'DISTRICT 5', safetyLevel: 'DANGEROUS', description: 'Restricted zone, heavy enforcement', realWorldAnalog: 'Quarantine zone' },
+  { name: 'OUTER RING', safetyLevel: 'DANGEROUS', description: 'Peripheral blocks, minimal oversight', realWorldAnalog: 'No-go area' },
 ];
 
 export const ALL_PLANETS: Planet[] = [

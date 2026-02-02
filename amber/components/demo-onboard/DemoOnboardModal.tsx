@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Modal, View, Text, Pressable } from 'react-native';
 import { styles } from '../../styles/demo-onboard/DemoOnboardModal.styles';
-import { useGameAudioContext } from '../../contexts/AudioContext';
 
 type Slide = {
   title: string;
@@ -10,35 +9,45 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    title: 'TRANSIT CHECKPOINT',
+    title: 'YOUR ROLE',
     lines: [
-      'You are assigned to AMBER DEPOT perimeter.',
-      'Verify all subjects requesting transit clearance.',
-      'Approve or deny based on documentation.',
+      'You operate a transit checkpoint.',
+      'Subjects arrive. You decide who passes.',
+      'Follow the directive. Approve or deny.',
     ],
   },
   {
-    title: 'VERIFICATION PROTOCOL',
+    title: 'DIRECTIVES',
     lines: [
-      'Each subject presents credentials and testimony.',
-      'Cross-reference with transit records.',
-      'Decide: APPROVE or DENY entry.',
+      'Each shift has a rule. Example: DENY: WARRANTS.',
+      'Some rules have exceptions based on occupation or clearance.',
+      'Example: DENY: ENGINEERS / EXCEPT: MEDICAL.',
+      'Follow the rule. Exceptions may complicate things.',
     ],
   },
   {
-    title: 'INVESTIGATION TOOLS',
+    title: 'VERIFICATION',
     lines: [
-      'Identity scans access the personnel database.',
-      'Query transit logs and warrant histories.',
-      'Ask up to 3 questions to clarify discrepancies.',
+      'Review each subject\'s credentials and dossier.',
+      'Run warrant checks when required.',
+      'Look for discrepancies. Then decide.',
     ],
   },
   {
-    title: 'BEGIN PROCESSING',
+    title: 'ALERTS',
     lines: [
-      'Subjects are waiting at the gate.',
-      'Follow the active directive from command.',
-      'Your decisions shape what comes next.',
+      'Some subjects trigger incidents after processing.',
+      'The map button glows red when an alert is active.',
+      'You can handle the alert or ignore it.',
+      'Ignoring has consequences.',
+    ],
+  },
+  {
+    title: 'BEGIN',
+    lines: [
+      'Subjects are waiting.',
+      'Check the directive. Verify credentials. Decide.',
+      'Your choices are final.',
     ],
   },
 ];
@@ -48,7 +57,6 @@ export const DemoOnboardModal = ({ visible, onDismiss }: { visible: boolean; onD
   const slide = useMemo(() => SLIDES[index], [index]);
   const isFirst = index === 0;
   const isLast = index === SLIDES.length - 1;
-  const { playButtonSound, playLoadingSound } = useGameAudioContext();
 
   return (
     <Modal visible={visible} transparent={false} animationType="fade">
@@ -74,7 +82,6 @@ export const DemoOnboardModal = ({ visible, onDismiss }: { visible: boolean; onD
           <View style={styles.actions}>
             <Pressable
               onPress={() => {
-                playButtonSound();
                 setIndex((prev) => Math.max(0, prev - 1));
               }}
               disabled={isFirst}
@@ -90,7 +97,6 @@ export const DemoOnboardModal = ({ visible, onDismiss }: { visible: boolean; onD
             {!isLast ? (
               <Pressable
                 onPress={() => {
-                  playButtonSound();
                   setIndex((prev) => Math.min(SLIDES.length - 1, prev + 1));
                 }}
                 style={({ pressed }) => [styles.actionButton, pressed && styles.actionButtonPressed]}
@@ -100,8 +106,6 @@ export const DemoOnboardModal = ({ visible, onDismiss }: { visible: boolean; onD
             ) : (
               <Pressable
                 onPress={() => {
-                  // "Begin shift" should be audible even if the modal unmounts immediately.
-                  playLoadingSound();
                   setTimeout(onDismiss, 120);
                 }}
                 style={({ pressed }) => [styles.actionButtonPrimary, pressed && styles.actionButtonPressed]}

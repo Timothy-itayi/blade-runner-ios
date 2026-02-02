@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Pressable, Image } from 'react-native';
-import { Audio } from 'expo-av';
 import { Theme } from '../../constants/theme';
 import { ShiftDecision } from './ShiftTransition';
 import { NewsReport } from '../../data/subjects';
@@ -22,44 +21,7 @@ export const ShiftNewsReport = ({ shiftDecisions, onComplete }: ShiftNewsReportP
     .filter((item): item is { decision: ShiftDecision; news: NewsReport } => item.news !== undefined);
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
-    };
-  }, [sound]);
-
-  useEffect(() => {
-    const playAudio = async () => {
-      if (sound) {
-        await sound.unloadAsync();
-      }
-
-      const currentItem = newsItems[currentIndex];
-      if (currentItem?.news.audioFile) {
-        setIsPlaying(true);
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          currentItem.news.audioFile
-        );
-        setSound(newSound);
-        
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            setIsPlaying(false);
-          }
-        });
-        
-        await newSound.playAsync();
-      }
-    };
-
-    playAudio();
-  }, [currentIndex]);
 
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -87,12 +49,7 @@ export const ShiftNewsReport = ({ shiftDecisions, onComplete }: ShiftNewsReportP
   const reportType = currentItem.news.type || 'NEWS';
   const shouldUseProceduralPortrait = subject.useProceduralPortrait || (!subject.profilePic && !!subject.id);
 
-  const handleNext = async () => {
-    if (sound) {
-      await sound.stopAsync();
-    }
-    setIsPlaying(false);
-    
+  const handleNext = () => {
     if (isLast) {
       onComplete();
     } else {
@@ -177,15 +134,7 @@ export const ShiftNewsReport = ({ shiftDecisions, onComplete }: ShiftNewsReportP
           </View>
         </View>
 
-        {/* Audio indicator */}
-        {isPlaying && (
-          <View style={styles.audioIndicator}>
-            <View style={styles.audioBar} />
-            <View style={[styles.audioBar, styles.audioBar2]} />
-            <View style={[styles.audioBar, styles.audioBar3]} />
-            <Text style={styles.audioText}>PLAYING</Text>
-          </View>
-        )}
+        {/* Audio indicator removed */}
       </Animated.View>
 
       {/* Next Button */}

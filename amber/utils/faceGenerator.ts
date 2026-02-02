@@ -164,39 +164,40 @@ type SynthStyleProfile = {
 const OVERLAY_VARIANTS = 3;
 
 const SYNTH_STYLE_PROFILES: Record<string, SynthStyleProfile> = {
+  // Wider variation ranges since we only have 3 base images
   DEFAULT: {
     tone: {
-      hueShift: [-0.12, 0.12],
-      saturation: [0.8, 1.25],
-      contrast: [1.0, 1.35],
+      hueShift: [-0.2, 0.2],
+      saturation: [0.7, 1.35],
+      contrast: [0.9, 1.45],
     },
     details: {
       freckleDensity: [0, 1],
-      poreStrength: [0, 0.5],
+      poreStrength: [0, 0.6],
     },
     cyber: {
-      scanlineIntensity: [0.2, 0.6],
-      scratchIntensity: [0, 0.4],
-      glowStrength: [0, 0.6],
+      scanlineIntensity: [0.15, 0.7],
+      scratchIntensity: [0, 0.5],
+      glowStrength: [0, 0.7],
     },
-    barcodeChance: 0.3,
+    barcodeChance: 0.35,
   },
   HUMAN: {
     tone: {
-      hueShift: [-0.05, 0.05],
-      saturation: [0.9, 1.15],
-      contrast: [0.95, 1.2],
+      hueShift: [-0.12, 0.12],
+      saturation: [0.8, 1.25],
+      contrast: [0.9, 1.3],
     },
     details: {
-      freckleDensity: [0.2, 1],
-      poreStrength: [0.15, 0.5],
+      freckleDensity: [0.15, 1],
+      poreStrength: [0.1, 0.55],
     },
     cyber: {
-      scanlineIntensity: [0.15, 0.45],
-      scratchIntensity: [0, 0.25],
-      glowStrength: [0.05, 0.35],
+      scanlineIntensity: [0.1, 0.5],
+      scratchIntensity: [0, 0.3],
+      glowStrength: [0.02, 0.4],
     },
-    barcodeChance: 0.1,
+    barcodeChance: 0.15,
   },
   REPLICANT: {
     tone: {
@@ -567,18 +568,20 @@ export function generateFaceGeometry(
     corruptionLevel: rng.range(0.2, 0.55),  // More dropout, missing data
 
     // PORTRAIT SYNTHESIS PARAMS
+    // With only 3 base images, we need stronger variations to differentiate subjects
     baseHeadIndex: baseHeadIndexOverride ?? rng.int(0, 2), // 3 ai portraits available
     overlayVariant: rng.int(0, OVERLAY_VARIANTS - 1),
-    overlayIntensity: rng.range(0.12, 0.45),
-    overlayScale: rng.range(0.75, 1.45),
-    overlayRotation: rng.range(-0.6, 0.6),
+    overlayIntensity: rng.range(0.15, 0.55),
+    overlayScale: rng.range(0.6, 1.6),
+    overlayRotation: rng.range(-0.8, 0.8),
     warp: {
-      jawTaper: rng.range(-0.12, 0.12),
-      cheekFullness: rng.range(-0.09, 0.09),
-      browHeight: rng.range(-0.08, 0.08),
-      eyeSpacing: rng.range(-0.09, 0.09),
-      noseWidth: rng.range(-0.09, 0.09),
-      mouthWidth: rng.range(-0.09, 0.09),
+      // Increased ranges for more visible face shape differences
+      jawTaper: rng.range(-0.22, 0.22),
+      cheekFullness: rng.range(-0.18, 0.18),
+      browHeight: rng.range(-0.15, 0.15),
+      eyeSpacing: rng.range(-0.16, 0.16),
+      noseWidth: rng.range(-0.16, 0.16),
+      mouthWidth: rng.range(-0.16, 0.16),
     },
     tone: synthParams.tone,
     details: synthParams.details,
@@ -741,18 +744,20 @@ export function getTemplateBasedGeometry(
     corruptionLevel: Math.max(0.1, Math.min(0.6, base.corruptionLevel * (1 + rng.range(-0.15, 0.15)))),
     
     // PORTRAIT SYNTHESIS PARAMS
+    // With only 3 base images, we need stronger variations to differentiate subjects
     baseHeadIndex: baseHeadIndexOverride ?? rng.int(0, 2),
     overlayVariant: rng.int(0, OVERLAY_VARIANTS - 1),
-    overlayIntensity: rng.range(0.12, 0.45),
-    overlayScale: rng.range(0.75, 1.45),
-    overlayRotation: rng.range(-0.6, 0.6),
+    overlayIntensity: rng.range(0.15, 0.55),
+    overlayScale: rng.range(0.6, 1.6),
+    overlayRotation: rng.range(-0.8, 0.8),
     warp: {
-      jawTaper: rng.range(-0.12, 0.12),
-      cheekFullness: rng.range(-0.09, 0.09),
-      browHeight: rng.range(-0.08, 0.08),
-      eyeSpacing: rng.range(-0.09, 0.09),
-      noseWidth: rng.range(-0.09, 0.09),
-      mouthWidth: rng.range(-0.09, 0.09),
+      // Increased ranges for more visible face shape differences
+      jawTaper: rng.range(-0.22, 0.22),
+      cheekFullness: rng.range(-0.18, 0.18),
+      browHeight: rng.range(-0.15, 0.15),
+      eyeSpacing: rng.range(-0.16, 0.16),
+      noseWidth: rng.range(-0.16, 0.16),
+      mouthWidth: rng.range(-0.16, 0.16),
     },
     tone: synthParams.tone,
     details: synthParams.details,
@@ -763,9 +768,9 @@ export function getTemplateBasedGeometry(
     geometry.headHeight *= rng.range(1.05, 1.12);
     geometry.mouthWidth *= rng.range(0.78, 0.92);
     geometry.eyeSpacing *= rng.range(1.08, 1.18);
-    geometry.warp.eyeSpacing = clamp(Math.abs(geometry.warp.eyeSpacing) + rng.range(0.03, 0.08), -0.2, 0.2);
-    geometry.warp.mouthWidth = clamp(-Math.abs(geometry.warp.mouthWidth) - rng.range(0.02, 0.06), -0.2, 0.2);
-    geometry.warp.jawTaper = clamp(geometry.warp.jawTaper + rng.range(0.02, 0.08), -0.2, 0.2);
+    geometry.warp.eyeSpacing = clamp(Math.abs(geometry.warp.eyeSpacing) + rng.range(0.03, 0.1), -0.25, 0.25);
+    geometry.warp.mouthWidth = clamp(-Math.abs(geometry.warp.mouthWidth) - rng.range(0.02, 0.08), -0.25, 0.25);
+    geometry.warp.jawTaper = clamp(geometry.warp.jawTaper + rng.range(0.02, 0.1), -0.25, 0.25);
   }
 
   return geometry;

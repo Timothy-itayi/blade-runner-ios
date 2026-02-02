@@ -7,7 +7,6 @@ import { TypewriterText } from '../ui/ScanData';
 import {
   INTRO_NEWS_SEGMENTS,
   INTRO_TICKER_ITEMS,
-  INTRO_AUDIO,
   IntroBroadcastSegment
 } from '../../constants/introBroadcast';
 

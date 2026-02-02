@@ -50,6 +50,7 @@ export const MapTheme = {
     nodeHeld: '#4cc9f0',             // Blue - in hold
     nodeGone: 'rgba(255,255,255,0.2)', // Faded - released
     nodePending: '#4895ef',          // Pulsing blue
+    nodeAlertRed: '#e63946',         // Alert detonation / ignore
     
     // Edges
     edgeDecision: 'rgba(255, 255, 255, 0.15)',
@@ -92,6 +93,7 @@ export function getNodeStateColor(state: string): string {
     case 'held': return MapTheme.colors.nodeHeld;
     case 'gone': return MapTheme.colors.nodeGone;
     case 'pending': return MapTheme.colors.nodePending;
+    case 'alert-red': return MapTheme.colors.nodeAlertRed;
     default: return MapTheme.colors.textDim;
   }
 }

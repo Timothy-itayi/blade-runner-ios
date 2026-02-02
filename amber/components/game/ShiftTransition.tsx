@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Pressable, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
 import { Theme } from '../../constants/theme';
-import { ShiftData } from '../../constants/shifts';
+import { ShiftData, DEMO_FINAL_SHIFT, SUBJECTS_PER_SHIFT } from '../../constants/shifts';
 import { TypewriterText } from '../ui/ScanData';
 import { SubjectData, IncidentReport, PersonalMessage } from '../../data/subjects';
 import { ShiftNewsReport } from './ShiftNewsReport';
@@ -19,8 +19,6 @@ interface ShiftTransitionProps {
   nextShift: ShiftData;
   approvedCount: number;
   deniedCount: number;
-  totalAccuracy: number;
-  messageHistory: string[];
   shiftDecisions: ShiftDecision[]; // NEW: Decisions made this shift
   onContinue: () => void;
   isEndOfDemo?: boolean; // If true, show demo complete instead of next shift
@@ -32,15 +30,13 @@ export const ShiftTransition = ({
   nextShift,
   approvedCount,
   deniedCount,
-  totalAccuracy,
-  messageHistory,
   shiftDecisions,
   onContinue,
   isEndOfDemo = false,
   onMainMenu,
 }: ShiftTransitionProps) => {
   // Start with 'news' phase to show news reports first
-  const [phase, setPhase] = useState<'news' | 'summary' | 'reports' | 'menu' | 'profile' | 'briefing' | 'demoComplete'>('news');
+  const [phase, setPhase] = useState<'news' | 'briefing' | 'demoComplete'>('news');
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const briefingOpacity = useRef(new Animated.Value(0)).current;
 
@@ -59,7 +55,7 @@ export const ShiftTransition = ({
     if (isEndOfDemo) {
       setPhase('demoComplete');
     } else {
-      setPhase('profile');
+      handleStartBriefing();
     }
   };
 
@@ -83,76 +79,23 @@ export const ShiftTransition = ({
       );
     }
 
-    if (phase === 'profile') {
-      return (
-        <View style={styles.profileContainer}>
-          <ScrollView 
-            style={styles.profileScrollContainer} 
-            contentContainerStyle={styles.profileScrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            <Text style={styles.profileTitle}>OPERATOR LOG // PERSONAL</Text>
-
-            <View style={styles.profileContent}>
-              <View style={styles.profilePhotoSection}>
-                <View style={styles.photoFrame}>
-                  <Image 
-                    source={require('../../assets/family-photo.png')} 
-                    style={styles.profilePhoto} 
-                    resizeMode="cover"
-                  />
-                </View>
-                <Text style={styles.ratingLabel}>SECURITY CLEARANCE RATING</Text>
-                <Text style={[styles.ratingValue, { color: totalAccuracy > 0.8 ? Theme.colors.accentApprove : totalAccuracy > 0.5 ? Theme.colors.accentWarn : Theme.colors.accentDeny }]}>
-                  {Math.round(totalAccuracy * 100)}%
-                </Text>
-              </View>
-
-              <View style={styles.messageLogSection}>
-                <Text style={styles.logLabel}>INCOMING MESSAGE HISTORY:</Text>
-                <View style={styles.logBox}>
-                  {messageHistory.length === 0 ? (
-                    <Text style={styles.emptyLogText}>NO EXTERNAL COMMUNICATIONS LOGGED.</Text>
-                  ) : (
-                    <View>
-                      {messageHistory.slice(-5).map((msg, i) => (
-                        <Text key={i} style={styles.logEntry}>- "{msg}"</Text>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              </View>
-            </View>
-
-          </ScrollView>
-
-          {/* Continue Button - Always visible at bottom */}
-          <Pressable 
-            onPress={handleStartBriefing}
-            style={({ pressed }) => [
-              styles.continueButton,
-              styles.continueButtonFullWidth,
-              pressed && styles.continueButtonPressed
-            ]}
-          >
-            <Text style={styles.continueText}>[ RECEIVE NEW DIRECTIVE ]</Text>
-          </Pressable>
-        </View>
-      );
-    }
-
     if (phase === 'demoComplete') {
+      const totalSubjects = DEMO_FINAL_SHIFT * SUBJECTS_PER_SHIFT;
       return (
         <View style={styles.demoCompleteContainer}>
           <View style={styles.demoCompleteBox}>
             <Text style={styles.demoCompleteLabel}>TRANSMISSION ENDED</Text>
             <View style={styles.demoCompleteDivider} />
             <Text style={styles.demoCompleteTitle}>AMBER DEMO COMPLETE</Text>
-            <Text style={styles.demoCompleteSubtitle}>SHIFT 1 // CLEARANCE CHECK</Text>
+            <Text style={styles.demoCompleteSubtitle}>SHIFTS 1-{DEMO_FINAL_SHIFT} // COMPLETE</Text>
             <View style={styles.demoCompleteDivider} />
             <View style={styles.demoStatsRow}>
+              <Text style={styles.demoStatLabel}>SHIFTS COMPLETED:</Text>
+              <Text style={styles.demoStatValue}>{DEMO_FINAL_SHIFT}</Text>
+            </View>
+            <View style={styles.demoStatsRow}>
               <Text style={styles.demoStatLabel}>SUBJECTS PROCESSED:</Text>
-              <Text style={styles.demoStatValue}>3</Text>
+              <Text style={styles.demoStatValue}>{totalSubjects}</Text>
             </View>
             <View style={styles.demoCompleteDivider} />
             <Text style={styles.demoCompleteFooter}>FULL VERSION COMING SOON</Text>

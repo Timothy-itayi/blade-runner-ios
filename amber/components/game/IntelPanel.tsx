@@ -450,6 +450,12 @@ export const IntelPanel = ({
     if (mode === 'dossier') {
       const dossierUnlocked = hudStage === 'full' && dossierRevealed;
       const dossierHasContent = dossierUnlocked && !!data.dossier;
+      const primaryCredential = credentialData?.credentials?.[0];
+      const destination = primaryCredential?.destinationPlanet || data.destinationPlanet || '—';
+      const permitLabel = primaryCredential ? getCredentialTypeName(primaryCredential.type) : '—';
+      const permitStatus = primaryCredential
+        ? (primaryCredential.valid ? getExpirationStatus(primaryCredential.expirationDate) : 'INVALID')
+        : '—';
       const showProceduralPortrait = data.useProceduralPortrait || (!data.profilePic && !!data.id);
 
       return (
@@ -502,6 +508,24 @@ export const IntelPanel = ({
                     <Text style={styles.dossierPreviewLabel}>ADDRESS</Text>
                     <Text style={styles.dossierPreviewValue} numberOfLines={2}>
                       {data.dossier?.address || '—'}
+                    </Text>
+                  </View>
+                  <View style={styles.dossierPreviewRow}>
+                    <Text style={styles.dossierPreviewLabel}>DESTINATION</Text>
+                    <Text style={styles.dossierPreviewValue} numberOfLines={1}>
+                      {destination}
+                    </Text>
+                  </View>
+                  <View style={styles.dossierPreviewRow}>
+                    <Text style={styles.dossierPreviewLabel}>PERMIT</Text>
+                    <Text style={styles.dossierPreviewValue} numberOfLines={1}>
+                      {permitLabel}
+                    </Text>
+                  </View>
+                  <View style={styles.dossierPreviewRow}>
+                    <Text style={styles.dossierPreviewLabel}>STATUS</Text>
+                    <Text style={styles.dossierPreviewValue} numberOfLines={1}>
+                      {permitStatus}
                     </Text>
                   </View>
                   {data.dossierAnomaly && data.dossierAnomaly.type !== 'NONE' && (

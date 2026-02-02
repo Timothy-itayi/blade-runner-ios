@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -6,10 +6,13 @@ import Animated, {
   withRepeat,
   withSequence,
   withTiming,
+  withSpring,
   interpolate,
   Easing,
+  runOnJS,
 } from 'react-native-reanimated';
-import Svg, { Circle, Line, G, Defs, RadialGradient, Stop } from 'react-native-svg';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Svg, { Line, G } from 'react-native-svg';
 import { MapTheme, getNodeStateColor, getEdgeTypeColor } from '../../constants/mapTheme';
 import { Theme } from '../../constants/theme';
 
@@ -25,7 +28,8 @@ export type NodeState =
   | 'denied-harm'
   | 'held'
   | 'gone'
-  | 'pending';
+  | 'pending'
+  | 'alert-red';
 
 export type EdgeType = 'decision' | 'consequence' | 'route' | 'escalate' | 'death';
 
@@ -193,9 +197,10 @@ function SubjectNode({ node, position, isSelected, onPress }: SubjectNodeProps) 
   const pulse = useSharedValue(0);
   const isGone = node.state === 'gone';
   const isPending = node.state === 'pending';
+  const isAlert = node.state === 'alert-red';
   
   useEffect(() => {
-    if (isPending || node.state === 'approved-harm') {
+    if (isPending || node.state === 'approved-harm' || isAlert) {
       pulse.value = withRepeat(
         withSequence(
           withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
@@ -208,13 +213,13 @@ function SubjectNode({ node, position, isSelected, onPress }: SubjectNodeProps) 
   }, [node.state]);
   
   const nodeStyle = useAnimatedStyle(() => {
-    if (!isPending && node.state !== 'approved-harm') return {};
+    if (!isPending && node.state !== 'approved-harm' && !isAlert) return {};
     const scale = interpolate(pulse.value, [0, 1], [1, 1.2]);
     return { transform: [{ scale }] };
   });
 
   const glowStyle = useAnimatedStyle(() => {
-    if (!isPending && node.state !== 'approved-harm') return { opacity: 0 };
+    if (!isPending && node.state !== 'approved-harm' && !isAlert) return { opacity: 0 };
     const opacity = interpolate(pulse.value, [0, 1], [0.3, 0.6]);
     return { opacity };
   });
@@ -254,8 +259,8 @@ function SubjectNode({ node, position, isSelected, onPress }: SubjectNodeProps) 
       />
       
       {/* Label */}
-      <Text style={styles.nodeLabel} numberOfLines={1}>
-        {node.label}
+      <Text style={styles.nodeLabel}>
+        {node.label.split(' — ')[0]}
       </Text>
     </TouchableOpacity>
   );
@@ -295,13 +300,73 @@ interface NodeTooltipProps {
   node: MapNode;
   position: NodePosition;
   containerWidth: number;
+  containerHeight: number;
 }
 
-function NodeTooltip({ node, position, containerWidth }: NodeTooltipProps) {
+function NodeTooltip({ node, position, containerWidth, containerHeight }: NodeTooltipProps) {
   const color = getNodeStateColor(node.state);
-  const tooltipLeft = position.x > containerWidth / 2 
-    ? position.x - 130 
-    : position.x + 30;
+  const centerX = containerWidth / 2;
+  const centerY = containerHeight / 2;
+  
+  const TOOLTIP_WIDTH = 100;
+  const TOOLTIP_HEIGHT = 50;
+  const NODE_OFFSET = 30; // Distance from node
+  const CENTER_SAFE_ZONE = 50; // Keep tooltip away from center node
+  
+  // Determine which side to place tooltip (prefer away from center)
+  const nodeIsRightOfCenter = position.x > centerX;
+  const nodeIsAboveCenter = position.y < centerY;
+  
+  // Calculate base tooltip position
+  let tooltipLeft: number;
+  let tooltipTop: number;
+  
+  // Horizontal positioning - place tooltip on opposite side from center
+  if (nodeIsRightOfCenter) {
+    // Node is right of center, put tooltip to the right of node (away from center)
+    tooltipLeft = position.x + NODE_OFFSET;
+    // If that would go off screen, put it to the left
+    if (tooltipLeft + TOOLTIP_WIDTH > containerWidth - 10) {
+      tooltipLeft = position.x - TOOLTIP_WIDTH - NODE_OFFSET + 20;
+    }
+  } else {
+    // Node is left of center, put tooltip to the left of node (away from center)
+    tooltipLeft = position.x - TOOLTIP_WIDTH - NODE_OFFSET + 20;
+    // If that would go off screen, put it to the right
+    if (tooltipLeft < 10) {
+      tooltipLeft = position.x + NODE_OFFSET;
+    }
+  }
+  
+  // Vertical positioning - place tooltip on opposite side from center vertically
+  if (nodeIsAboveCenter) {
+    // Node is above center, put tooltip above node
+    tooltipTop = position.y - TOOLTIP_HEIGHT - 10;
+    if (tooltipTop < 10) {
+      tooltipTop = position.y + 20;
+    }
+  } else {
+    // Node is below center, put tooltip below node
+    tooltipTop = position.y + 20;
+    if (tooltipTop + TOOLTIP_HEIGHT > containerHeight - 10) {
+      tooltipTop = position.y - TOOLTIP_HEIGHT - 10;
+    }
+  }
+  
+  // Final check: ensure tooltip doesn't overlap center zone
+  const tooltipCenterX = tooltipLeft + TOOLTIP_WIDTH / 2;
+  const tooltipCenterY = tooltipTop + TOOLTIP_HEIGHT / 2;
+  const distToCenter = Math.sqrt(
+    Math.pow(tooltipCenterX - centerX, 2) + Math.pow(tooltipCenterY - centerY, 2)
+  );
+  
+  if (distToCenter < CENTER_SAFE_ZONE + 30) {
+    // Push tooltip further away from center
+    const angle = Math.atan2(tooltipCenterY - centerY, tooltipCenterX - centerX);
+    const pushDistance = CENTER_SAFE_ZONE + 40 - distToCenter;
+    tooltipLeft += Math.cos(angle) * pushDistance;
+    tooltipTop += Math.sin(angle) * pushDistance;
+  }
 
   const getStateLabel = (state: NodeState): string => {
     switch (state) {
@@ -312,11 +377,12 @@ function NodeTooltip({ node, position, containerWidth }: NodeTooltipProps) {
       case 'held': return 'HELD';
       case 'gone': return 'GONE';
       case 'pending': return 'PENDING';
+      default: return 'UNKNOWN';
     }
   };
 
   return (
-    <View style={[styles.tooltip, { left: tooltipLeft, top: position.y - 25 }]}>
+    <View style={[styles.tooltip, { left: tooltipLeft, top: tooltipTop }]}>
       <View style={[styles.tooltipBadge, { backgroundColor: color }]}>
         <Text style={styles.tooltipBadgeText}>{getStateLabel(node.state)}</Text>
       </View>
@@ -324,6 +390,13 @@ function NodeTooltip({ node, position, containerWidth }: NodeTooltipProps) {
     </View>
   );
 }
+
+// ============================================
+// ZOOM/PAN CONSTANTS
+// ============================================
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 3;
+const SPRING_CONFIG = { damping: 15, stiffness: 150 };
 
 // ============================================
 // MAIN COMPONENT
@@ -339,6 +412,15 @@ export default function NodeMap({
 }: NodeMapProps) {
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(null);
   const [containerHeight, setContainerHeight] = useState(height);
+  
+  // Pan and zoom state
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
+  const [isTransformed, setIsTransformed] = useState(false);
   
   const selectedId = selectedNodeId !== undefined ? selectedNodeId : internalSelectedId;
   const effectiveHeight = height || containerHeight;
@@ -379,53 +461,130 @@ export default function NodeMap({
     }
   };
 
+  // Update transformed state indicator
+  const updateTransformState = useCallback((transformed: boolean) => {
+    setIsTransformed(transformed);
+  }, []);
+
+  // Recenter the map
+  const handleRecenter = useCallback(() => {
+    scale.value = withSpring(1, SPRING_CONFIG);
+    translateX.value = withSpring(0, SPRING_CONFIG);
+    translateY.value = withSpring(0, SPRING_CONFIG);
+    savedScale.value = 1;
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+    setIsTransformed(false);
+  }, []);
+
+  // Pan gesture
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    })
+    .onUpdate((event) => {
+      translateX.value = savedTranslateX.value + event.translationX;
+      translateY.value = savedTranslateY.value + event.translationY;
+    })
+    .onEnd(() => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+      const isAtOrigin = Math.abs(translateX.value) < 5 && 
+                         Math.abs(translateY.value) < 5 && 
+                         Math.abs(scale.value - 1) < 0.05;
+      runOnJS(updateTransformState)(!isAtOrigin);
+    });
+
+  // Pinch gesture for zoom
+  const pinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      savedScale.value = scale.value;
+    })
+    .onUpdate((event) => {
+      const newScale = savedScale.value * event.scale;
+      scale.value = Math.min(Math.max(newScale, MIN_SCALE), MAX_SCALE);
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
+      const isAtOrigin = Math.abs(translateX.value) < 5 && 
+                         Math.abs(translateY.value) < 5 && 
+                         Math.abs(scale.value - 1) < 0.05;
+      runOnJS(updateTransformState)(!isAtOrigin);
+    });
+
+  // Combine gestures
+  const combinedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
+
+  // Animated style for the map content
+  const animatedMapStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
+
   return (
     <View style={[styles.container, { width, height: effectiveHeight }]}>
-      {/* SVG Layer - Grid and Edges */}
-      <View style={styles.svgContainer}>
-        <Svg width={width} height={effectiveHeight}>
-          {showGrid && <GridBackground width={width} height={effectiveHeight} />}
+      <GestureDetector gesture={combinedGesture}>
+        <Animated.View style={[styles.mapContent, animatedMapStyle]}>
+          {/* SVG Layer - Grid and Edges */}
+          <View style={styles.svgContainer}>
+            <Svg width={width} height={effectiveHeight}>
+              {showGrid && <GridBackground width={width} height={effectiveHeight} />}
+              
+              {/* Edges */}
+              {edges.map((edge) => {
+                const fromPos = positionLookup[edge.from];
+                const toPos = positionLookup[edge.to];
+                if (!fromPos || !toPos) return null;
+                
+                return (
+                  <EdgeComponent
+                    key={edge.id}
+                    edge={edge}
+                    fromPos={fromPos}
+                    toPos={toPos}
+                    isHighlighted={selectedId === edge.from || selectedId === edge.to}
+                  />
+                );
+              })}
+            </Svg>
+          </View>
           
-          {/* Edges */}
-          {edges.map((edge) => {
-            const fromPos = positionLookup[edge.from];
-            const toPos = positionLookup[edge.to];
-            if (!fromPos || !toPos) return null;
-            
-            return (
-              <EdgeComponent
-                key={edge.id}
-                edge={edge}
-                fromPos={fromPos}
-                toPos={toPos}
-                isHighlighted={selectedId === edge.from || selectedId === edge.to}
-              />
-            );
-          })}
-        </Svg>
-      </View>
+          {/* Core node (player) */}
+          <CoreNode centerX={centerX} centerY={centerY} />
+          
+          {/* Subject nodes */}
+          {subjectNodes.map((node, i) => (
+            <SubjectNode
+              key={node.id}
+              node={node}
+              position={positions[i]}
+              isSelected={selectedId === node.id}
+              onPress={() => handleNodePress(node)}
+            />
+          ))}
+          
+          {/* Tooltip for selected node */}
+          {selectedNode && selectedPosition && (
+            <NodeTooltip 
+              node={selectedNode} 
+              position={selectedPosition}
+              containerWidth={width}
+              containerHeight={effectiveHeight}
+            />
+          )}
+        </Animated.View>
+      </GestureDetector>
       
-      {/* Core node (player) */}
-      <CoreNode centerX={centerX} centerY={centerY} />
-      
-      {/* Subject nodes */}
-      {subjectNodes.map((node, i) => (
-        <SubjectNode
-          key={node.id}
-          node={node}
-          position={positions[i]}
-          isSelected={selectedId === node.id}
-          onPress={() => handleNodePress(node)}
-        />
-      ))}
-      
-      {/* Tooltip for selected node */}
-      {selectedNode && selectedPosition && (
-        <NodeTooltip 
-          node={selectedNode} 
-          position={selectedPosition}
-          containerWidth={width}
-        />
+      {/* Recenter button - only visible when map is panned/zoomed */}
+      {isTransformed && (
+        <TouchableOpacity style={styles.recenterButton} onPress={handleRecenter}>
+          <Text style={styles.recenterText}>⊕</Text>
+          <Text style={styles.recenterLabel}>CENTER</Text>
+        </TouchableOpacity>
       )}
       
       {/* Empty state */}
@@ -447,8 +606,37 @@ const styles = StyleSheet.create({
     backgroundColor: MapTheme.colors.void,
     overflow: 'hidden',
   },
+  mapContent: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   svgContainer: {
     ...StyleSheet.absoluteFillObject,
+  },
+  recenterButton: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+    backgroundColor: 'rgba(20, 24, 30, 0.9)',
+    borderWidth: 1,
+    borderColor: MapTheme.colors.edgeDecision,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  recenterText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
+    color: MapTheme.colors.textPrimary,
+  },
+  recenterLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.textSecondary,
+    letterSpacing: 1,
   },
   // Core node styles (Player - HAL inspired)
   coreContainer: {
@@ -493,9 +681,10 @@ const styles = StyleSheet.create({
   // Subject node styles
   nodeContainer: {
     position: 'absolute',
-    width: 40,
+    width: 70,
     height: 50,
     alignItems: 'center',
+    marginLeft: -15, // offset for wider container
   },
   node: {
     width: 14,
@@ -507,7 +696,8 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    top: 0,
+    top: -7, // center around node (node is 14px, glow is 28px, so offset by (28-14)/2 = 7)
+    left: 21, // center horizontally (container is 70px, glow is 28px, so (70-28)/2 = 21)
   },
   nodeSelection: {
     position: 'absolute',
@@ -515,7 +705,8 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 2,
-    top: 0,
+    top: -7, // center around node
+    left: 21, // center horizontally
   },
   nodeLabel: {
     fontFamily: Theme.fonts.mono,

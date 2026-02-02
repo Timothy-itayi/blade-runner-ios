@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Dimensions, LayoutChangeEvent } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +19,38 @@ export default function MapScreen() {
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
   const [mapLayout, setMapLayout] = useState({ width: SCREEN_WIDTH - 32, height: SCREEN_HEIGHT * 0.5 });
   const decisionLog = useGameStore((state) => state.decisionLog);
+  const alertLog = useGameStore((state) => state.alertLog);
+  const propagandaFeed = useGameStore((state) => state.propagandaFeed);
+  const resolveAlert = useGameStore((state) => state.resolveAlert);
+  const addPropaganda = useGameStore((state) => state.addPropaganda);
+
+  const [activeAlertId, setActiveAlertId] = useState<string | null>(null);
+  const [alertStep, setAlertStep] = useState<'prompt' | 'detail' | 'negotiate' | 'intercept' | null>(null);
+  const [interceptToggle, setInterceptToggle] = useState(false);
+  const [detonateToggle, setDetonateToggle] = useState(false);
+  const [selectedNegotiation, setSelectedNegotiation] = useState<'INTIMIDATE' | 'PERSUADE' | 'REASON' | null>(null);
+
+  const pendingAlert = useMemo(() => {
+    return alertLog.find(entry => entry.outcome === 'PENDING') || null;
+  }, [alertLog]);
+
+  useEffect(() => {
+    if (pendingAlert) {
+      setActiveAlertId(pendingAlert.subjectId);
+      setAlertStep('prompt');
+      setInterceptToggle(false);
+      setDetonateToggle(false);
+      setSelectedNegotiation(null);
+    } else {
+      setActiveAlertId(null);
+      setAlertStep(null);
+    }
+  }, [pendingAlert?.subjectId]);
+
+  const activeAlert = useMemo(() => {
+    if (!activeAlertId) return null;
+    return alertLog.find(entry => entry.subjectId === activeAlertId) || null;
+  }, [activeAlertId, alertLog]);
 
   const handleBack = () => {
     router.back();
@@ -40,16 +72,19 @@ export default function MapScreen() {
     const subjectEdges: MapEdge[] = [];
     decisionLog.forEach((entry, index) => {
       const decisionLabel = entry.decision === 'APPROVE' ? 'APPROVED' : 'DENIED';
+      const alertEntry = alertLog.find(alert => alert.subjectId === entry.subjectId);
+      const isAlertRed = alertEntry?.outcome === 'IGNORED' || alertEntry?.outcome === 'DETONATED';
       const state: NodeState =
         entry.decision === 'APPROVE'
           ? (entry.correct ? 'approved-clean' : 'approved-harm')
           : (entry.correct ? 'denied-clean' : 'denied-harm');
+      const finalState: NodeState = isAlertRed ? 'alert-red' : state;
       const nodeId = `subject-${entry.subjectId}-${index}`;
       subjectNodes.push({
         id: nodeId,
         type: 'subject',
         label: `${entry.subjectName} — ${decisionLabel}`,
-        state,
+        state: finalState,
         subjectId: entry.subjectId,
       });
       subjectEdges.push({
@@ -60,10 +95,10 @@ export default function MapScreen() {
       });
     });
     return {
-      nodes: [{ id: 'player', type: 'player', label: 'YOU', state: 'approved-clean' }, ...subjectNodes],
+      nodes: [{ id: 'player', type: 'player', label: 'AMBER CHECKPOINT', state: 'approved-clean' }, ...subjectNodes],
       edges: subjectEdges,
     };
-  }, [decisionLog]);
+  }, [decisionLog, alertLog]);
 
   // Stats from nodes (subject count only)
   const stats = useMemo(() => {
@@ -72,9 +107,39 @@ export default function MapScreen() {
       total: subjects.length,
       approved: subjects.filter(n => n.state.startsWith('approved')).length,
       denied: subjects.filter(n => n.state.startsWith('denied')).length,
-      harm: subjects.filter(n => n.state.includes('harm')).length,
+      harm: subjects.filter(n => n.state.includes('harm') || n.state === 'alert-red').length,
     };
   }, [nodes]);
+
+  const getCollateralCount = (totalSubjects: number): number => {
+    if (totalSubjects <= 1) return 0;
+    return Math.min(2, totalSubjects - 1);
+  };
+
+  const finalizeAlert = (outcome: import('../store/gameStore').AlertOutcome, options?: Partial<import('../store/gameStore').AlertLogEntry>) => {
+    if (!activeAlert) return;
+    const collateralCount = outcome === 'DETONATED' ? getCollateralCount(nodes.length - 1) : 0;
+    resolveAlert(activeAlert.subjectId, {
+      outcome,
+      resolvedAt: Date.now(),
+      collateralCount,
+      ...options,
+    });
+
+    if (outcome === 'IGNORED' || outcome === 'DETONATED') {
+      addPropaganda({
+        id: `PR-${Date.now()}`,
+        subjectId: activeAlert.subjectId,
+        headline: activeAlert.scenario.propaganda.headline,
+        body: activeAlert.scenario.propaganda.body,
+        timestamp: Date.now(),
+        outcome,
+      });
+    }
+
+    setAlertStep(null);
+    setActiveAlertId(null);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -125,6 +190,73 @@ export default function MapScreen() {
           </View>
         </View>
 
+        {/* AMBER Alerts Panel - Always Visible */}
+        <View style={styles.alertsPanel}>
+          <View style={styles.alertsPanelHeader}>
+            <View style={styles.alertsPanelTitleRow}>
+              <View style={[styles.alertsPanelIndicator, pendingAlert ? styles.alertsPanelIndicatorActive : null]} />
+              <Text style={styles.alertsPanelTitle}>AMBER ALERTS</Text>
+            </View>
+            <Text style={styles.alertsPanelMeta}>
+              {alertLog.length} TOTAL • {alertLog.filter(a => a.outcome === 'PENDING').length} PENDING
+            </Text>
+          </View>
+          
+          {pendingAlert ? (
+            <View style={styles.alertsPanelActive}>
+              <View style={styles.alertActiveHeader}>
+                <Text style={styles.alertActiveLabel}>⚠ ACTIVE ALERT</Text>
+                <Text style={styles.alertActiveId}>{pendingAlert.subjectId}</Text>
+              </View>
+              <Text style={styles.alertActiveTitle}>{pendingAlert.scenario.title}</Text>
+              <Text style={styles.alertActiveLocation}>{pendingAlert.scenario.location}</Text>
+              <Text style={styles.alertActiveSummary} numberOfLines={2}>{pendingAlert.scenario.summary}</Text>
+              
+              <View style={styles.alertActiveActions}>
+                <TouchableOpacity 
+                  onPress={() => setAlertStep('detail')} 
+                  style={styles.alertActiveButton}
+                >
+                  <Text style={styles.alertActiveButtonText}>HANDLE</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => finalizeAlert('IGNORED')} 
+                  style={styles.alertActiveButtonMuted}
+                >
+                  <Text style={styles.alertActiveButtonTextMuted}>IGNORE</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.alertsPanelEmpty}>
+              <Text style={styles.alertsPanelEmptyText}>NO ACTIVE ALERTS</Text>
+            </View>
+          )}
+          
+          {/* Recent Alert History */}
+          {alertLog.filter(a => a.outcome !== 'PENDING').length > 0 && (
+            <View style={styles.alertsHistory}>
+              <Text style={styles.alertsHistoryLabel}>RECENT</Text>
+              {alertLog
+                .filter(a => a.outcome !== 'PENDING')
+                .slice(0, 3)
+                .map((entry, index) => (
+                  <View key={`history-${entry.subjectId}-${index}`} style={styles.alertsHistoryItem}>
+                    <Text style={styles.alertsHistoryId}>{entry.subjectId}</Text>
+                    <Text style={[
+                      styles.alertsHistoryOutcome,
+                      entry.outcome === 'IGNORED' || entry.outcome === 'DETONATED' 
+                        ? styles.alertsHistoryOutcomeRed 
+                        : styles.alertsHistoryOutcomeGreen
+                    ]}>
+                      {entry.outcome.replace('_', ' ')}
+                    </Text>
+                  </View>
+                ))}
+            </View>
+          )}
+        </View>
+
         {/* Map Container - full height, center node in middle */}
         <View style={styles.mapContainer} onLayout={handleMapLayout}>
           <View style={styles.mapBorder}>
@@ -143,19 +275,6 @@ export default function MapScreen() {
           <View style={styles.scanLines} pointerEvents="none" />
         </View>
 
-        {/* Selected Node Details */}
-        {selectedNode && selectedNode.type !== 'player' && (
-          <View style={styles.detailPanel}>
-            <View style={styles.detailHeader}>
-              <View style={[styles.detailBadge, { backgroundColor: getStateColor(selectedNode.state) }]}>
-                <Text style={styles.detailBadgeText}>{getStateLabel(selectedNode.state)}</Text>
-              </View>
-              <Text style={styles.detailId}>{selectedNode.subjectId}</Text>
-            </View>
-            <Text style={styles.detailName}>{selectedNode.label}</Text>
-            <Text style={styles.detailType}>TYPE: {selectedNode.type.toUpperCase()}</Text>
-          </View>
-        )}
 
         {/* Legend */}
         <View style={styles.legend}>
@@ -165,18 +284,27 @@ export default function MapScreen() {
             <Text style={styles.legendText}>APPROVED</Text>
           </View>
           <View style={styles.legendRow}>
-            <View style={[styles.legendDot, { backgroundColor: MapTheme.colors.nodeApprovedHarm }]} />
-            <Text style={styles.legendText}>CAUSED HARM</Text>
-          </View>
-          <View style={styles.legendRow}>
             <View style={[styles.legendDot, { backgroundColor: MapTheme.colors.nodeDeniedClean }]} />
             <Text style={styles.legendText}>DENIED</Text>
+          </View>
+          <View style={styles.legendRow}>
+            <View style={[styles.legendDot, { backgroundColor: MapTheme.colors.nodeAlertRed }]} />
+            <Text style={styles.legendText}>ALERT</Text>
           </View>
           <View style={styles.legendRow}>
             <View style={[styles.legendDot, { backgroundColor: MapTheme.colors.coreNode }]} />
             <Text style={styles.legendText}>YOU</Text>
           </View>
         </View>
+
+        {/* Propaganda Feed */}
+        {propagandaFeed.length > 0 && (
+          <View style={styles.propagandaPanel}>
+            <Text style={styles.propagandaLabel}>AMBER NEWS</Text>
+            <Text style={styles.propagandaHeadline}>{propagandaFeed[0].headline}</Text>
+            <Text style={styles.propagandaBody}>{propagandaFeed[0].body}</Text>
+          </View>
+        )}
 
         {/* Back Button */}
         <View style={styles.footer}>
@@ -187,7 +315,213 @@ export default function MapScreen() {
             style={{ flex: 1 }}
           />
         </View>
+
+        {/* Selected Node Details - Overlay positioned at bottom of map */}
+        {selectedNode && (
+          <View style={styles.detailPanelOverlay}>
+            <TouchableOpacity 
+              style={styles.detailPanelBackdrop} 
+              activeOpacity={1} 
+              onPress={() => setSelectedNode(null)} 
+            />
+            <View style={styles.detailPanel}>
+              <TouchableOpacity style={styles.detailCloseButton} onPress={() => setSelectedNode(null)}>
+                <Text style={styles.detailCloseText}>×</Text>
+              </TouchableOpacity>
+              {selectedNode.type === 'player' ? (
+                <>
+                  <Text style={styles.detailName}>{selectedNode.label}</Text>
+                  <Text style={styles.detailType}>LOCATION: CENTRAL HUB</Text>
+                </>
+              ) : (() => {
+                const logEntry = decisionLog.find(entry => entry.subjectId === selectedNode.subjectId);
+                const isApproved = selectedNode.state.startsWith('approved');
+                const isDenied = selectedNode.state.startsWith('denied');
+                
+                return (
+                  <>
+                    <View style={styles.detailHeader}>
+                      <View style={[styles.detailBadge, { backgroundColor: getStateColor(selectedNode.state) }]}>
+                        <Text style={styles.detailBadgeText}>{getStateLabel(selectedNode.state)}</Text>
+                      </View>
+                      <Text style={styles.detailId}>{selectedNode.subjectId}</Text>
+                    </View>
+                    <Text style={styles.detailName}>{logEntry?.subjectName || selectedNode.label.split(' — ')[0]}</Text>
+                    
+                    {/* Subject Info Grid */}
+                    <View style={styles.detailGrid}>
+                      <View style={styles.detailGridItem}>
+                        <Text style={styles.detailGridLabel}>TYPE</Text>
+                        <Text style={styles.detailGridValue}>{logEntry?.subjectType || 'HUMAN'}</Text>
+                      </View>
+                      <View style={styles.detailGridItem}>
+                        <Text style={styles.detailGridLabel}>ORIGIN</Text>
+                        <Text style={styles.detailGridValue}>{logEntry?.originPlanet || '—'}</Text>
+                      </View>
+                    </View>
+                    
+                    {/* Approved: Show ticket info */}
+                    {isApproved && (
+                      <View style={styles.detailSection}>
+                        <Text style={styles.detailSectionLabel}>TRANSIT CLEARANCE</Text>
+                        <View style={styles.detailGrid}>
+                          <View style={styles.detailGridItem}>
+                            <Text style={styles.detailGridLabel}>DESTINATION</Text>
+                            <Text style={[styles.detailGridValue, styles.detailGridValueHighlight]}>
+                              {logEntry?.destinationPlanet || '—'}
+                            </Text>
+                          </View>
+                          <View style={styles.detailGridItem}>
+                            <Text style={styles.detailGridLabel}>OCCUPATION</Text>
+                            <Text style={styles.detailGridValue}>{logEntry?.permitType || '—'}</Text>
+                          </View>
+                        </View>
+                        {logEntry?.warrants && logEntry.warrants !== 'NONE' && (
+                          <View style={styles.detailWarning}>
+                            <Text style={styles.detailWarningText}>⚠ WARRANT: {logEntry.warrants}</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                    
+                    {/* Denied: Show reason */}
+                    {isDenied && (
+                      <View style={styles.detailSection}>
+                        <Text style={styles.detailSectionLabel}>DENIAL REASON</Text>
+                        <Text style={styles.detailDenyReason}>{logEntry?.denyReason || 'UNSPECIFIED'}</Text>
+                        {logEntry?.destinationPlanet && (
+                          <Text style={styles.detailDenyContext}>
+                            INTENDED DESTINATION: {logEntry.destinationPlanet}
+                          </Text>
+                        )}
+                      </View>
+                    )}
+                    
+                    {/* Alert info if exists */}
+                    {alertLog.some(entry => entry.subjectId === selectedNode.subjectId) && (
+                      <View style={styles.alertDetail}>
+                        {alertLog
+                          .filter(entry => entry.subjectId === selectedNode.subjectId)
+                          .map(entry => (
+                            <View key={`alert-${entry.subjectId}`}>
+                              <Text style={styles.alertDetailLabel}>ALERT STATUS</Text>
+                              <Text style={styles.alertDetailValue}>{entry.outcome.replace('_', ' ')}</Text>
+                              {entry.collateralCount ? (
+                                <Text style={styles.alertDetailValue}>COLLATERAL: {entry.collateralCount}</Text>
+                              ) : null}
+                            </View>
+                          ))}
+                      </View>
+                    )}
+                  </>
+                );
+              })()}
+            </View>
+          </View>
+        )}
       </View>
+
+      {/* Alert Detail Panel - Only show for detail/negotiate/intercept steps, not prompt */}
+      {activeAlert && alertStep === 'detail' && (
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertPanel}>
+            <Text style={styles.alertTitle}>INCIDENT REPORT</Text>
+            <Text style={styles.alertSubtitle}>{activeAlert.scenario.title}</Text>
+            <Text style={styles.alertLocation}>{activeAlert.scenario.location}</Text>
+            <Text style={styles.alertSummary}>{activeAlert.scenario.summary}</Text>
+            {activeAlert.scenario.collateralContext ? (
+              <Text style={styles.alertCollateral}>COLLATERAL: {activeAlert.scenario.collateralContext}</Text>
+            ) : null}
+            <View style={styles.alertActions}>
+              <TouchableOpacity onPress={() => finalizeAlert('DETONATED', { detonateUsed: true })} style={styles.alertButtonDanger}>
+                <Text style={styles.alertButtonText}>DETONATE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setAlertStep('negotiate')} style={styles.alertButton}>
+                <Text style={styles.alertButtonText}>NEGOTIATE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setAlertStep('intercept')} style={styles.alertButton}>
+                <Text style={styles.alertButtonText}>INTERCEPT</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Negotiation Panel */}
+      {activeAlert && alertStep === 'negotiate' && (
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertPanel}>
+            <Text style={styles.alertTitle}>NEGOTIATION LINK</Text>
+            <Text style={styles.alertSubtitle}>{activeAlert.scenario.title}</Text>
+            <TouchableOpacity onPress={() => setInterceptToggle(prev => !prev)} style={styles.alertToggle}>
+              <Text style={styles.alertToggleText}>{interceptToggle ? '✓' : '○'} DISPATCH INTERCEPT</Text>
+            </TouchableOpacity>
+            <View style={styles.alertActions}>
+              <TouchableOpacity onPress={() => setSelectedNegotiation('INTIMIDATE')} style={styles.alertButton}>
+                <Text style={styles.alertButtonText}>INTIMIDATE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSelectedNegotiation('PERSUADE')} style={styles.alertButton}>
+                <Text style={styles.alertButtonText}>PERSUADE</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSelectedNegotiation('REASON')} style={styles.alertButton}>
+                <Text style={styles.alertButtonText}>REASON</Text>
+              </TouchableOpacity>
+            </View>
+            {selectedNegotiation && (
+              <TouchableOpacity
+                onPress={() => {
+                  const preferred = activeAlert.scenario.preferredNegotiation;
+                  const success = preferred ? preferred === selectedNegotiation : selectedNegotiation !== 'INTIMIDATE';
+                  if (!success && interceptToggle) {
+                    finalizeAlert('INTERCEPTED', { interceptUsed: true, negotiationMethod: selectedNegotiation });
+                    return;
+                  }
+                  finalizeAlert(success ? 'NEGOTIATED_SUCCESS' : 'NEGOTIATED_FAIL', {
+                    negotiationMethod: selectedNegotiation,
+                    interceptUsed: interceptToggle || undefined,
+                  });
+                }}
+                style={styles.alertButton}
+              >
+                <Text style={styles.alertButtonText}>CONFIRM</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={() => setAlertStep('detail')} style={styles.alertButtonMuted}>
+              <Text style={styles.alertButtonTextMuted}>BACK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Intercept Panel */}
+      {activeAlert && alertStep === 'intercept' && (
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertPanel}>
+            <Text style={styles.alertTitle}>INTERCEPT ORDER</Text>
+            <Text style={styles.alertSubtitle}>{activeAlert.scenario.title}</Text>
+            <TouchableOpacity onPress={() => setDetonateToggle(prev => !prev)} style={styles.alertToggle}>
+              <Text style={styles.alertToggleText}>{detonateToggle ? '✓' : '○'} DETONATE IF BREACH</Text>
+            </TouchableOpacity>
+            <View style={styles.alertActions}>
+              <TouchableOpacity
+                onPress={() => {
+                  if (detonateToggle) {
+                    finalizeAlert('DETONATED', { detonateUsed: true, interceptUsed: true });
+                  } else {
+                    finalizeAlert('INTERCEPTED', { interceptUsed: true });
+                  }
+                }}
+                style={styles.alertButton}
+              >
+                <Text style={styles.alertButtonText}>DISPATCH</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setAlertStep('detail')} style={styles.alertButtonMuted}>
+                <Text style={styles.alertButtonTextMuted}>BACK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -202,6 +536,7 @@ function getStateColor(state: NodeState): string {
     case 'held': return MapTheme.colors.nodeHeld;
     case 'gone': return MapTheme.colors.nodeGone;
     case 'pending': return MapTheme.colors.nodePending;
+    case 'alert-red': return MapTheme.colors.nodeAlertRed;
     default: return MapTheme.colors.textDim;
   }
 }
@@ -215,6 +550,7 @@ function getStateLabel(state: NodeState): string {
     case 'held': return 'HELD';
     case 'gone': return 'GONE';
     case 'pending': return 'PENDING';
+    case 'alert-red': return 'ALERT';
     default: return 'UNKNOWN';
   }
 }
@@ -343,13 +679,41 @@ const styles = StyleSheet.create({
     // For now, just a subtle overlay
     backgroundColor: 'transparent',
   },
-  // Detail Panel
+  // Detail Panel - Overlay style
+  detailPanelOverlay: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 80, // Above the footer button
+    zIndex: 50,
+  },
+  detailPanelBackdrop: {
+    position: 'absolute',
+    top: -2000,
+    left: -100,
+    right: -100,
+    bottom: -100,
+  },
   detailPanel: {
     backgroundColor: MapTheme.colors.panel,
     padding: 12,
-    marginTop: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  detailCloseButton: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1,
+  },
+  detailCloseText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 18,
+    color: MapTheme.colors.textDim,
   },
   detailHeader: {
     flexDirection: 'row',
@@ -386,6 +750,87 @@ const styles = StyleSheet.create({
     color: MapTheme.colors.textSecondary,
     marginTop: 4,
   },
+  detailGrid: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 8,
+  },
+  detailGridItem: {
+    flex: 1,
+  },
+  detailGridLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 7,
+    color: MapTheme.colors.textDim,
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  detailGridValue: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: MapTheme.colors.textPrimary,
+  },
+  detailGridValueHighlight: {
+    color: MapTheme.colors.nodeApprovedClean,
+    fontWeight: 'bold',
+  },
+  detailSection: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  detailSectionLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    color: MapTheme.colors.textDim,
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  detailDenyReason: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    color: MapTheme.colors.nodeDeniedHarm,
+    fontWeight: 'bold',
+  },
+  detailDenyContext: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.textSecondary,
+    marginTop: 4,
+  },
+  detailWarning: {
+    marginTop: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    backgroundColor: 'rgba(255, 107, 107, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+  },
+  detailWarningText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.nodeApprovedHarm,
+  },
+  alertDetail: {
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
+  alertDetailLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    color: MapTheme.colors.textDim,
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  alertDetailValue: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: MapTheme.colors.textPrimary,
+    marginBottom: 2,
+  },
   // Legend
   legend: {
     flexDirection: 'row',
@@ -418,8 +863,289 @@ const styles = StyleSheet.create({
     color: MapTheme.colors.textSecondary,
     letterSpacing: 0.5,
   },
+  propagandaPanel: {
+    marginTop: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: MapTheme.colors.panel,
+  },
+  propagandaLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.textDim,
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  propagandaHeadline: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    color: MapTheme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  propagandaBody: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: MapTheme.colors.textSecondary,
+    lineHeight: 14,
+  },
   // Footer
   footer: {
     marginTop: 16, // Increase space between legend and button
+  },
+  alertOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  alertPanel: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: MapTheme.colors.panel,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    padding: 16,
+  },
+  alertTitle: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 14,
+    color: MapTheme.colors.nodeApprovedHarm,
+    letterSpacing: 2,
+    marginBottom: 6,
+  },
+  alertSubtitle: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    color: MapTheme.colors.textPrimary,
+    marginBottom: 4,
+  },
+  alertLocation: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: MapTheme.colors.textSecondary,
+    marginBottom: 8,
+  },
+  alertSummary: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: MapTheme.colors.textSecondary,
+    marginBottom: 10,
+    lineHeight: 14,
+  },
+  alertCollateral: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.nodeDeniedHarm,
+    marginBottom: 10,
+  },
+  alertActions: {
+    gap: 8,
+  },
+  alertButton: {
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(20,20,28,0.8)',
+    alignItems: 'center',
+  },
+  alertButtonDanger: {
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: MapTheme.colors.halRed,
+    backgroundColor: MapTheme.colors.halRedDim,
+    alignItems: 'center',
+  },
+  alertButtonMuted: {
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(10,10,14,0.6)',
+    alignItems: 'center',
+  },
+  alertButtonText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: MapTheme.colors.textPrimary,
+    letterSpacing: 1,
+  },
+  alertButtonTextMuted: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: MapTheme.colors.textDim,
+    letterSpacing: 1,
+  },
+  alertToggle: {
+    marginVertical: 8,
+  },
+  alertToggleText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: MapTheme.colors.textPrimary,
+    letterSpacing: 1,
+  },
+  // AMBER Alerts Panel
+  alertsPanel: {
+    backgroundColor: MapTheme.colors.panel,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.3)',
+    marginBottom: 10,
+    padding: 10,
+  },
+  alertsPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 107, 107, 0.15)',
+  },
+  alertsPanelTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  alertsPanelIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(100, 100, 100, 0.5)',
+  },
+  alertsPanelIndicatorActive: {
+    backgroundColor: MapTheme.colors.nodeApprovedHarm,
+  },
+  alertsPanelTitle: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: MapTheme.colors.nodeApprovedHarm,
+    letterSpacing: 1.5,
+  },
+  alertsPanelMeta: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    color: MapTheme.colors.textDim,
+    letterSpacing: 0.5,
+  },
+  alertsPanelActive: {
+    backgroundColor: 'rgba(255, 107, 107, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.25)',
+    padding: 8,
+  },
+  alertActiveHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  alertActiveLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.nodeApprovedHarm,
+    letterSpacing: 1,
+  },
+  alertActiveId: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.textDim,
+  },
+  alertActiveTitle: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    color: MapTheme.colors.textPrimary,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  alertActiveLocation: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.textSecondary,
+    marginBottom: 4,
+  },
+  alertActiveSummary: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.textDim,
+    lineHeight: 12,
+    marginBottom: 8,
+  },
+  alertActiveActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  alertActiveButton: {
+    flex: 1,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 107, 107, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 107, 0.5)',
+    alignItems: 'center',
+  },
+  alertActiveButtonText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.textPrimary,
+    letterSpacing: 1,
+  },
+  alertActiveButtonMuted: {
+    flex: 1,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(50, 50, 60, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(100, 100, 110, 0.3)',
+    alignItems: 'center',
+  },
+  alertActiveButtonTextMuted: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.textDim,
+    letterSpacing: 1,
+  },
+  alertsPanelEmpty: {
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  alertsPanelEmptyText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.textDim,
+    letterSpacing: 1,
+  },
+  alertsHistory: {
+    marginTop: 8,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  alertsHistoryLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    color: MapTheme.colors.textDim,
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  alertsHistoryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  alertsHistoryId: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: MapTheme.colors.textSecondary,
+  },
+  alertsHistoryOutcome: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    letterSpacing: 0.5,
+  },
+  alertsHistoryOutcomeRed: {
+    color: MapTheme.colors.nodeApprovedHarm,
+  },
+  alertsHistoryOutcomeGreen: {
+    color: MapTheme.colors.nodeApprovedClean,
   },
 });

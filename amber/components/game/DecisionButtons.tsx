@@ -4,7 +4,6 @@ import { Image } from 'expo-image';
 import { styles } from '../../styles/game/DecisionButtons.styles';
 import { HUDBox } from '../ui/HUDBox';
 import { MechanicalButton } from '../ui/MechanicalUI';
-import { useGameAudioContext } from '../../contexts/AudioContext';
 import { Theme } from '../../constants/theme';
 import { LabelTape } from '../ui/LabelTape';
 
@@ -40,12 +39,9 @@ export const DecisionButtons = ({
   protocolStatus?: ProtocolStatus,
   isNewGame?: boolean, // Only animate on first game start
 }) => {
-  const { playDecisionSound } = useGameAudioContext();
-
   const handleDecision = (type: 'APPROVE' | 'DENY') => {
     // Buttons are non-functional until game mechanics are added
     if (disabled) return;
-    playDecisionSound();
     onDecision(type);
   };
 

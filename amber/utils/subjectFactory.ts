@@ -345,7 +345,8 @@ function generateCredentialDetails(
   traits: SubjectTraits,
   name: string,
   idCode: string,
-  credentialType: CredentialType
+  credentialType: CredentialType,
+  destinationPlanet: string
 ): CredentialDetails {
   const currentYear = 3184;
   const issuedYear = currentYear - Math.floor(Math.random() * 2);
@@ -357,11 +358,11 @@ function generateCredentialDetails(
   const expirationDay = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0');
   
   const planetCodes: Record<OriginPlanet, string> = {
-    MARS: 'MA',
-    EUROPA: 'EU',
-    TITAN: 'TP',
-    GANYMEDE: 'GA',
-    CALLISTO: 'CA',
+    'DISTRICT 1': 'D1',
+    'DISTRICT 2': 'D2',
+    'DISTRICT 3': 'D3',
+    'DISTRICT 4': 'D4',
+    'DISTRICT 5': 'D5',
   };
   
   const credentialNumbers: Record<CredentialType, string> = {
@@ -374,11 +375,11 @@ function generateCredentialDetails(
   };
   
   const issuingAuthorities: Record<OriginPlanet, string> = {
-    MARS: 'MARS COLONIAL AUTHORITY',
-    EUROPA: 'EUROPA IMMIGRATION OFFICE',
-    TITAN: 'TITAN COLONIAL AUTHORITY',
-    GANYMEDE: 'GANYMEDE OUTPOST ADMINISTRATION',
-    CALLISTO: 'CALLISTO DEEP STATION AUTHORITY',
+    'DISTRICT 1': 'DISTRICT 1 CIVIL REGISTRY',
+    'DISTRICT 2': 'DISTRICT 2 PUBLIC SERVICES',
+    'DISTRICT 3': 'DISTRICT 3 ADMIN OFFICE',
+    'DISTRICT 4': 'DISTRICT 4 MUNICIPAL OFFICE',
+    'DISTRICT 5': 'DISTRICT 5 RESIDENT SERVICES',
   };
   
   const anomalies: string[] = [];
@@ -397,7 +398,7 @@ function generateCredentialDetails(
     expirationDate: `${Math.floor(expirationYear)}-${expirationMonth}-${expirationDay}`,
     holderName: name,
     originPlanet: traits.originPlanet,
-    destinationPlanet: 'EARTH',
+    destinationPlanet,
     purpose: generateReasonForVisit(traits),
     valid: anomalies.length === 0,
     anomalies,
@@ -480,11 +481,11 @@ function generateDossierData(traits: SubjectTraits, name: string, sex: 'M' | 'F'
   };
 
   const addresses: Record<OriginPlanet, string[]> = {
-    MARS: ['Mars Colony Sector 7', 'Red Station Block 3', 'Mars Outpost Alpha'],
-    EUROPA: ['Europa Station Residential', 'Ice Block 9', 'Europa Outpost'],
-    TITAN: ['Titan Corporate District', 'Titan Station Block 5', 'Titan Outpost'],
-    GANYMEDE: ['Ganymede Outpost', 'Jove Station', 'Outer Rim Settlement'],
-    CALLISTO: ['Callisto Deep Station', 'Edge Settlement', 'Far Outpost'],
+    'DISTRICT 1': ['District 1, Sector 7', 'District 1, Block 3', 'District 1, Yard 12'],
+    'DISTRICT 2': ['District 2, North Row', 'District 2, Block 9', 'District 2, Court 4'],
+    'DISTRICT 3': ['District 3, Central Row', 'District 3, Block 5', 'District 3, Lane 8'],
+    'DISTRICT 4': ['District 4, West Works', 'District 4, Block 2', 'District 4, Yard 6'],
+    'DISTRICT 5': ['District 5, Outer Ring', 'District 5, Block 11', 'District 5, Yard 3'],
   };
 
   const occupation = occupations[traits.hierarchyTier][
@@ -556,12 +557,35 @@ export function createSubjectFromTraits(
   
   // Generate credential details
   const credentialType = generateCredentialType(traits);
-  const credentialDetails = generateCredentialDetails(traits, name, idCode, credentialType);
+  const destinationPlanet = config.manualOverrides?.destinationPlanet || 'CENTRAL HUB';
+  const credentialDetails = generateCredentialDetails(traits, name, idCode, credentialType, destinationPlanet);
+
+  // Apply credential behavior flags to credential validity/anomalies
+  if (credentialBehavior === 'FORGED') {
+    credentialDetails.valid = false;
+    credentialDetails.anomalies = [...credentialDetails.anomalies, 'Document forgery suspected'];
+  } else if (credentialBehavior === 'MISSING') {
+    credentialDetails.valid = false;
+    credentialDetails.anomalies = [...credentialDetails.anomalies, 'Credential missing or expired'];
+  } else if (credentialBehavior === 'MULTIPLE') {
+    credentialDetails.anomalies = [...credentialDetails.anomalies, 'Conflicting credentials presented'];
+  } else if (credentialBehavior === 'NONE') {
+    credentialDetails.valid = false;
+    credentialDetails.anomalies = [...credentialDetails.anomalies, 'No credentials provided'];
+  } else if (credentialBehavior === 'RELUCTANT') {
+    credentialDetails.anomalies = [...credentialDetails.anomalies, 'Delayed presentation'];
+  }
   
   // Generate BPM baseline modifier
   const bpmModifier = generateBPMModifier(communicationStyle, credentialBehavior, personality);
   const baseBPM = 72 + Math.floor(Math.random() * 10);
   const initialBPM = baseBPM + bpmModifier;
+
+  // Dossier (allow partial override)
+  const generatedDossier = generateDossierData(traits, name, sex);
+  const dossier = config.manualOverrides?.dossier
+    ? { ...generatedDossier, ...config.manualOverrides.dossier }
+    : generatedDossier;
 
   // Generate subject data
   const subject: SubjectData = {
@@ -585,7 +609,7 @@ export function createSubjectFromTraits(
     
     // Request
     reasonForVisit,
-    destinationPlanet: 'EARTH',
+    destinationPlanet,
     
     // Assets
     videoSource: assets.videoSource,
@@ -634,7 +658,7 @@ export function createSubjectFromTraits(
     },
     
     // Dossier
-    dossier: generateDossierData(traits, name, sex),
+    dossier,
   };
 
   // Apply manual overrides

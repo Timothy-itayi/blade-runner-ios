@@ -19,10 +19,10 @@ const matchesCondition = (seed: SubjectSeed, condition: DirectiveConditionType):
       return seed.subjectType === 'REPLICANT' || seed.subjectType === 'ROBOT_CYBORG';
     case 'ENGINEERS':
       return seed.role === 'ENGINEER';
-    case 'TITAN_ORIGIN':
-      return seed.originPlanet === 'TITAN';
-    case 'IO_ORIGIN':
-      return (seed.originPlanet as string) === 'IO';
+    case 'DISTRICT_3_ORIGIN':
+      return seed.originPlanet === 'DISTRICT 3';
+    case 'DISTRICT_4_ORIGIN':
+      return (seed.originPlanet as string) === 'DISTRICT 4';
     case 'NON_HUMANS':
       return !isHuman(seed.subjectType);
     case 'ALL':
@@ -40,8 +40,8 @@ const matchesException = (seed: SubjectSeed, exception: ExceptionType): boolean 
       return seed.hierarchyTier === 'VIP' || seed.exceptionTags?.includes('VIP_OVERRIDE') === true;
     case 'MEDICAL':
       return seed.role === 'MEDICAL' || seed.truthFlags.hasMedicalEmergency === true;
-    case 'EARTH_ORIGIN':
-      return (seed.originPlanet as string) === 'EARTH';
+    case 'DISTRICT_1_ORIGIN':
+      return (seed.originPlanet as string) === 'DISTRICT 1';
     case 'CYBORG':
       return isCyborg(seed.subjectType) || seed.exceptionTags?.includes('CYBORG_OVERRIDE') === true;
     case 'DIPLOMAT':
@@ -88,6 +88,11 @@ export const buildSubjectFromSeed = (
       id: seed.id,
       originPlanet: seed.originPlanet,
       reasonForVisit: seed.reasonForVisit,
+      destinationPlanet: seed.destinationPlanet,
+      greetingText: seed.greetingText,
+      communicationStyle: seed.communicationStyle,
+      credentialBehavior: seed.credentialBehavior,
+      dossier: seed.dossier,
     },
     useProceduralPortrait: true,
     seed: seed.seed,
@@ -107,6 +112,7 @@ export const buildSubjectFromSeed = (
   subject.truthFlags = seed.truthFlags;
   subject.exceptionTags = seed.exceptionTags || [];
   subject.seed = seed.seed;
+  subject.alertScenario = seed.alertScenario;
 
   return subject;
 };

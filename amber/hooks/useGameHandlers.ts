@@ -1,5 +1,5 @@
 import { SubjectData } from '../data/subjects';
-import { ShiftData } from '../constants/shifts';
+import { ShiftData, DEMO_FINAL_SHIFT } from '../constants/shifts';
 import { Outcome } from '../data/subjects';
 import { ShiftDecision } from '../components/game/ShiftTransition';
 import { getNarrativeMessage, getSubjectData } from '../utils/gameHelpers';
@@ -26,6 +26,7 @@ interface GameHandlersProps {
   setCurrentSubjectIndex: (value: number | ((prev: number) => number)) => void;
   setBiometricsRevealed: (value: boolean) => void;
   setSubjectsProcessed: (value: number | ((prev: number) => number)) => void;
+  onShiftAdvance?: () => void;
   
   // State values
   currentSubjectIndex: number;
@@ -66,6 +67,7 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     setCurrentSubjectIndex,
     setBiometricsRevealed,
     setSubjectsProcessed,
+  onShiftAdvance,
     currentSubjectIndex,
     currentSubject,
     currentShift,
@@ -127,21 +129,49 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     // Determine if decision was "correct" based on consequence severity
     const correct = consequence.type === 'NONE' || consequence.type === 'WARNING';
 
-    // Lives system: wrong decisions cost 1 life
     const store = useGameStore.getState();
+    
+    // Determine deny reason for display
+    let denyReason: string | undefined;
+    if (type === 'DENY') {
+      if (currentSubject.warrants && currentSubject.warrants !== 'NONE') {
+        denyReason = `WARRANT: ${currentSubject.warrants}`;
+      } else if (currentSubject.intendedOutcome === 'DENY') {
+        denyReason = 'DIRECTIVE VIOLATION';
+      } else {
+        denyReason = 'OPERATOR DISCRETION';
+      }
+    }
+    
     store.addDecisionLog({
       subjectId: currentSubject.id,
       subjectName: currentSubject.name,
       decision: type,
       correct,
+      subjectType: currentSubject.subjectType,
+      originPlanet: currentSubject.originPlanet,
+      destinationPlanet: currentSubject.destinationPlanet,
+      permitType: currentSubject.dossier?.occupation,
+      warrants: currentSubject.warrants,
+      denyReason,
     });
+    if (currentShift.id > 1 && currentSubject.alertScenario) {
+      const existingAlert = store.alertLog.find(entry => entry.subjectId === currentSubject.id);
+      if (!existingAlert) {
+        store.addAlert({
+          subjectId: currentSubject.id,
+          subjectName: currentSubject.name,
+          scenario: currentSubject.alertScenario,
+          outcome: 'PENDING',
+        });
+      }
+    }
     if (consequence.type === 'NONE') {
       // Clean decision: no life loss
     } else if (consequence.type === 'WARNING') {
       setInfractions(prev => prev + consequence.infractionCount);
       setTriggerConsequence(true);
     } else {
-      store.loseLife(1);
       setInfractions(prev => prev + consequence.infractionCount);
       setTriggerConsequence(true);
     }
@@ -191,6 +221,8 @@ export const useGameHandlers = (props: GameHandlersProps) => {
   };
 
   const nextSubject = () => {
+    const store = useGameStore.getState();
+
     // Reset biometrics revelation and dossier for next subject
     setBiometricsRevealed(false);
     // Note: dossierRevealed should be reset here but we need to pass setDossierRevealed
@@ -208,8 +240,11 @@ export const useGameHandlers = (props: GameHandlersProps) => {
       ? getNextSubjectIndex(currentSubjectIndex, poolSize)
       : (currentSubjectIndex + 1) % poolSize;
 
+    const endOfShift = isEndOfShift(currentSubjectIndex);
+    const isEndOfDemo = endOfShift && currentShift.id === DEMO_FINAL_SHIFT;
+
     // Queue narrative messages silently
-    if (triggerConsequence || isEndOfShift(currentSubjectIndex)) {
+    if (triggerConsequence || endOfShift) {
       const msg = getNarrativeMessage(
         triggerConsequence,
         infractions,
@@ -223,12 +258,18 @@ export const useGameHandlers = (props: GameHandlersProps) => {
     setTriggerConsequence(false);
 
     // Check if we're at end of shift
-    if (isEndOfShift(currentSubjectIndex) && nextIndex !== 0) {
+    if (isEndOfDemo) {
       setShowShiftTransition(true);
-    } else {
-      setCurrentSubjectIndex(nextIndex);
-      setTimeout(triggerScan, 1200);
+      return;
     }
+
+    if (endOfShift) {
+      onShiftAdvance?.();
+      return;
+    }
+
+    setCurrentSubjectIndex(nextIndex);
+    setTimeout(triggerScan, 1200);
   };
 
   return {

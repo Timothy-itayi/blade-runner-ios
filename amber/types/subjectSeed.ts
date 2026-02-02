@@ -1,5 +1,7 @@
 import type { SubjectType, HierarchyTier } from '../data/subjects';
 import type { OriginPlanet } from '../data/subjectTraits';
+import type { CommunicationStyle, CredentialBehavior } from '../data/subjectGreetings';
+import type { AlertScenario } from './alertScenario';
 
 export type SubjectRole =
   | 'ENGINEER'
@@ -32,6 +34,15 @@ export interface SubjectSeed {
   originPlanet: OriginPlanet;
   role?: SubjectRole;
   reasonForVisit?: string;
+  destinationPlanet?: string;
+  greetingText?: string;
+  communicationStyle?: CommunicationStyle;
+  credentialBehavior?: CredentialBehavior;
+  dossier?: {
+    occupation?: string;
+    address?: string;
+  };
+  alertScenario?: AlertScenario;
   truthFlags: SubjectTruthFlags;
   exceptionTags?: ExceptionTag[];
 }

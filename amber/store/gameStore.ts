@@ -23,15 +23,46 @@ export interface DecisionLogEntry {
   subjectName: string;
   decision: 'APPROVE' | 'DENY';
   correct: boolean;
+  // Additional context for map display
+  subjectType?: string;
+  originPlanet?: string;
+  destinationPlanet?: string;
+  permitType?: string;
+  permitStatus?: string;
+  denyReason?: string; // Why they were denied (directive violation, warrant, etc.)
+  warrants?: string;
+}
+
+export type AlertOutcome =
+  | 'PENDING'
+  | 'IGNORED'
+  | 'DETONATED'
+  | 'INTERCEPTED'
+  | 'NEGOTIATED_SUCCESS'
+  | 'NEGOTIATED_FAIL';
+
+export interface AlertLogEntry {
+  subjectId: string;
+  subjectName: string;
+  scenario: import('../types/alertScenario').AlertScenario;
+  outcome: AlertOutcome;
+  resolvedAt?: number;
+  collateralCount?: number;
+  negotiationMethod?: 'INTIMIDATE' | 'PERSUADE' | 'REASON';
+  interceptUsed?: boolean;
+  detonateUsed?: boolean;
+}
+
+export interface PropagandaEntry {
+  id: string;
+  subjectId: string;
+  headline: string;
+  body: string;
+  timestamp: number;
+  outcome: AlertOutcome;
 }
 
 interface GameStore {
-  // Lives system
-  lives: number;
-  setLives: (count: number) => void;
-  loseLife: (amount?: number) => void;
-  resetLives: () => void;
-  
   // Equipment system
   equipment: Record<EquipmentType, Equipment>;
   glitchEquipment: (type: EquipmentType) => void;
@@ -51,7 +82,17 @@ interface GameStore {
   addDecisionLog: (entry: DecisionLogEntry) => void;
   clearDecisionLog: () => void;
   setDecisionLog: (entries: DecisionLogEntry[]) => void;
-  
+
+  // Amber alerts and propaganda
+  alertLog: AlertLogEntry[];
+  addAlert: (entry: AlertLogEntry) => void;
+  resolveAlert: (subjectId: string, update: Partial<AlertLogEntry>) => void;
+  clearAlertLog: () => void;
+  setAlertLog: (entries: AlertLogEntry[]) => void;
+  propagandaFeed: PropagandaEntry[];
+  addPropaganda: (entry: PropagandaEntry) => void;
+  clearPropaganda: () => void;
+  setPropagandaFeed: (entries: PropagandaEntry[]) => void;
 }
 
 const INITIAL_EQUIPMENT: Record<EquipmentType, Equipment> = {
@@ -63,12 +104,6 @@ const INITIAL_EQUIPMENT: Record<EquipmentType, Equipment> = {
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
-  // Lives
-  lives: 3, // Start with 3 lives
-  setLives: (count) => set({ lives: Math.max(0, count) }),
-  loseLife: (amount = 1) => set((state) => ({ lives: Math.max(0, state.lives - amount) })),
-  resetLives: () => set({ lives: 3 }),
-  
   // Equipment
   equipment: INITIAL_EQUIPMENT,
   glitchEquipment: (type) => set((state) => ({
@@ -122,4 +157,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
   })),
   clearDecisionLog: () => set({ decisionLog: [] }),
   setDecisionLog: (entries) => set({ decisionLog: entries }),
+
+  // Amber alerts and propaganda
+  alertLog: [],
+  addAlert: (entry) => set((state) => ({
+    alertLog: [...state.alertLog, entry],
+  })),
+  resolveAlert: (subjectId, update) => set((state) => ({
+    alertLog: state.alertLog.map((entry) =>
+      entry.subjectId === subjectId ? { ...entry, ...update } : entry
+    ),
+  })),
+  clearAlertLog: () => set({ alertLog: [] }),
+  setAlertLog: (entries) => set({ alertLog: entries }),
+  propagandaFeed: [],
+  addPropaganda: (entry) => set((state) => ({
+    propagandaFeed: [entry, ...state.propagandaFeed].slice(0, 20),
+  })),
+  clearPropaganda: () => set({ propagandaFeed: [] }),
+  setPropagandaFeed: (entries) => set({ propagandaFeed: entries }),
 }));

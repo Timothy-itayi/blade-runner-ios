@@ -15,13 +15,13 @@ export const INCIDENT_DISCREPANCIES = [
 ];
 
 export const TRANSIT_ROUTES = [
-  { from: 'MARS', to: 'EARTH' },
-  { from: 'EUROPA', to: 'EARTH' },
-  { from: 'TITAN', to: 'EARTH' },
-  { from: 'GANYMEDE', to: 'EARTH' },
-  { from: 'CALLISTO', to: 'EARTH' },
-  { from: 'MARS', to: 'EUROPA' },
-  { from: 'TITAN', to: 'EUROPA' },
+  { from: 'DISTRICT 1', to: 'CENTRAL HUB' },
+  { from: 'DISTRICT 2', to: 'CENTRAL HUB' },
+  { from: 'DISTRICT 3', to: 'CENTRAL HUB' },
+  { from: 'DISTRICT 4', to: 'CENTRAL HUB' },
+  { from: 'DISTRICT 5', to: 'CENTRAL HUB' },
+  { from: 'DISTRICT 1', to: 'DISTRICT 2' },
+  { from: 'DISTRICT 3', to: 'DISTRICT 2' },
 ];
 
 export const VERIFICATION_SOURCES = [

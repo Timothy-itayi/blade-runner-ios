@@ -29,11 +29,11 @@ export interface SubjectManagerConfig {
 
 const ROLE_POOL: SubjectRole[] = ['ENGINEER', 'MEDICAL', 'SECURITY', 'DIPLOMAT', 'CIVILIAN'];
 const NAME_POOL = {
-  M: ['EVA', 'REX', 'ORIN', 'JACE', 'DION', 'HUGO', 'COLE', 'REED'],
-  F: ['NOVA', 'CASS', 'KIRA', 'ZARA', 'LYRA', 'IRIS', 'WREN', 'ZOYA'],
-  X: ['SAGE', 'MIRA', 'FINN', 'REMY', 'TOVA', 'ASH', 'NYLA', 'NICO'],
+  M: ['James', 'Daniel', 'Marcus', 'Ethan', 'Noah', 'Luis', 'Omar', 'Caleb'],
+  F: ['Sarah', 'Emily', 'Maya', 'Priya', 'Hannah', 'Jasmine', 'Nina', 'Olivia'],
+  X: ['Alex', 'Jordan', 'Casey', 'Riley', 'Taylor', 'Morgan', 'Avery', 'Quinn'],
 };
-const SURNAME_POOL = ['KANE', 'VOSS', 'RYDER', 'NOX', 'VALE', 'KELL', 'SOL', 'DANE'];
+const SURNAME_POOL = ['Miller', 'Lopez', 'Nguyen', 'Patel', 'Reed', 'Cole', 'Brooks', 'Carter'];
 
 const createGeneratedSeed = (seedValue: number, index: number): SubjectSeed => {
   const rng = new SeededRandom(seedValue);

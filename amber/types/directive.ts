@@ -5,8 +5,8 @@ export type DirectiveConditionType =
   | 'REPLICANTS'
   | 'SYNTHETICS'
   | 'ENGINEERS'
-  | 'TITAN_ORIGIN'
-  | 'IO_ORIGIN'
+  | 'DISTRICT_3_ORIGIN'
+  | 'DISTRICT_4_ORIGIN'
   | 'NON_HUMANS'
   | 'ALL';
 
@@ -14,7 +14,7 @@ export type ExceptionType =
   | 'HUMANS'
   | 'VIP'
   | 'MEDICAL'
-  | 'EARTH_ORIGIN'
+  | 'DISTRICT_1_ORIGIN'
   | 'CYBORG'
   | 'DIPLOMAT'
   | 'EMERGENCY';

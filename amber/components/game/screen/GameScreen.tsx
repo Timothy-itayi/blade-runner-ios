@@ -8,6 +8,8 @@ import { SubjectData } from '../../../data/subjects';
 import { ShiftData } from '../../../constants/shifts';
 import { Theme } from '../../../constants/theme';
 import { getSubjectGreeting } from '../../../data/subjectGreetings';
+import { getCredentialTypeName, getExpirationStatus, getSubjectCredentials } from '../../../data/credentialTypes';
+import { useGameStore } from '../../../store/gameStore';
 import { MechanicalButton } from '../../ui/MechanicalUI';
 import { LabelTape, LEDIndicator } from '../../ui/LabelTape';
 import { Screw, NoiseOverlay } from '../../ui/ChassisFrame';
@@ -111,10 +113,12 @@ export const GameScreen = ({
   const forceProceduralPortrait = true;
   const [dbOutput, setDbOutput] = useState<string[]>([]);
   const [lastQuery, setLastQuery] = useState<string>('NONE');
+  const [activePanel, setActivePanel] = useState<'WARRANTS' | 'DOCUMENTATION' | 'TRANSIT'>('WARRANTS');
   const [pendingDecision, setPendingDecision] = useState<{
     type: 'APPROVE' | 'DENY';
     missing: RequiredCheck[];
   } | null>(null);
+  const hasPendingAlert = useGameStore((state) => state.alertLog.some((alert) => alert.outcome === 'PENDING'));
 
   const info = gatheredInformation || createEmptyInformation();
   const requiredChecks = useMemo(() => {
@@ -184,16 +188,18 @@ export const GameScreen = ({
     setDbOutput([]);
     setLastQuery('NONE');
     setPendingDecision(null);
+    setActivePanel('WARRANTS');
   }, [currentSubject.id]);
 
   // Auto-advance after decision
   useEffect(() => {
     if (!hasDecision) return;
+    if (hasPendingAlert) return;
     const timer = setTimeout(() => {
       onNext();
     }, 1200);
     return () => clearTimeout(timer);
-  }, [hasDecision, onNext]);
+  }, [hasDecision, hasPendingAlert, onNext]);
 
   const handleDecision = (type: 'APPROVE' | 'DENY') => {
     if (hasDecision) return;
@@ -203,6 +209,14 @@ export const GameScreen = ({
       return;
     }
     onDecision(type);
+  };
+
+  const formatLogDate = (value: string): string => {
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (match) {
+      return `${match[3]}/${match[2]}/${match[1]}`;
+    }
+    return value;
   };
 
   const buildDbOutput = (query: DbQueryType): string[] => {
@@ -246,7 +260,7 @@ export const GameScreen = ({
       travel.slice(0, 3).forEach((entry) => {
         const fromPlanet = entry.from || (entry as any).fromPlanet || 'UNK';
         const toPlanet = entry.to || (entry as any).toPlanet || 'UNK';
-        const date = entry.date || 'UNK';
+        const date = entry.date ? formatLogDate(entry.date) : 'UNK';
         const flagMarker = entry.flagged ? ' ⚠' : '';
         lines.push(`${date}`);
         lines.push(`  ${fromPlanet} → ${toPlanet}${flagMarker}`);
@@ -346,6 +360,14 @@ export const GameScreen = ({
 
   if (hudStage === 'none') return null;
 
+  const credentialData = getSubjectCredentials(currentSubject.id, currentSubject);
+  const primaryCredential = credentialData?.credentials?.[0];
+  const ticketDestination = primaryCredential?.destinationPlanet || currentSubject.destinationPlanet || '—';
+  const ticketPermit = primaryCredential ? getCredentialTypeName(primaryCredential.type) : '—';
+  const ticketStatus = primaryCredential
+    ? (primaryCredential.valid ? getExpirationStatus(primaryCredential.expirationDate) : 'INVALID')
+    : '—';
+
   return (
     <View style={styles.container}>
       {/* Metal chassis background */}
@@ -408,6 +430,9 @@ export const GameScreen = ({
                 </View>
                 <View style={styles.directiveStripMeta}>
                   <Text style={styles.directiveStripMetaText}>
+                    SHIFT: {currentShift.id}
+                  </Text>
+                  <Text style={styles.directiveStripMetaText}>
                     REQ CHECKS: {completedCount}/{requiredCount || 0}
                   </Text>
                   <Text style={styles.directiveStripMetaText}>
@@ -416,155 +441,296 @@ export const GameScreen = ({
                 </View>
               </View>
 
-              <View style={styles.workSurface}>
-                <View style={[styles.outputColumn, pendingDecision && styles.outputColumnWarning]}>
-                  <View style={styles.outputHeader}>
-                    <Text style={styles.outputLabel}>CHECKS</Text>
-                    <Text style={styles.outputMeta}>
-                      {requiredCount > 0 
-                        ? `${completedCount}/${requiredCount} REQUIRED` 
-                        : 'NO CHECKS REQUIRED'}
+              <View style={styles.panelTabs}>
+                {(['WARRANTS', 'DOCUMENTATION', 'TRANSIT'] as const).map((tab) => (
+                  <TouchableOpacity
+                    key={tab}
+                    onPress={() => setActivePanel(tab)}
+                    style={[styles.panelTab, activePanel === tab && styles.panelTabActive]}
+                  >
+                    <Text style={[styles.panelTabText, activePanel === tab && styles.panelTabTextActive]}>
+                      {tab === 'WARRANTS' ? 'WARRANT CHECK' : tab}
                     </Text>
-                  </View>
-                  <View style={styles.outputControls}>
-                    {(['WARRANT', 'TRANSIT', 'INCIDENT'] as DbQueryType[]).map((queryType) => {
-                      const required = isCheckRequired(queryType);
-                      const completed = (queryType === 'WARRANT' && info.warrantCheck) ||
-                                        (queryType === 'TRANSIT' && info.transitLog) ||
-                                        (queryType === 'INCIDENT' && info.incidentHistory);
-                      return (
-                        <TouchableOpacity
-                          key={queryType}
-                          onPress={() => handleDbQuery(queryType)}
-                          style={[
-                            styles.outputButton,
-                            required && styles.outputButtonRequired,
-                            !required && styles.outputButtonOptional,
-                            completed && styles.outputButtonCompleted,
-                          ]}
-                          activeOpacity={0.7}
-                        >
-                          <View style={styles.outputButtonContent}>
-                            <Text style={[
-                              styles.outputButtonText,
-                              required && styles.outputButtonTextRequired,
-                            ]}>
-                              {queryType}
-                            </Text>
-                            <Text style={[
-                              styles.outputButtonTag,
-                              required ? styles.outputButtonTagRequired : styles.outputButtonTagOptional,
-                            ]}>
-                              {required ? 'REQ' : 'OPT'}
-                            </Text>
-                          </View>
-                          {completed && (
-                            <Text style={styles.outputButtonDone}>✓</Text>
-                          )}
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                  {pendingDecision && (
-                    <View style={styles.outputMissing}>
-                      <Text style={styles.outputMissingText}>
-                        MISSING CHECKS: {pendingDecision.missing.join(', ')}
-                      </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {activePanel === 'WARRANTS' && (
+                <View style={styles.workSurfaceSingle}>
+                  <View style={[styles.outputColumn, pendingDecision && styles.outputColumnWarning]}>
+                    <View style={styles.outputHeader}>
+                      <Text style={styles.outputLabel}>WARRANT & INCIDENT SCAN</Text>
+                      <Text style={styles.outputMeta}>CRIMINAL DATABASE ACCESS</Text>
                     </View>
-                  )}
-                  <View style={styles.outputLog}>
-                    <ScrollView
-                      style={styles.outputLogScroll}
-                      contentContainerStyle={styles.outputLogContent}
+                    
+                    {/* Subject Header for Warrants */}
+                    <View style={styles.warrantSubjectHeader}>
+                      <View>
+                        <Text style={styles.warrantSubjectLabel}>SUBJECT</Text>
+                        <Text style={styles.warrantSubjectName}>{currentSubject.dossier?.name || currentSubject.name || 'UNKNOWN'}</Text>
+                        <Text style={styles.warrantSubjectId}>{currentSubject.id}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={styles.warrantSubjectLabel}>RESULT</Text>
+                        <Text style={[
+                          styles.warrantResultValue, 
+                          info.warrantCheck && currentSubject.warrants && currentSubject.warrants !== 'NONE' ? styles.statusDisplayRejected : styles.statusDisplayCleared
+                        ]}>
+                          {!info.warrantCheck ? 'PENDING SCAN' : (currentSubject.warrants && currentSubject.warrants !== 'NONE' ? 'WARRANT FOUND' : 'CLEAR')}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Stats Row */}
+                    <View style={styles.warrantStatsRow}>
+                      <View style={styles.warrantStatItem}>
+                        <Text style={styles.warrantStatLabel}>INCIDENTS</Text>
+                        <Text style={styles.warrantStatValue}>{info.incidentHistory ? currentSubject.incidents : '-'}</Text>
+                      </View>
+                      <View style={styles.warrantStatItem}>
+                        <Text style={styles.warrantStatLabel}>FLAGS</Text>
+                        <Text style={styles.warrantStatValue}>{flags.length}</Text>
+                      </View>
+                      <View style={styles.warrantStatItem}>
+                         <Text style={styles.warrantStatLabel}>PRIORITY</Text>
+                         <Text style={styles.warrantStatValue}>{currentSubject.subjectType === 'REPLICANT' ? 'HIGH' : 'STD'}</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.outputControls}>
+                      {/* Only showing Warrant button as requested */}
+                      {['WARRANT'].map((queryType) => {
+                        const qType = queryType as DbQueryType;
+                        const required = isCheckRequired(qType);
+                        const completed = info.warrantCheck;
+                        return (
+                          <TouchableOpacity
+                            key={qType}
+                            onPress={() => handleDbQuery(qType)}
+                            style={[
+                              styles.outputButton,
+                              required && styles.outputButtonRequired,
+                              !required && styles.outputButtonOptional,
+                              completed && styles.outputButtonCompleted,
+                            ]}
+                            activeOpacity={0.7}
+                          >
+                            <View style={styles.outputButtonContent}>
+                              <Text style={[
+                                styles.outputButtonText,
+                                required && styles.outputButtonTextRequired,
+                              ]}>
+                                RUN {qType}
+                              </Text>
+                              <Text style={[
+                                styles.outputButtonTag,
+                                required ? styles.outputButtonTagRequired : styles.outputButtonTagOptional,
+                              ]}>
+                                {required ? 'REQ' : 'OPT'}
+                              </Text>
+                            </View>
+                            {completed && (
+                              <Text style={styles.outputButtonDone}>✓</Text>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    
+                    {pendingDecision && (
+                      <View style={styles.outputMissing}>
+                        <Text style={styles.outputMissingText}>
+                          MISSING CHECKS: {pendingDecision.missing.join(', ')}
+                        </Text>
+                      </View>
+                    )}
+
+                    {/* Details section removed as requested */}
+                  </View>
+                </View>
+              )}
+
+              {activePanel === 'DOCUMENTATION' && (
+                <View style={styles.workSurfaceColumn}>
+                  {/* Dossier Section */}
+                  <View style={styles.documentationSection}>
+                    <View style={styles.outputHeader}>
+                      <Text style={styles.outputLabel}>SUBJECT DOSSIER</Text>
+                      <Text style={styles.outputMeta}>IDENTITY RECORD</Text>
+                    </View>
+                    <View style={styles.dossierGrid}>
+                      <View style={styles.dossierGridItem}>
+                        <Text style={styles.dossierKey}>NAME</Text>
+                        <Text style={styles.dossierValueLarge}>{currentSubject.dossier?.name || currentSubject.name}</Text>
+                      </View>
+                      <View style={styles.dossierGridItem}>
+                         <Text style={styles.dossierKey}>ID CODE</Text>
+                         <Text style={styles.dossierValue}>{currentSubject.id}</Text>
+                      </View>
+                      <View style={styles.dossierGridItem}>
+                        <Text style={styles.dossierKey}>DOB</Text>
+                        <Text style={styles.dossierValue}>{currentSubject.dossier?.dateOfBirth || '—'}</Text>
+                      </View>
+                      <View style={styles.dossierGridItem}>
+                        <Text style={styles.dossierKey}>ORIGIN</Text>
+                        <Text style={styles.dossierValue}>{currentSubject.originPlanet || '—'}</Text>
+                      </View>
+                      <View style={styles.dossierGridItem}>
+                        <Text style={styles.dossierKey}>OCCUPATION</Text>
+                        <Text style={styles.dossierValue}>{currentSubject.dossier?.occupation || '—'}</Text>
+                      </View>
+                      <View style={styles.dossierGridItem}>
+                        <Text style={styles.dossierKey}>ADDRESS</Text>
+                        <Text style={styles.dossierValue} numberOfLines={1}>{currentSubject.dossier?.address || '—'}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Ticket/Ticker Section */}
+                  <View style={styles.documentationSection}>
+                     <View style={styles.outputHeader}>
+                      <Text style={styles.outputLabel}>TRANSIT CREDENTIALS</Text>
+                      <Text style={styles.outputMeta}>TICKET</Text>
+                    </View>
+                    <View style={styles.ticketGrid}>
+                      <View style={styles.ticketGridItem}>
+                        <Text style={styles.subjectKey}>DESTINATION</Text>
+                        <Text style={styles.subjectValue}>{ticketDestination}</Text>
+                      </View>
+                      <View style={styles.ticketGridItem}>
+                        <Text style={styles.subjectKey}>PERMIT TYPE</Text>
+                        <Text style={styles.subjectValue}>{ticketPermit}</Text>
+                      </View>
+                      <View style={styles.ticketGridItem}>
+                        <Text style={styles.subjectKey}>STATUS</Text>
+                         <Text style={[styles.subjectValue, ticketStatus === 'INVALID' ? styles.statusDisplayRejected : styles.statusDisplayCleared]}>
+                          {ticketStatus}
+                        </Text>
+                      </View>
+                      <View style={styles.ticketGridItem}>
+                        <Text style={styles.subjectKey}>ISSUER</Text>
+                        <Text style={styles.subjectValue}>{primaryCredential?.issuedBy || '—'}</Text>
+                      </View>
+                      <View style={styles.ticketGridItem}>
+                        <Text style={styles.subjectKey}>EXPIRATION</Text>
+                        <Text style={styles.subjectValue}>{primaryCredential?.expirationDate || '—'}</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {activePanel === 'TRANSIT' && (
+                <View style={styles.workSurfaceColumn}>
+                  {/* Transit Header Section */}
+                  <View style={styles.transitHeaderSection}>
+                    <View style={styles.transitHeaderRow}>
+                      <Text style={styles.transitHeaderLabel}>TRANSIT LOG</Text>
+                      <Text style={styles.transitHeaderMeta}>RECENT TRAVEL</Text>
+                    </View>
+                    
+                    {/* Summary Stats */}
+                    <View style={styles.transitSummary}>
+                      <View style={styles.transitStatItem}>
+                        <Text style={styles.transitStatLabel}>SUBJECT</Text>
+                        <Text style={styles.transitStatValue}>{currentSubject.id}</Text>
+                      </View>
+                      <View style={styles.transitStatItem}>
+                        <Text style={styles.transitStatLabel}>RECORDS</Text>
+                        <Text style={styles.transitStatValue}>
+                          {currentSubject.databaseQuery?.travelHistory?.length || 0}
+                        </Text>
+                      </View>
+                      <View style={styles.transitStatItem}>
+                        <Text style={styles.transitStatLabel}>ALERT</Text>
+                        <Text style={[
+                          styles.transitStatValue,
+                          currentSubject.databaseQuery?.travelHistory?.some(e => e.flagged) 
+                            ? styles.transitAlertFlagged 
+                            : styles.transitAlertClear
+                        ]}>
+                          {currentSubject.databaseQuery?.travelHistory?.some(e => e.flagged) ? 'FLAGGED' : 'CLEAR'}
+                        </Text>
+                      </View>
+                    </View>
+                    
+                    <TouchableOpacity 
+                      onPress={() => handleDbQuery('TRANSIT')} 
+                      style={[styles.transitScanButton, info.transitLog && styles.transitScanButtonCompleted]} 
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.transitScanButtonText}>RUN TRANSIT SCAN</Text>
+                      {info.transitLog && <Text style={styles.transitScanButtonDone}>✓</Text>}
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Transit Entries Section */}
+                  <View style={styles.transitEntriesSection}>
+                    <View style={styles.transitEntriesHeader}>
+                      <Text style={styles.transitEntriesTitle}>TRAVEL ENTRIES</Text>
+                    </View>
+                    <ScrollView 
+                      style={styles.transitEntriesScroll}
                       showsVerticalScrollIndicator={false}
                     >
-                      {dbOutput.length > 0 ? (
-                        dbOutput.map((line, index) => {
-                          // Determine line styling based on content
-                          const isHeader = line.startsWith('──');
-                          const isStatus = line.startsWith('STATUS:');
-                          const isWarning = line.includes('⚠');
-                          const isClear = line.includes('✓');
-                          const isReason = line.includes('REASON:');
-                          const isRiskBox = line.startsWith('│') || line.startsWith('┌') || line.startsWith('└');
-                          const isEmpty = line === '';
-
-                          if (isEmpty) {
-                            return <View key={`spacer-${index}`} style={styles.outputLogSpacer} />;
-                          }
-
+                      {info.transitLog && currentSubject.databaseQuery?.travelHistory?.length ? (
+                        currentSubject.databaseQuery.travelHistory.map((entry, index) => {
+                          const fromPlanet = entry.from || (entry as any).fromPlanet || 'UNK';
+                          const toPlanet = entry.to || (entry as any).toPlanet || 'UNK';
+                          const date = entry.date ? formatLogDate(entry.date) : 'UNK';
+                          const isFlagged = entry.flagged;
+                          
                           return (
-                            <Text
-                              key={`${line}-${index}`}
+                            <View 
+                              key={`transit-${index}`} 
                               style={[
-                                styles.outputLogLine,
-                                isHeader && styles.outputLogHeader,
-                                isStatus && (isWarning ? styles.outputLogWarning : styles.outputLogClear),
-                                isWarning && !isStatus && styles.outputLogWarning,
-                                isClear && !isStatus && styles.outputLogClear,
-                                isReason && styles.outputLogReason,
-                                isRiskBox && styles.outputLogRiskBox,
+                                styles.transitEntryCard, 
+                                isFlagged && styles.transitEntryCardFlagged
                               ]}
                             >
-                              {line}
-                            </Text>
+                              <View style={styles.transitEntryRow}>
+                                <View style={styles.transitEntryDateCol}>
+                                  <Text style={styles.transitEntryLabel}>DATE</Text>
+                                  <Text style={[styles.transitEntryDate, styles.transitTextUnderline]}>{date}</Text>
+                                </View>
+                                <View style={styles.transitEntryStatusCol}>
+                                  <Text style={styles.transitEntryLabel}>STATUS</Text>
+                                  <Text style={[
+                                    styles.transitEntryStatus,
+                                    isFlagged ? styles.transitStatusFlagged : styles.transitStatusClear
+                                  ]}>
+                                    {isFlagged ? '⚠ FLAG' : '✓ OK'}
+                                  </Text>
+                                </View>
+                              </View>
+                              <View style={styles.transitEntryRoute}>
+                                <Text style={styles.transitEntryLabel}>ROUTE</Text>
+                                <View style={styles.transitRouteDisplay}>
+                                  <Text style={[styles.transitLocationFrom, styles.transitTextUnderline]}>{fromPlanet}</Text>
+                                  <Text style={styles.transitArrow}>→</Text>
+                                  <Text style={[styles.transitLocationTo, styles.transitTextUnderline]}>{toPlanet}</Text>
+                                </View>
+                              </View>
+                              {isFlagged && entry.flagNote && (
+                                <View style={styles.transitFlagReason}>
+                                  <Text style={styles.transitEntryLabel}>REASON</Text>
+                                  <Text style={styles.transitFlagReasonText}>{entry.flagNote}</Text>
+                                </View>
+                              )}
+                            </View>
                           );
                         })
                       ) : (
-                        <Text style={styles.outputLogEmpty}>SELECT A CHECK</Text>
+                        <View style={styles.transitEmptyState}>
+                          <Text style={styles.transitEmptyText}>
+                            {info.transitLog ? 'NO TRAVEL RECORDS' : 'RUN TRANSIT SCAN TO LOAD'}
+                          </Text>
+                        </View>
                       )}
                     </ScrollView>
                   </View>
                 </View>
-
-                <View style={[styles.subjectColumn, pendingDecision && styles.subjectColumnWarning]}>
-                  <Text style={styles.subjectLabel}>SUBJECT</Text>
-                  <View style={styles.subjectRow}>
-                    <Text style={styles.subjectKey}>ID</Text>
-                    <Text style={styles.subjectValue}>{currentSubject.id}</Text>
-                  </View>
-                  <View style={styles.subjectRow}>
-                    <Text style={styles.subjectKey}>TYPE</Text>
-                    <Text style={styles.subjectValue}>{currentSubject.subjectType ?? 'HUMAN'}</Text>
-                  </View>
-                  <View style={styles.subjectRow}>
-                    <Text style={styles.subjectKey}>ORIGIN</Text>
-                    <Text style={styles.subjectValue}>{currentSubject.originPlanet ?? 'MARS'}</Text>
-                  </View>
-                  <View style={styles.subjectRow}>
-                    <Text style={styles.subjectKey}>STATUS</Text>
-                    <Text
-                      style={[
-                        styles.subjectValue,
-                        hasDecision &&
-                          decisionOutcome?.type === 'APPROVE' &&
-                          styles.statusDisplayCleared,
-                        hasDecision &&
-                          decisionOutcome?.type === 'DENY' &&
-                          styles.statusDisplayRejected,
-                      ]}
-                    >
-                      {hasDecision
-                        ? decisionOutcome?.type === 'APPROVE'
-                          ? 'CLEARED'
-                          : 'REJECTED'
-                        : 'AWAIT'}
-                    </Text>
-                  </View>
-                  <View style={styles.flagsBlock}>
-                    <Text style={styles.flagsLabel}>FLAGS</Text>
-                    {flags.length > 0 ? (
-                      flags.map((flag, index) => (
-                        <Text key={`${flag}-${index}`} style={styles.flagsValue}>
-                          ⚠ {flag}
-                        </Text>
-                      ))
-                    ) : (
-                      <Text style={styles.flagsEmpty}>NONE</Text>
-                    )}
-                  </View>
-                </View>
-              </View>
+              )}
             </View>
             <NoiseOverlay opacity={0.02} />
             <ScanlineOverlay intensity={0.06} />
@@ -603,7 +769,7 @@ export const GameScreen = ({
               onPress={handleMapPress}
               color={OSC_COLORS.buttonPurple}
               showLED
-              ledColor="blue"
+              ledColor={hasPendingAlert ? 'red' : 'blue'}
               ledActive={true}
               style={styles.modeButton}
             />
@@ -877,12 +1043,364 @@ const styles = StyleSheet.create({
     gap: 8,
     minHeight: 0,
   },
+  workSurfaceColumn: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: 8,
+    minHeight: 0,
+  },
+  workSurfaceSingle: {
+    flex: 1,
+    minHeight: 0,
+  },
+  documentationSection: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(111, 209, 255, 0.35)',
+    backgroundColor: 'rgba(6, 18, 26, 0.6)',
+    padding: 8,
+    minHeight: 0,
+  },
+  dossierGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  dossierGridItem: {
+    width: '30%',
+    marginBottom: 4,
+  },
+  dossierValueLarge: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: OSC_COLORS.textLight,
+    letterSpacing: 0.6,
+  },
+  ticketGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  ticketGridItem: {
+    width: '30%',
+    marginBottom: 4,
+  },
+  warrantSubjectHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(111, 209, 255, 0.2)',
+  },
+  warrantSubjectLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 6,
+    color: OSC_COLORS.sectionChecks,
+    letterSpacing: 0.6,
+    opacity: 0.8,
+    marginBottom: 0,
+  },
+  warrantSubjectName: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: OSC_COLORS.textLight,
+    letterSpacing: 0.8,
+  },
+  warrantSubjectId: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    color: OSC_COLORS.textLight,
+    opacity: 0.6,
+    letterSpacing: 0.6,
+  },
+  warrantResultValue: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: OSC_COLORS.textLight,
+    letterSpacing: 0.8,
+  },
+  warrantStatsRow: {
+    flexDirection: 'row',
+    gap: 14,
+    marginBottom: 6,
+  },
+  warrantStatItem: {
+    alignItems: 'flex-start',
+  },
+  warrantStatLabel: {
+     fontFamily: Theme.fonts.mono,
+     fontSize: 6,
+     color: OSC_COLORS.sectionChecks,
+     letterSpacing: 0.6,
+     marginBottom: 0,
+  },
+  warrantStatValue: {
+     fontFamily: Theme.fonts.mono,
+     fontSize: 10,
+     color: OSC_COLORS.textLight,
+     fontWeight: 'bold',
+  },
+  outputLogTitle: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: OSC_COLORS.sectionChecks,
+    letterSpacing: 1.4,
+    marginBottom: 4,
+    opacity: 0.8,
+  },
+  outputLogDate: {
+    color: '#00ffaa',
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  outputLogMovement: {
+    color: '#fff',
+    marginLeft: 8,
+  },
+  // Transit Tab Styles
+  transitHeaderSection: {
+    borderWidth: 1,
+    borderColor: 'rgba(111, 209, 255, 0.35)',
+    backgroundColor: 'rgba(6, 18, 26, 0.6)',
+    padding: 6,
+  },
+  transitHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  transitHeaderLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: OSC_COLORS.sectionChecks,
+    letterSpacing: 1,
+  },
+  transitHeaderMeta: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 7,
+    color: OSC_COLORS.textLight,
+    letterSpacing: 0.5,
+    opacity: 0.7,
+  },
+  transitSummary: {
+    flexDirection: 'row',
+    gap: 14,
+    marginBottom: 6,
+    paddingBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(111, 209, 255, 0.2)',
+  },
+  transitStatItem: {
+    alignItems: 'flex-start',
+  },
+  transitStatLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 6,
+    color: OSC_COLORS.sectionChecks,
+    letterSpacing: 0.6,
+    marginBottom: 0,
+  },
+  transitStatValue: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: OSC_COLORS.textLight,
+    fontWeight: 'bold',
+  },
+  transitScanButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(111, 209, 255, 0.4)',
+    backgroundColor: 'rgba(0, 14, 22, 0.7)',
+    borderRadius: 3,
+  },
+  transitScanButtonCompleted: {
+    borderColor: 'rgba(0, 255, 136, 0.5)',
+  },
+  transitScanButtonText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: OSC_COLORS.textLight,
+    letterSpacing: 0.8,
+  },
+  transitScanButtonDone: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    color: '#00ff88',
+  },
+  transitAlertClear: {
+    color: '#00ff88',
+  },
+  transitAlertFlagged: {
+    color: '#ff6b6b',
+  },
+  transitEntriesSection: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: 'rgba(111, 209, 255, 0.35)',
+    backgroundColor: 'rgba(6, 18, 26, 0.6)',
+    padding: 8,
+    minHeight: 0,
+  },
+  transitEntriesHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(111, 209, 255, 0.4)',
+    paddingBottom: 4,
+    marginBottom: 6,
+  },
+  transitEntriesTitle: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: OSC_COLORS.sectionChecks,
+    letterSpacing: 1.2,
+    textDecorationLine: 'underline',
+  },
+  transitEntriesScroll: {
+    flex: 1,
+  },
+  transitEntryCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(111, 209, 255, 0.25)',
+    backgroundColor: 'rgba(0, 20, 30, 0.5)',
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    marginBottom: 5,
+    borderRadius: 3,
+  },
+  transitEntryCardFlagged: {
+    borderColor: 'rgba(255, 107, 107, 0.6)',
+    backgroundColor: 'rgba(40, 10, 10, 0.5)',
+  },
+  transitEntryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  transitEntryDateCol: {
+    flex: 1,
+  },
+  transitEntryStatusCol: {
+    alignItems: 'flex-end',
+  },
+  transitEntryLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 7,
+    color: OSC_COLORS.sectionChecks,
+    letterSpacing: 0.8,
+    marginBottom: 1,
+    opacity: 0.8,
+  },
+  transitEntryDate: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    color: '#00ffaa',
+    fontWeight: 'bold',
+  },
+  transitEntryStatus: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  transitStatusClear: {
+    color: '#00ff88',
+  },
+  transitStatusFlagged: {
+    color: '#ff6b6b',
+  },
+  transitEntryRoute: {
+    marginBottom: 2,
+  },
+  transitRouteDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  transitLocationFrom: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    color: '#6fd1ff',
+    fontWeight: 'bold',
+  },
+  transitArrow: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 12,
+    color: '#ffd48a',
+  },
+  transitLocationTo: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 11,
+    color: '#00ffaa',
+    fontWeight: 'bold',
+  },
+  transitTextUnderline: {
+    textDecorationLine: 'underline',
+  },
+  transitFlagReason: {
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 107, 107, 0.3)',
+  },
+  transitFlagReasonText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: '#ffb38a',
+    marginTop: 1,
+  },
+  transitEmptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  transitEmptyText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: OSC_COLORS.textLight,
+    opacity: 0.6,
+    letterSpacing: 1,
+  },
+  panelTabs: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  panelTab: {
+    flex: 1,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0, 8, 12, 0.5)',
+    alignItems: 'center',
+  },
+  panelTabActive: {
+    borderColor: 'rgba(111, 209, 255, 0.6)',
+    backgroundColor: 'rgba(10, 24, 32, 0.85)',
+  },
+  panelTabText: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: OSC_COLORS.textLight,
+    letterSpacing: 1.2,
+    opacity: 0.7,
+  },
+  panelTabTextActive: {
+    opacity: 1,
+    color: OSC_COLORS.sectionChecks,
+  },
   outputColumn: {
     flex: 1.15,
     borderWidth: 1,
-    borderLeftWidth: 3,
     borderColor: 'rgba(111, 209, 255, 0.35)',
-    borderLeftColor: 'rgba(111, 209, 255, 0.95)',
     backgroundColor: 'rgba(6, 18, 26, 0.6)',
     padding: 10,
     minHeight: 0,
@@ -892,34 +1410,34 @@ const styles = StyleSheet.create({
     borderLeftColor: 'rgba(255, 110, 80, 0.95)',
   },
   outputHeader: {
-    marginBottom: 8,
-    gap: 4,
+    marginBottom: 4,
+    gap: 2,
   },
   outputLabel: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 10,
+    fontSize: 9,
     color: OSC_COLORS.sectionChecks,
-    letterSpacing: 1.4,
+    letterSpacing: 1,
   },
   outputMeta: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 9,
+    fontSize: 7,
     color: OSC_COLORS.textLight,
-    letterSpacing: 0.6,
-    opacity: 0.8,
+    letterSpacing: 0.5,
+    opacity: 0.7,
   },
   outputControls: {
-    gap: 8,
-    marginBottom: 10,
+    gap: 6,
+    marginBottom: 6,
   },
   outputButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: 'rgba(111, 209, 255, 0.4)',
     backgroundColor: 'rgba(0, 14, 22, 0.7)',
-    borderRadius: 4,
-    minHeight: 48,
+    borderRadius: 3,
+    minHeight: 36,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -939,13 +1457,13 @@ const styles = StyleSheet.create({
   outputButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   outputButtonText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 12,
+    fontSize: 9,
     color: OSC_COLORS.textLight,
-    letterSpacing: 1,
+    letterSpacing: 0.8,
   },
   outputButtonTextRequired: {
     color: OSC_COLORS.sectionChecks,
@@ -1049,6 +1567,36 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(24, 18, 8, 0.55)',
     padding: 10,
     minHeight: 0,
+  },
+  dossierPanel: {
+    borderWidth: 1,
+    borderColor: 'rgba(255, 212, 138, 0.25)',
+    backgroundColor: 'rgba(14, 12, 8, 0.4)',
+    padding: 8,
+    gap: 6,
+  },
+  dossierRowCompact: {
+    gap: 2,
+  },
+  dossierKey: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    color: OSC_COLORS.textLight,
+    letterSpacing: 0.8,
+    opacity: 0.7,
+  },
+  dossierValue: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    color: OSC_COLORS.textLight,
+    letterSpacing: 0.6,
+  },
+  ticketPanel: {
+    borderWidth: 1,
+    borderColor: 'rgba(111, 209, 255, 0.3)',
+    backgroundColor: 'rgba(6, 16, 22, 0.5)',
+    padding: 8,
+    gap: 6,
   },
   subjectColumnWarning: {
     borderColor: 'rgba(255, 110, 80, 0.6)',

@@ -148,6 +148,9 @@ export interface SubjectData {
     motivation: string;
     tells: string[];
   };
+
+  // Alert scenario (optional, used by map/alert mechanics)
+  alertScenario?: import('../types/alertScenario').AlertScenario;
   
   // Interrogation
   interrogationResponses?: {
@@ -253,13 +256,13 @@ export const SUBJECTS: SubjectData[] = [
     sex: 'M',
     subjectType: 'HUMAN',
     hierarchyTier: 'MIDDLE',
-    originPlanet: 'MARS',
+    originPlanet: 'DISTRICT 1',
     compliance: 'C',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
     reasonForVisit: 'Procedural portrait system test.',
-    destinationPlanet: 'EARTH',
+    destinationPlanet: 'CENTRAL HUB',
     useProceduralPortrait: true,
     dialogue: "Testing the procedural portrait system.",
     biometricData: {
@@ -272,7 +275,7 @@ export const SUBJECTS: SubjectData[] = [
     idData: {
       name: 'PROCEDURAL TEST',
       idCode: 'PROC-001',
-      originPlanet: 'MARS',
+      originPlanet: 'DISTRICT 1',
       statedPurpose: 'System test',
       status: 'ACTIVE',
     },
@@ -310,13 +313,13 @@ export const SUBJECTS: SubjectData[] = [
     sex: 'F',
     subjectType: 'HUMAN',
     hierarchyTier: 'MIDDLE',
-    originPlanet: 'EUROPA',
+    originPlanet: 'DISTRICT 2',
     compliance: 'C',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
     reasonForVisit: 'Transit verification.',
-    destinationPlanet: 'EARTH',
+    destinationPlanet: 'CENTRAL HUB',
     useProceduralPortrait: true,
     dialogue: "Requesting clearance for Europa transit.",
     biometricData: {
@@ -329,7 +332,7 @@ export const SUBJECTS: SubjectData[] = [
     idData: {
       name: 'PROCEDURAL TEST B',
       idCode: 'PROC-002',
-      originPlanet: 'EUROPA',
+      originPlanet: 'DISTRICT 2',
       statedPurpose: 'Transit',
       status: 'ACTIVE',
     },
@@ -359,13 +362,13 @@ export const SUBJECTS: SubjectData[] = [
     sex: 'M',
     subjectType: 'HUMAN',
     hierarchyTier: 'MIDDLE',
-    originPlanet: 'TITAN',
+    originPlanet: 'DISTRICT 3',
     compliance: 'C',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
     reasonForVisit: 'Transit verification.',
-    destinationPlanet: 'MARS',
+    destinationPlanet: 'DISTRICT 1',
     useProceduralPortrait: true,
     dialogue: "Titan outbound. Clearance required.",
     biometricData: {
@@ -378,7 +381,7 @@ export const SUBJECTS: SubjectData[] = [
     idData: {
       name: 'PROCEDURAL TEST C',
       idCode: 'PROC-003',
-      originPlanet: 'TITAN',
+      originPlanet: 'DISTRICT 3',
       statedPurpose: 'Transit',
       status: 'ACTIVE',
     },
@@ -408,13 +411,13 @@ export const SUBJECTS: SubjectData[] = [
     sex: 'F',
     subjectType: 'HUMAN',
     hierarchyTier: 'MIDDLE',
-    originPlanet: 'IO',
+    originPlanet: 'DISTRICT 4',
     compliance: 'C',
     status: 'ACTIVE',
     incidents: 0,
     warrants: 'NONE',
     reasonForVisit: 'Transit verification.',
-    destinationPlanet: 'EARTH',
+    destinationPlanet: 'CENTRAL HUB',
     useProceduralPortrait: true,
     dialogue: "Io transit. Requesting clearance.",
     biometricData: {
@@ -427,7 +430,7 @@ export const SUBJECTS: SubjectData[] = [
     idData: {
       name: 'PROCEDURAL TEST D',
       idCode: 'PROC-004',
-      originPlanet: 'IO',
+      originPlanet: 'DISTRICT 4',
       statedPurpose: 'Transit',
       status: 'ACTIVE',
     },

@@ -5,11 +5,12 @@ import { SeededRandom } from './seededRandom';
 import {
   INCIDENT_DISCREPANCIES,
   TRANSIT_ROUTES,
+  TRANSIT_FLAG_REASONS,
   VERIFICATION_CONTRADICTIONS,
   VERIFICATION_QUESTIONS,
   VERIFICATION_SOURCES,
   VERIFICATION_SUMMARIES,
-  WARRANT_DETAILS,
+  WARRANT_ENTRIES,
 } from '../data/templates/evidenceTemplates';
 
 const formatDate = (rng: SeededRandom): string => {
@@ -30,11 +31,13 @@ const buildTravelHistory = (rng: SeededRandom, hasTransitIssue: boolean): Travel
       to: route.to,
       date: formatDate(rng),
       flagged,
-      flagNote: flagged ? 'ROUTE FLAGGED' : undefined,
+      flagNote: flagged ? rng.pick(TRANSIT_FLAG_REASONS) : undefined,
     });
   }
   if (hasTransitIssue && !entries.some((e) => e.flagged)) {
-    entries[0] = { ...entries[0], flagged: true, flagNote: 'ROUTE FLAGGED' };
+    // Ensure at least one entry is flagged with a specific reason
+    const flagReason = rng.pick(TRANSIT_FLAG_REASONS);
+    entries[0] = { ...entries[0], flagged: true, flagNote: flagReason };
   }
   return entries;
 };
@@ -108,7 +111,9 @@ const buildOutputs = (seed: SubjectSeed, evidence: SubjectEvidence): Record<Evid
 
 export const createSubjectEvidence = (seed: SubjectSeed): SubjectEvidence => {
   const rng = new SeededRandom(seed.seed);
-  const warrants = seed.truthFlags.hasWarrant ? rng.pick(WARRANT_DETAILS) : 'NONE';
+  const warrantEntry = seed.truthFlags.hasWarrant ? rng.pick(WARRANT_ENTRIES) : null;
+  const warrants = warrantEntry ? warrantEntry.offense : 'NONE';
+  const warrantDescription = warrantEntry ? warrantEntry.description : undefined;
   const incidents = seed.truthFlags.hasIncident ? rng.int(1, 3) : 0;
   const travelHistory = buildTravelHistory(rng, seed.truthFlags.hasTransitIssue);
   const discrepancies = seed.truthFlags.hasIncident
@@ -117,6 +122,7 @@ export const createSubjectEvidence = (seed: SubjectSeed): SubjectEvidence => {
 
   const evidence: SubjectEvidence = {
     warrants,
+    warrantDescription,
     incidents,
     databaseQuery: {
       travelHistory,

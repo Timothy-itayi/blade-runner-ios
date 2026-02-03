@@ -21,6 +21,8 @@ import {
   getRequiredChecks,
   RequiredCheck,
 } from '../../../utils/requiredChecks';
+import { AlertModeScreen } from '../AlertModeScreen';
+import { NewsTicker } from '../../ui/NewsTicker';
 
 // Metal texture for chassis
 const METAL_TEXTURE = require('../../../assets/textures/Texturelabs_Metal_264S.jpg');
@@ -93,6 +95,8 @@ interface GameScreenProps {
   onNext: () => void;
   gatheredInformation?: GatheredInformation;
   onInformationUpdate?: (info: Partial<GatheredInformation>) => void;
+  alertModeVisible?: boolean;
+  onAlertModeChange?: (visible: boolean) => void;
   [key: string]: any;
 }
 
@@ -107,9 +111,21 @@ export const GameScreen = ({
   onNext,
   gatheredInformation,
   onInformationUpdate,
+  alertModeVisible: alertModeVisibleProp,
+  onAlertModeChange,
 }: GameScreenProps) => {
   const router = useRouter();
-  const portraitBaseImageId = currentSubjectIndex % 3;
+  // FaceLandmark portrait selection must be tied to the subject, not the UI index.
+  // The previous `currentSubjectIndex % 3` guaranteed mismatches (e.g. Sarah Miles showing a male portrait).
+  const portraitBaseImageId = useMemo(() => {
+    // FaceLandmarkTflite pipeline currently preloads only a small set of base faces.
+    // Index 1 is the only guaranteed female face in that set.
+    if (currentSubject.sex === 'F') return 1;
+
+    // For everything else, pick deterministically so it doesn't "shuffle" per render.
+    const stable = ((currentSubject.seed ?? currentSubjectIndex) as number) >>> 0;
+    return stable % 2 === 0 ? 0 : 2;
+  }, [currentSubject.sex, currentSubject.seed, currentSubjectIndex]);
   const forceProceduralPortrait = true;
   const [dbOutput, setDbOutput] = useState<string[]>([]);
   const [lastQuery, setLastQuery] = useState<string>('NONE');
@@ -118,7 +134,22 @@ export const GameScreen = ({
     type: 'APPROVE' | 'DENY';
     missing: RequiredCheck[];
   } | null>(null);
+  const [alertModeVisibleInternal, setAlertModeVisibleInternal] = useState(false);
+  const alertModeVisible = alertModeVisibleProp ?? alertModeVisibleInternal;
+  const setAlertModeVisible = onAlertModeChange ?? setAlertModeVisibleInternal;
   const hasPendingAlert = useGameStore((state) => state.alertLog.some((alert) => alert.outcome === 'PENDING'));
+  const propagandaFeed = useGameStore((state) => state.propagandaFeed);
+
+  // Get news headlines from propaganda feed + static headlines
+  const newsHeadlines = useMemo(() => {
+    const staticNews = [
+      'AMBER SYSTEMS OPERATIONAL — ALL DISTRICTS SECURE',
+      'TRANSIT EFFICIENCY UP 12% THIS QUARTER',
+      'CHECKPOINT COMPLIANCE ENSURES PUBLIC SAFETY',
+    ];
+    const propagandaHeadlines = propagandaFeed.slice(-3).map((p) => p.headline);
+    return [...propagandaHeadlines, ...staticNews].slice(0, 5);
+  }, [propagandaFeed]);
 
   const info = gatheredInformation || createEmptyInformation();
   const requiredChecks = useMemo(() => {
@@ -408,6 +439,14 @@ export const GameScreen = ({
         </View>
       </View>
 
+      {/* AMBER News Ticker */}
+      <NewsTicker
+        headlines={newsHeadlines}
+        prefix="AMBER NEWS"
+        variant={hasPendingAlert ? 'alert' : 'default'}
+        speed={40}
+      />
+
       {/* Main screen area - lightweight status (no face scanner) */}
       <View style={styles.screenContainer}>
         <View style={styles.screenBezel}>
@@ -545,7 +584,20 @@ export const GameScreen = ({
                       </View>
                     )}
 
-                    {/* Details section removed as requested */}
+                    {/* Warrant Details - shown when warrant found */}
+                    {info.warrantCheck && currentSubject.warrants && currentSubject.warrants !== 'NONE' && (
+                      <View style={styles.warrantDetailsSection}>
+                        <View style={styles.warrantDetailsHeader}>
+                          <Text style={styles.warrantDetailsLabel}>⚠ ACTIVE WARRANT</Text>
+                        </View>
+                        <View style={styles.warrantDetailsContent}>
+                          <Text style={styles.warrantDetailsOffense}>{currentSubject.warrants}</Text>
+                          {currentSubject.warrantDescription && (
+                            <Text style={styles.warrantDetailsDescription}>{currentSubject.warrantDescription}</Text>
+                          )}
+                        </View>
+                      </View>
+                    )}
                   </View>
                 </View>
               )}
@@ -581,7 +633,7 @@ export const GameScreen = ({
                       </View>
                       <View style={styles.dossierGridItem}>
                         <Text style={styles.dossierKey}>ADDRESS</Text>
-                        <Text style={styles.dossierValue} numberOfLines={1}>{currentSubject.dossier?.address || '—'}</Text>
+                        <Text style={styles.dossierValue}>{currentSubject.dossier?.address || '—'}</Text>
                       </View>
                     </View>
                   </View>
@@ -743,7 +795,7 @@ export const GameScreen = ({
       <View style={styles.commsLinkWrapper}>
         <CommLinkPanel
           hudStage={hudStage}
-          dialogue={currentSubject.dialogue ?? getSubjectGreeting(currentSubject.id, currentSubject)?.greetingText}
+          dialogue={currentSubject.dialogue ?? getSubjectGreeting(currentSubject.id, currentSubject)?.greeting}
           subjectId={currentSubject.id}
           subjectType={currentSubject.subjectType}
           isAnomaly={currentSubject.biometricData?.anomalyDetected}
@@ -760,7 +812,7 @@ export const GameScreen = ({
           <View style={styles.controlTextureOverlay} />
         </View>
         
-        {/* Left control group - Map */}
+        {/* Left control group - Map & Alerts */}
         <View style={styles.controlGroup}>
           <LabelTape text="MODE" variant="cream" size="small" />
           <View style={styles.buttonGroup}>
@@ -769,8 +821,17 @@ export const GameScreen = ({
               onPress={handleMapPress}
               color={OSC_COLORS.buttonPurple}
               showLED
-              ledColor={hasPendingAlert ? 'red' : 'blue'}
+              ledColor="blue"
               ledActive={true}
+              style={styles.modeButton}
+            />
+            <MechanicalButton
+              label="AMBER"
+              onPress={() => setAlertModeVisible(true)}
+              color={OSC_COLORS.buttonRed}
+              showLED
+              ledColor="red"
+              ledActive={hasPendingAlert}
               style={styles.modeButton}
             />
           </View>
@@ -850,6 +911,12 @@ export const GameScreen = ({
           </View>
         </View>
       )}
+
+      {/* Alert Mode Screen */}
+      <AlertModeScreen
+        visible={alertModeVisible}
+        onClose={() => setAlertModeVisible(false)}
+      />
     </View>
   );
 };
@@ -1069,13 +1136,16 @@ const styles = StyleSheet.create({
   dossierGridItem: {
     width: '30%',
     marginBottom: 4,
+    minWidth: 0,
   },
   dossierValueLarge: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: 'bold',
     color: OSC_COLORS.textLight,
     letterSpacing: 0.6,
+    lineHeight: 13,
+    flexShrink: 1,
   },
   ticketGrid: {
     flexDirection: 'row',
@@ -1085,6 +1155,7 @@ const styles = StyleSheet.create({
   ticketGridItem: {
     width: '30%',
     marginBottom: 4,
+    minWidth: 0,
   },
   warrantSubjectHeader: {
     flexDirection: 'row',
@@ -1143,6 +1214,45 @@ const styles = StyleSheet.create({
      fontSize: 10,
      color: OSC_COLORS.textLight,
      fontWeight: 'bold',
+  },
+  // Warrant Details Section (shown when warrant found)
+  warrantDetailsSection: {
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 83, 74, 0.5)',
+    backgroundColor: 'rgba(212, 83, 74, 0.08)',
+    padding: 8,
+  },
+  warrantDetailsHeader: {
+    marginBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(212, 83, 74, 0.3)',
+    paddingBottom: 4,
+  },
+  warrantDetailsLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#d4534a',
+    letterSpacing: 1.2,
+  },
+  warrantDetailsContent: {
+    gap: 4,
+  },
+  warrantDetailsOffense: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: OSC_COLORS.textLight,
+    letterSpacing: 0.4,
+  },
+  warrantDetailsDescription: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: OSC_COLORS.textLight,
+    opacity: 0.85,
+    lineHeight: 14,
+    marginTop: 2,
   },
   outputLogTitle: {
     fontFamily: Theme.fonts.mono,
@@ -1587,9 +1697,11 @@ const styles = StyleSheet.create({
   },
   dossierValue: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 10,
+    fontSize: 9,
     color: OSC_COLORS.textLight,
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
+    lineHeight: 12,
+    flexShrink: 1,
   },
   ticketPanel: {
     borderWidth: 1,
@@ -1624,9 +1736,11 @@ const styles = StyleSheet.create({
   },
   subjectValue: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 11,
+    fontSize: 9,
     color: OSC_COLORS.textLight,
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
+    lineHeight: 12,
+    flexShrink: 1,
   },
   flagsBlock: {
     marginTop: 10,
@@ -1751,20 +1865,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 6,
-  },
-  dossierKey: {
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    color: OSC_COLORS.screenGlow,
-    letterSpacing: 1,
-    opacity: 0.7,
-  },
-  dossierValue: {
-    fontFamily: Theme.fonts.mono,
-    fontSize: 11,
-    fontWeight: '600',
-    color: OSC_COLORS.textLight,
-    letterSpacing: 1,
   },
   databaseLabel: {
     fontFamily: Theme.fonts.mono,

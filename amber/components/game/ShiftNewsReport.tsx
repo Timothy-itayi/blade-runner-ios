@@ -85,6 +85,7 @@ export const ShiftNewsReport = ({ shiftDecisions, onComplete }: ShiftNewsReportP
               <ProceduralPortrait
                 subjectId={subject.id}
                 subjectType={subject.subjectType}
+                sex={subject.sex || 'M'}
                 isAnomaly={subject.subjectType === 'REPLICANT'}
                 portraitPreset="dossier"
                 style={styles.image}

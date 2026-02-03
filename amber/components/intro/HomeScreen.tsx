@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Animated, Pressable, Easing, Image, Modal } from 'react-native';
 import { styles } from '../../styles/intro/HomeScreen.styles';
-import { MessageThread } from './MessageThread';
-import { IntroAlertModal } from './IntroAlertModal';
+
 import { MainMenu } from './MainMenu';
 import { INTRO_MESSAGES, ALERT_DELAY, INTERRUPTED_MESSAGE } from '../../constants/intro';
 
@@ -375,26 +374,9 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
             { opacity: combinedOpacity, transform: [{ translateX: glitchOffset }] }
           ]}
         >
-          <MessageThread
-            visibleIndices={visibleIndices}
-            readIndices={readIndices}
-            messageAnims={messageAnims}
-            currentTime={currentTime}
-            wifeIsTyping={wifeIsTyping}
-            isTyping={isTyping}
-            typingText={typingText}
-            showCursor={showCursor}
-            sendButtonPressed={sendButtonPressed}
-            failedMessage={failedMessage}
-            failedMessageStatus={failedMessageStatus}
-          />
+         
 
-          <IntroAlertModal
-            visible={showAlert}
-            opacity={alertOpacity}
-            scale={alertScale}
-            onAuthenticate={handleAuthenticate}
-          />
+          
         </Animated.View>
 
         {/* Takeover overlays */}

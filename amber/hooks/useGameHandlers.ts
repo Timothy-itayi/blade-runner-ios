@@ -149,6 +149,7 @@ export const useGameHandlers = (props: GameHandlersProps) => {
       decision: type,
       correct,
       subjectType: currentSubject.subjectType,
+      sex: currentSubject.sex,
       originPlanet: currentSubject.originPlanet,
       destinationPlanet: currentSubject.destinationPlanet,
       permitType: currentSubject.dossier?.occupation,

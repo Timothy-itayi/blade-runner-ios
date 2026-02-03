@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, Dimensions, LayoutChangeEvent } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { Theme } from '../constants/theme';
 import { MechanicalButton } from '../components/ui/MechanicalUI';
 import { HUDBox } from '../components/ui/HUDBox';
 import { useGameStore } from '../store/gameStore';
+import { ProceduralPortrait } from '../components/ui/ProceduralPortrait';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const METAL_TEXTURE = require('../assets/textures/Texturelabs_Metal_264S.jpg');
@@ -21,36 +22,9 @@ export default function MapScreen() {
   const decisionLog = useGameStore((state) => state.decisionLog);
   const alertLog = useGameStore((state) => state.alertLog);
   const propagandaFeed = useGameStore((state) => state.propagandaFeed);
-  const resolveAlert = useGameStore((state) => state.resolveAlert);
-  const addPropaganda = useGameStore((state) => state.addPropaganda);
 
-  const [activeAlertId, setActiveAlertId] = useState<string | null>(null);
-  const [alertStep, setAlertStep] = useState<'prompt' | 'detail' | 'negotiate' | 'intercept' | null>(null);
-  const [interceptToggle, setInterceptToggle] = useState(false);
-  const [detonateToggle, setDetonateToggle] = useState(false);
-  const [selectedNegotiation, setSelectedNegotiation] = useState<'INTIMIDATE' | 'PERSUADE' | 'REASON' | null>(null);
-
-  const pendingAlert = useMemo(() => {
-    return alertLog.find(entry => entry.outcome === 'PENDING') || null;
-  }, [alertLog]);
-
-  useEffect(() => {
-    if (pendingAlert) {
-      setActiveAlertId(pendingAlert.subjectId);
-      setAlertStep('prompt');
-      setInterceptToggle(false);
-      setDetonateToggle(false);
-      setSelectedNegotiation(null);
-    } else {
-      setActiveAlertId(null);
-      setAlertStep(null);
-    }
-  }, [pendingAlert?.subjectId]);
-
-  const activeAlert = useMemo(() => {
-    if (!activeAlertId) return null;
-    return alertLog.find(entry => entry.subjectId === activeAlertId) || null;
-  }, [activeAlertId, alertLog]);
+  // Alert state is handled by the dedicated AlertModeScreen
+  // We still use alertLog for node coloring on the map
 
   const handleBack = () => {
     router.back();
@@ -111,36 +85,6 @@ export default function MapScreen() {
     };
   }, [nodes]);
 
-  const getCollateralCount = (totalSubjects: number): number => {
-    if (totalSubjects <= 1) return 0;
-    return Math.min(2, totalSubjects - 1);
-  };
-
-  const finalizeAlert = (outcome: import('../store/gameStore').AlertOutcome, options?: Partial<import('../store/gameStore').AlertLogEntry>) => {
-    if (!activeAlert) return;
-    const collateralCount = outcome === 'DETONATED' ? getCollateralCount(nodes.length - 1) : 0;
-    resolveAlert(activeAlert.subjectId, {
-      outcome,
-      resolvedAt: Date.now(),
-      collateralCount,
-      ...options,
-    });
-
-    if (outcome === 'IGNORED' || outcome === 'DETONATED') {
-      addPropaganda({
-        id: `PR-${Date.now()}`,
-        subjectId: activeAlert.subjectId,
-        headline: activeAlert.scenario.propaganda.headline,
-        body: activeAlert.scenario.propaganda.body,
-        timestamp: Date.now(),
-        outcome,
-      });
-    }
-
-    setAlertStep(null);
-    setActiveAlertId(null);
-  };
-
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={[styles.container, { paddingBottom: insets.bottom }]}>
@@ -190,73 +134,6 @@ export default function MapScreen() {
           </View>
         </View>
 
-        {/* AMBER Alerts Panel - Always Visible */}
-        <View style={styles.alertsPanel}>
-          <View style={styles.alertsPanelHeader}>
-            <View style={styles.alertsPanelTitleRow}>
-              <View style={[styles.alertsPanelIndicator, pendingAlert ? styles.alertsPanelIndicatorActive : null]} />
-              <Text style={styles.alertsPanelTitle}>AMBER ALERTS</Text>
-            </View>
-            <Text style={styles.alertsPanelMeta}>
-              {alertLog.length} TOTAL • {alertLog.filter(a => a.outcome === 'PENDING').length} PENDING
-            </Text>
-          </View>
-          
-          {pendingAlert ? (
-            <View style={styles.alertsPanelActive}>
-              <View style={styles.alertActiveHeader}>
-                <Text style={styles.alertActiveLabel}>⚠ ACTIVE ALERT</Text>
-                <Text style={styles.alertActiveId}>{pendingAlert.subjectId}</Text>
-              </View>
-              <Text style={styles.alertActiveTitle}>{pendingAlert.scenario.title}</Text>
-              <Text style={styles.alertActiveLocation}>{pendingAlert.scenario.location}</Text>
-              <Text style={styles.alertActiveSummary} numberOfLines={2}>{pendingAlert.scenario.summary}</Text>
-              
-              <View style={styles.alertActiveActions}>
-                <TouchableOpacity 
-                  onPress={() => setAlertStep('detail')} 
-                  style={styles.alertActiveButton}
-                >
-                  <Text style={styles.alertActiveButtonText}>HANDLE</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => finalizeAlert('IGNORED')} 
-                  style={styles.alertActiveButtonMuted}
-                >
-                  <Text style={styles.alertActiveButtonTextMuted}>IGNORE</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.alertsPanelEmpty}>
-              <Text style={styles.alertsPanelEmptyText}>NO ACTIVE ALERTS</Text>
-            </View>
-          )}
-          
-          {/* Recent Alert History */}
-          {alertLog.filter(a => a.outcome !== 'PENDING').length > 0 && (
-            <View style={styles.alertsHistory}>
-              <Text style={styles.alertsHistoryLabel}>RECENT</Text>
-              {alertLog
-                .filter(a => a.outcome !== 'PENDING')
-                .slice(0, 3)
-                .map((entry, index) => (
-                  <View key={`history-${entry.subjectId}-${index}`} style={styles.alertsHistoryItem}>
-                    <Text style={styles.alertsHistoryId}>{entry.subjectId}</Text>
-                    <Text style={[
-                      styles.alertsHistoryOutcome,
-                      entry.outcome === 'IGNORED' || entry.outcome === 'DETONATED' 
-                        ? styles.alertsHistoryOutcomeRed 
-                        : styles.alertsHistoryOutcomeGreen
-                    ]}>
-                      {entry.outcome.replace('_', ' ')}
-                    </Text>
-                  </View>
-                ))}
-            </View>
-          )}
-        </View>
-
         {/* Map Container - full height, center node in middle */}
         <View style={styles.mapContainer} onLayout={handleMapLayout}>
           <View style={styles.mapBorder}>
@@ -278,7 +155,7 @@ export default function MapScreen() {
 
         {/* Legend */}
         <View style={styles.legend}>
-          <Text style={styles.legendTitle}>LEGEND</Text>
+   
           <View style={styles.legendRow}>
             <View style={[styles.legendDot, { backgroundColor: MapTheme.colors.nodeApprovedClean }]} />
             <Text style={styles.legendText}>APPROVED</Text>
@@ -346,17 +223,31 @@ export default function MapScreen() {
                       </View>
                       <Text style={styles.detailId}>{selectedNode.subjectId}</Text>
                     </View>
-                    <Text style={styles.detailName}>{logEntry?.subjectName || selectedNode.label.split(' — ')[0]}</Text>
                     
-                    {/* Subject Info Grid */}
-                    <View style={styles.detailGrid}>
-                      <View style={styles.detailGridItem}>
-                        <Text style={styles.detailGridLabel}>TYPE</Text>
-                        <Text style={styles.detailGridValue}>{logEntry?.subjectType || 'HUMAN'}</Text>
+                    {/* Portrait and Name Row */}
+                    <View style={styles.detailPortraitRow}>
+                      <View style={styles.detailPortraitContainer}>
+                        <ProceduralPortrait
+                          subjectId={selectedNode.subjectId || selectedNode.id}
+                          subjectType={logEntry?.subjectType}
+                          sex={logEntry?.sex || 'M'}
+                          portraitPreset="dossier"
+                          style={styles.detailPortrait}
+                        />
                       </View>
-                      <View style={styles.detailGridItem}>
-                        <Text style={styles.detailGridLabel}>ORIGIN</Text>
-                        <Text style={styles.detailGridValue}>{logEntry?.originPlanet || '—'}</Text>
+                      <View style={styles.detailNameContainer}>
+                        <Text style={styles.detailName}>{logEntry?.subjectName || selectedNode.label.split(' — ')[0]}</Text>
+                        {/* Subject Info Grid */}
+                        <View style={styles.detailGridCompact}>
+                          <View style={styles.detailGridItem}>
+                            <Text style={styles.detailGridLabel}>TYPE</Text>
+                            <Text style={styles.detailGridValue}>{logEntry?.subjectType || 'HUMAN'}</Text>
+                          </View>
+                          <View style={styles.detailGridItem}>
+                            <Text style={styles.detailGridLabel}>ORIGIN</Text>
+                            <Text style={styles.detailGridValue}>{logEntry?.originPlanet || '—'}</Text>
+                          </View>
+                        </View>
                       </View>
                     </View>
                     
@@ -421,107 +312,6 @@ export default function MapScreen() {
         )}
       </View>
 
-      {/* Alert Detail Panel - Only show for detail/negotiate/intercept steps, not prompt */}
-      {activeAlert && alertStep === 'detail' && (
-        <View style={styles.alertOverlay}>
-          <View style={styles.alertPanel}>
-            <Text style={styles.alertTitle}>INCIDENT REPORT</Text>
-            <Text style={styles.alertSubtitle}>{activeAlert.scenario.title}</Text>
-            <Text style={styles.alertLocation}>{activeAlert.scenario.location}</Text>
-            <Text style={styles.alertSummary}>{activeAlert.scenario.summary}</Text>
-            {activeAlert.scenario.collateralContext ? (
-              <Text style={styles.alertCollateral}>COLLATERAL: {activeAlert.scenario.collateralContext}</Text>
-            ) : null}
-            <View style={styles.alertActions}>
-              <TouchableOpacity onPress={() => finalizeAlert('DETONATED', { detonateUsed: true })} style={styles.alertButtonDanger}>
-                <Text style={styles.alertButtonText}>DETONATE</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setAlertStep('negotiate')} style={styles.alertButton}>
-                <Text style={styles.alertButtonText}>NEGOTIATE</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setAlertStep('intercept')} style={styles.alertButton}>
-                <Text style={styles.alertButtonText}>INTERCEPT</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* Negotiation Panel */}
-      {activeAlert && alertStep === 'negotiate' && (
-        <View style={styles.alertOverlay}>
-          <View style={styles.alertPanel}>
-            <Text style={styles.alertTitle}>NEGOTIATION LINK</Text>
-            <Text style={styles.alertSubtitle}>{activeAlert.scenario.title}</Text>
-            <TouchableOpacity onPress={() => setInterceptToggle(prev => !prev)} style={styles.alertToggle}>
-              <Text style={styles.alertToggleText}>{interceptToggle ? '✓' : '○'} DISPATCH INTERCEPT</Text>
-            </TouchableOpacity>
-            <View style={styles.alertActions}>
-              <TouchableOpacity onPress={() => setSelectedNegotiation('INTIMIDATE')} style={styles.alertButton}>
-                <Text style={styles.alertButtonText}>INTIMIDATE</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setSelectedNegotiation('PERSUADE')} style={styles.alertButton}>
-                <Text style={styles.alertButtonText}>PERSUADE</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setSelectedNegotiation('REASON')} style={styles.alertButton}>
-                <Text style={styles.alertButtonText}>REASON</Text>
-              </TouchableOpacity>
-            </View>
-            {selectedNegotiation && (
-              <TouchableOpacity
-                onPress={() => {
-                  const preferred = activeAlert.scenario.preferredNegotiation;
-                  const success = preferred ? preferred === selectedNegotiation : selectedNegotiation !== 'INTIMIDATE';
-                  if (!success && interceptToggle) {
-                    finalizeAlert('INTERCEPTED', { interceptUsed: true, negotiationMethod: selectedNegotiation });
-                    return;
-                  }
-                  finalizeAlert(success ? 'NEGOTIATED_SUCCESS' : 'NEGOTIATED_FAIL', {
-                    negotiationMethod: selectedNegotiation,
-                    interceptUsed: interceptToggle || undefined,
-                  });
-                }}
-                style={styles.alertButton}
-              >
-                <Text style={styles.alertButtonText}>CONFIRM</Text>
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={() => setAlertStep('detail')} style={styles.alertButtonMuted}>
-              <Text style={styles.alertButtonTextMuted}>BACK</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* Intercept Panel */}
-      {activeAlert && alertStep === 'intercept' && (
-        <View style={styles.alertOverlay}>
-          <View style={styles.alertPanel}>
-            <Text style={styles.alertTitle}>INTERCEPT ORDER</Text>
-            <Text style={styles.alertSubtitle}>{activeAlert.scenario.title}</Text>
-            <TouchableOpacity onPress={() => setDetonateToggle(prev => !prev)} style={styles.alertToggle}>
-              <Text style={styles.alertToggleText}>{detonateToggle ? '✓' : '○'} DETONATE IF BREACH</Text>
-            </TouchableOpacity>
-            <View style={styles.alertActions}>
-              <TouchableOpacity
-                onPress={() => {
-                  if (detonateToggle) {
-                    finalizeAlert('DETONATED', { detonateUsed: true, interceptUsed: true });
-                  } else {
-                    finalizeAlert('INTERCEPTED', { interceptUsed: true });
-                  }
-                }}
-                style={styles.alertButton}
-              >
-                <Text style={styles.alertButtonText}>DISPATCH</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setAlertStep('detail')} style={styles.alertButtonMuted}>
-                <Text style={styles.alertButtonTextMuted}>BACK</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      )}
     </SafeAreaView>
   );
 }
@@ -749,6 +539,33 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: MapTheme.colors.textSecondary,
     marginTop: 4,
+  },
+  detailPortraitRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginTop: 4,
+  },
+  detailPortraitContainer: {
+    width: 64,
+    height: 80,
+    backgroundColor: MapTheme.colors.void,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    overflow: 'hidden',
+  },
+  detailPortrait: {
+    width: '100%',
+    height: '100%',
+  },
+  detailNameContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  detailGridCompact: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 6,
   },
   detailGrid: {
     flexDirection: 'row',

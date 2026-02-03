@@ -100,6 +100,7 @@ export interface SubjectData {
   // Flags
   incidents: number;
   warrants: string;
+  warrantDescription?: string;
   restrictions?: string[];
   
   // Request
@@ -293,7 +294,7 @@ export const SUBJECTS: SubjectData[] = [
     },
     dossier: {
       name: 'PROCEDURAL TEST',
-      dateOfBirth: '3160-01-01',
+      dateOfBirth: '01/01/3160',
       address: 'Mars Colony Test Facility',
       occupation: 'Test Subject',
       sex: 'MALE',
@@ -342,7 +343,7 @@ export const SUBJECTS: SubjectData[] = [
     },
     dossier: {
       name: 'PROCEDURAL TEST B',
-      dateOfBirth: '3162-05-12',
+      dateOfBirth: '12/05/3162',
       address: 'Europa Outpost',
       occupation: 'Transit',
       sex: 'FEMALE',
@@ -391,7 +392,7 @@ export const SUBJECTS: SubjectData[] = [
     },
     dossier: {
       name: 'PROCEDURAL TEST C',
-      dateOfBirth: '3158-11-03',
+      dateOfBirth: '03/11/3158',
       address: 'Titan Colony',
       occupation: 'Transit',
       sex: 'MALE',
@@ -440,7 +441,7 @@ export const SUBJECTS: SubjectData[] = [
     },
     dossier: {
       name: 'PROCEDURAL TEST D',
-      dateOfBirth: '3161-07-22',
+      dateOfBirth: '22/07/3161',
       address: 'Io Station',
       occupation: 'Transit',
       sex: 'FEMALE',

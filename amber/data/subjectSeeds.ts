@@ -1,7 +1,10 @@
 import type { SubjectSeed } from '../types/subjectSeed';
 
 export const SUBJECT_SEEDS: SubjectSeed[] = [
-  // Shift 1
+  // =============================================================================
+  // SHIFT 1 - Tutorial shift. Directive: DENY: WARRANTS
+  // Focus: Clear warrant cases + moral dilemmas
+  // =============================================================================
   {
     id: 'S1-01',
     seed: 41001,
@@ -13,7 +16,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'CIVILIAN',
     reasonForVisit: 'Work shift transfer. Warehouse clerk.',
     destinationPlanet: 'DISTRICT 3',
-    greetingText: 'Morning. Sarah Miles. I am here for my shift transfer.',
+    greetingText: 'Warehouse clerk. Shift transfer to District 3.',
     communicationStyle: 'FLUENT',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -33,7 +36,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'CIVILIAN',
     reasonForVisit: 'Family visit. Mother in recovery.',
     destinationPlanet: 'DISTRICT 2',
-    greetingText: 'Please, I am late. Daniel Ortiz. My mother is in the ward.',
+    greetingText: 'Family visit. Mother in recovery. Request access.',
     communicationStyle: 'AGITATED',
     credentialBehavior: 'RELUCTANT',
     dossier: {
@@ -78,7 +81,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'SECURITY',
     reasonForVisit: 'Security contractor replacement.',
     destinationPlanet: 'CENTRAL HUB',
-    greetingText: 'Security detail. Kevin Brooks. Contractor replacement team.',
+    greetingText: 'Security contractor rotation. Augments registered. Request hub access.',
     communicationStyle: 'FORMAL',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -99,7 +102,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'DIPLOMAT',
     reasonForVisit: 'Executive access for board session.',
     destinationPlanet: 'CENTRAL HUB',
-    greetingText: 'Laura Chen. Board session access. Please proceed.',
+    greetingText: 'Board session access. Proceed.',
     communicationStyle: 'FORMAL',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -120,7 +123,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'ENGINEER',
     reasonForVisit: 'Facilities repair assignment.',
     destinationPlanet: 'DISTRICT 4',
-    greetingText: 'Hannah Price. Facilities repair assignment. I am cleared.',
+    greetingText: 'Facilities engineer. Filtration repair in District 4. Need clearance.',
     communicationStyle: 'FLUENT',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -140,7 +143,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'CIVILIAN',
     reasonForVisit: 'Housing appeal appointment.',
     destinationPlanet: 'DISTRICT 2',
-    greetingText: 'Mark Ellis. Housing appeal appointment.',
+    greetingText: 'Housing appeal appointment.',
     communicationStyle: 'BROKEN',
     credentialBehavior: 'FORGED',
     dossier: {
@@ -160,7 +163,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'SECURITY',
     reasonForVisit: 'Perimeter inspection detail.',
     destinationPlanet: 'CENTRAL HUB',
-    greetingText: 'Jordan Blake. Perimeter inspection detail.',
+    greetingText: 'Perimeter inspection from District 5. Request hub access.',
     communicationStyle: 'FORMAL',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -181,7 +184,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'MEDICAL',
     reasonForVisit: 'Urgent clinic transfer.',
     destinationPlanet: 'DISTRICT 1',
-    greetingText: 'Nina Alvarez. Urgent clinic transfer. Please hurry.',
+    greetingText: 'Clinic nurse, trauma unit. Patient in transit. Need immediate clearance.',
     communicationStyle: 'AGITATED',
     credentialBehavior: 'MULTIPLE',
     dossier: {
@@ -202,7 +205,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'CIVILIAN',
     reasonForVisit: 'Work permit renewal.',
     destinationPlanet: 'DISTRICT 3',
-    greetingText: 'Caleb Ross. Work permit renewal.',
+    greetingText: 'Work permit renewal.',
     communicationStyle: 'FLUENT',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -223,7 +226,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'ENGINEER',
     reasonForVisit: 'Maintenance supervisor callout.',
     destinationPlanet: 'DISTRICT 4',
-    greetingText: 'Priya Shah. Maintenance supervisor callout.',
+    greetingText: 'Maintenance supervisor callout.',
     communicationStyle: 'FLUENT',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -243,7 +246,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'CIVILIAN',
     reasonForVisit: 'Former employee, dispute hearing.',
     destinationPlanet: 'CENTRAL HUB',
-    greetingText: 'Tommy Reyes. I have a hearing. I need access.',
+    greetingText: 'Hearing scheduled. Request access.',
     communicationStyle: 'AGITATED',
     credentialBehavior: 'RELUCTANT',
     dossier: {
@@ -288,7 +291,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'ENGINEER',
     reasonForVisit: 'ID reissue appointment.',
     destinationPlanet: 'DISTRICT 2',
-    greetingText: 'Lena Park. I am here for an ID reissue appointment.',
+    greetingText: 'ID reissue appointment.',
     communicationStyle: 'BROKEN',
     credentialBehavior: 'MISSING',
     dossier: {
@@ -333,7 +336,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'ENGINEER',
     reasonForVisit: 'Temp contractor intake.',
     destinationPlanet: 'DISTRICT 3',
-    greetingText: 'Maya Clarke. Temp contractor intake.',
+    greetingText: 'Temp contractor intake.',
     communicationStyle: 'BROKEN',
     credentialBehavior: 'FORGED',
     dossier: {
@@ -354,7 +357,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'MEDICAL',
     reasonForVisit: 'Family emergency access.',
     destinationPlanet: 'DISTRICT 1',
-    greetingText: 'Grace Tanaka. Family emergency. I need access now.',
+    greetingText: 'Family emergency. Need access now.',
     communicationStyle: 'AGITATED',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -375,7 +378,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'CIVILIAN',
     reasonForVisit: 'Family visit authorization.',
     destinationPlanet: 'DISTRICT 1',
-    greetingText: 'Evan Tanaka. Family visit authorization.',
+    greetingText: 'Family visit authorization.',
     communicationStyle: 'FLUENT',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -395,7 +398,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'MEDICAL',
     reasonForVisit: 'Prosthetic service appointment.',
     destinationPlanet: 'DISTRICT 4',
-    greetingText: 'Luis Carter. Prosthetic service appointment.',
+    greetingText: 'Prosthetic service appointment.',
     communicationStyle: 'FLUENT',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -415,7 +418,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'DIPLOMAT',
     reasonForVisit: 'Executive audit access.',
     destinationPlanet: 'CENTRAL HUB',
-    greetingText: 'Victor Hale. Executive audit access. Proceed.',
+    greetingText: 'Executive audit access. Proceed.',
     communicationStyle: 'FORMAL',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -462,7 +465,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'CIVILIAN',
     reasonForVisit: 'Visiting family member in custody.',
     destinationPlanet: 'DISTRICT 2',
-    greetingText: 'Rita Fernandez. I am here to visit my brother. He is in holding.',
+    greetingText: 'Visiting family member in holding. Request access.',
     communicationStyle: 'AGITATED',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -482,7 +485,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'CIVILIAN',
     reasonForVisit: 'Work assignment rotation.',
     destinationPlanet: 'DISTRICT 5',
-    greetingText: 'Sam Wheeler. Work rotation. Routine assignment.',
+    greetingText: 'Work rotation. Routine assignment.',
     communicationStyle: 'BROKEN',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -502,7 +505,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'DIPLOMAT',
     reasonForVisit: 'Trade delegation meeting.',
     destinationPlanet: 'CENTRAL HUB',
-    greetingText: 'Yuki Ando. Trade delegation. Expedite clearance.',
+    greetingText: 'Trade delegation. Expedite clearance.',
     communicationStyle: 'FORMAL',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -548,7 +551,7 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     role: 'CIVILIAN',
     reasonForVisit: 'Medical appointment follow-up.',
     destinationPlanet: 'DISTRICT 1',
-    greetingText: 'Derek Marsh. Medical follow-up. I have the appointment slip.',
+    greetingText: 'Medical follow-up. Appointment on file.',
     communicationStyle: 'FLUENT',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -557,5 +560,201 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     },
     truthFlags: { hasWarrant: false, hasTransitIssue: false, hasIncident: false },
     exceptionTags: ['MEDICAL'],
+  },
+
+  // =============================================================================
+  // ADDITIONAL SHIFT 1 SUBJECTS - More warrant cases for gameplay balance
+  // =============================================================================
+  {
+    id: 'S1-10',
+    seed: 41022,
+    name: 'Victor Novak',
+    sex: 'M',
+    subjectType: 'HUMAN',
+    hierarchyTier: 'LOWER',
+    originPlanet: 'DISTRICT 4',
+    role: 'CIVILIAN',
+    reasonForVisit: 'Looking for work. Day labor.',
+    destinationPlanet: 'DISTRICT 1',
+    greetingText: 'Day labor permit request. Seeking clearance.',
+    communicationStyle: 'BROKEN',
+    credentialBehavior: 'RELUCTANT',
+    dossier: {
+      occupation: 'Unemployed',
+      address: 'District 4, Overflow Shelter',
+    },
+    truthFlags: { hasWarrant: true, hasTransitIssue: false, hasIncident: true },
+  },
+  {
+    id: 'S1-11',
+    seed: 41023,
+    name: 'Rosa Mendez',
+    sex: 'F',
+    subjectType: 'HUMAN',
+    hierarchyTier: 'MIDDLE',
+    originPlanet: 'DISTRICT 2',
+    role: 'MEDICAL',
+    reasonForVisit: 'Emergency surgery team rotation.',
+    destinationPlanet: 'DISTRICT 1',
+    greetingText: 'Transplant surgery rotation. Patient prepped. Request access.',
+    communicationStyle: 'AGITATED',
+    credentialBehavior: 'COOPERATIVE',
+    dossier: {
+      occupation: 'Surgeon',
+      address: 'Medical Row, Staff Housing',
+    },
+    // MORAL DILEMMA: Surgeon with medical exception BUT has warrant for organ trafficking
+    truthFlags: { hasWarrant: true, hasTransitIssue: false, hasIncident: true },
+    exceptionTags: ['MEDICAL'],
+  },
+  {
+    id: 'S1-12',
+    seed: 41024,
+    name: 'James Wu',
+    sex: 'M',
+    subjectType: 'HUMAN_CYBORG',
+    hierarchyTier: 'MIDDLE',
+    originPlanet: 'DISTRICT 5',
+    role: 'CIVILIAN',
+    reasonForVisit: 'Court appearance. Witness testimony.',
+    destinationPlanet: 'CENTRAL HUB',
+    greetingText: 'Witness appearance today. Request access.',
+    communicationStyle: 'FORMAL',
+    credentialBehavior: 'COOPERATIVE',
+    dossier: {
+      occupation: 'Accountant',
+      address: 'District 5, Tower Block 3',
+    },
+    truthFlags: { hasWarrant: true, hasTransitIssue: false, hasIncident: false },
+  },
+  {
+    id: 'S1-13',
+    seed: 41025,
+    name: 'Tanya Brooks',
+    sex: 'F',
+    subjectType: 'HUMAN',
+    hierarchyTier: 'LOWER',
+    originPlanet: 'DISTRICT 3',
+    role: 'CIVILIAN',
+    reasonForVisit: 'Child pickup from school.',
+    destinationPlanet: 'DISTRICT 2',
+    greetingText: 'Child pickup authorization. Request access.',
+    communicationStyle: 'AGITATED',
+    credentialBehavior: 'COOPERATIVE',
+    dossier: {
+      occupation: 'Factory Line Worker',
+      address: 'District 3, Block 14',
+    },
+    truthFlags: { hasWarrant: true, hasTransitIssue: false, hasIncident: false },
+  },
+
+  // =============================================================================
+  // ADDITIONAL SHIFT 3 SUBJECTS - More VIP/DIPLOMAT cases
+  // =============================================================================
+  {
+    id: 'S3-08',
+    seed: 41026,
+    name: 'Helena Cross',
+    sex: 'F',
+    subjectType: 'HUMAN',
+    hierarchyTier: 'VIP',
+    originPlanet: 'DISTRICT 1',
+    role: 'DIPLOMAT',
+    reasonForVisit: 'Emergency council session.',
+    destinationPlanet: 'CENTRAL HUB',
+    greetingText: 'Emergency session in progress. Immediate access required.',
+    communicationStyle: 'FORMAL',
+    credentialBehavior: 'COOPERATIVE',
+    dossier: {
+      occupation: 'Councilwoman',
+      address: 'Central Ring, Council Quarters',
+    },
+    truthFlags: { hasWarrant: false, hasTransitIssue: false, hasIncident: false },
+    exceptionTags: ['VIP_OVERRIDE', 'DIPLOMAT'],
+  },
+  {
+    id: 'S3-09',
+    seed: 41027,
+    name: 'Raj Patel',
+    sex: 'M',
+    subjectType: 'HUMAN',
+    hierarchyTier: 'VIP',
+    originPlanet: 'DISTRICT 4',
+    role: 'CIVILIAN',
+    reasonForVisit: 'Corporate merger signing.',
+    destinationPlanet: 'CENTRAL HUB',
+    greetingText: 'Merger signing. Executive clearance requested.',
+    communicationStyle: 'FORMAL',
+    credentialBehavior: 'COOPERATIVE',
+    dossier: {
+      occupation: 'CEO',
+      address: 'District 4, Executive Tower',
+    },
+    // VIP but has warrant - player must decide
+    truthFlags: { hasWarrant: true, hasTransitIssue: false, hasIncident: true },
+    exceptionTags: ['VIP_OVERRIDE'],
+  },
+  {
+    id: 'S3-10',
+    seed: 41028,
+    name: 'Colonel Ada Sterling',
+    sex: 'F',
+    subjectType: 'HUMAN_CYBORG',
+    hierarchyTier: 'VIP',
+    originPlanet: 'DISTRICT 5',
+    role: 'SECURITY',
+    reasonForVisit: 'Defense briefing.',
+    destinationPlanet: 'CENTRAL HUB',
+    greetingText: 'Defense briefing, classified. Request clearance.',
+    communicationStyle: 'FORMAL',
+    credentialBehavior: 'COOPERATIVE',
+    dossier: {
+      occupation: 'Military Officer',
+      address: 'District 5, Command Barracks',
+    },
+    truthFlags: { hasWarrant: false, hasTransitIssue: false, hasIncident: false },
+    exceptionTags: ['VIP_OVERRIDE'],
+  },
+  {
+    id: 'S3-11',
+    seed: 41029,
+    name: 'Maria Santos',
+    sex: 'F',
+    subjectType: 'HUMAN',
+    hierarchyTier: 'MIDDLE',
+    originPlanet: 'DISTRICT 2',
+    role: 'CIVILIAN',
+    reasonForVisit: 'Food delivery route.',
+    destinationPlanet: 'DISTRICT 3',
+    greetingText: 'Food delivery, D-Three route. Cold chain goods. Request access.',
+    communicationStyle: 'FLUENT',
+    credentialBehavior: 'COOPERATIVE',
+    dossier: {
+      occupation: 'Delivery Driver',
+      address: 'District 2, Transport Hub',
+    },
+    // Regular civilian - should be DENIED in Shift 3
+    truthFlags: { hasWarrant: false, hasTransitIssue: false, hasIncident: false },
+  },
+  {
+    id: 'S3-12',
+    seed: 41030,
+    name: 'Omar Hassan',
+    sex: 'M',
+    subjectType: 'HUMAN',
+    hierarchyTier: 'LOWER',
+    originPlanet: 'DISTRICT 3',
+    role: 'CIVILIAN',
+    reasonForVisit: 'Scrap collection permit.',
+    destinationPlanet: 'DISTRICT 4',
+    greetingText: 'Scrap collection permit. Request access.',
+    communicationStyle: 'BROKEN',
+    credentialBehavior: 'RELUCTANT',
+    dossier: {
+      occupation: 'Scrap Collector',
+      address: 'District 3, Outer Fence',
+    },
+    // Regular civilian - should be DENIED in Shift 3
+    truthFlags: { hasWarrant: false, hasTransitIssue: false, hasIncident: false },
   },
 ];

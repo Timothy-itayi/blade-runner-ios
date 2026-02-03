@@ -20,7 +20,7 @@ import {
   PortraitPreset,
   resolvePortraitFraming,
 } from '../../utils/PortraitConfig';
-import { getHeadAsset } from './portraitAssets';
+import { getHeadAsset, getHeadAssetBySex, SubjectSex } from './portraitAssets';
 
 // React Native requires @react-three/fiber/native Canvas to create a GL surface.
 // The default @react-three/fiber Canvas is DOM-only and renders nothing in RN.
@@ -922,12 +922,14 @@ function RawHeadFallback({
   headIndex,
   preset,
   style,
+  sex = 'M',
   showScanLine = false,
   scanProgress = 0,
 }: {
   headIndex: number;
   preset: PortraitPreset;
   style?: any;
+  sex?: SubjectSex;
   showScanLine?: boolean;
   scanProgress?: number;
 }) {
@@ -944,7 +946,7 @@ function RawHeadFallback({
 
   return (
     <PortraitFrame preset={preset} headIndex={headIndex} style={style} overlay={overlay}>
-      <ExpoImage source={getHeadAsset(headIndex)} style={StyleSheet.absoluteFill} contentFit="cover" />
+      <ExpoImage source={getHeadAssetBySex(headIndex, sex)} style={StyleSheet.absoluteFill} contentFit="cover" />
     </PortraitFrame>
   );
 }
@@ -958,6 +960,8 @@ function RawHeadFallback({
 export interface ProceduralPortraitProps {
   subjectId: string;
   subjectType?: string;
+  /** Subject's sex for portrait matching ('M' | 'F' | 'X'). */
+  sex?: SubjectSex;
   isAnomaly?: boolean;
   isScanning?: boolean;
   scanProgress?: number;
@@ -975,6 +979,7 @@ export interface ProceduralPortraitProps {
 export function ProceduralPortrait({
   subjectId,
   subjectType,
+  sex = 'M',
   isAnomaly,
   isScanning = false,
   scanProgress = 0,
@@ -1139,7 +1144,7 @@ export function ProceduralPortrait({
       overlay={overlay}
     >
       <>
-        <ExpoImage source={getHeadAsset(geometry.baseHeadIndex)} style={StyleSheet.absoluteFill} contentFit="cover" />
+        <ExpoImage source={getHeadAssetBySex(geometry.baseHeadIndex, sex)} style={StyleSheet.absoluteFill} contentFit="cover" />
         {extra}
       </>
     </PortraitFrame>
@@ -1208,6 +1213,7 @@ export function ProceduralPortrait({
         headIndex={geometry.baseHeadIndex}
         preset={portraitPreset}
         style={style}
+        sex={sex}
         showScanLine={isScanning}
         scanProgress={scanProgress}
       />

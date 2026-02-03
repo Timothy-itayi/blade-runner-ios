@@ -472,6 +472,7 @@ export const IntelPanel = ({
                     <ProceduralPortrait
                       subjectId={data.id}
                       subjectType={data.subjectType}
+                      sex={data.sex || 'M'}
                       isAnomaly={data.subjectType === 'REPLICANT'}
                       portraitPreset="dossier"
                       style={styles.dossierPreviewPhoto}

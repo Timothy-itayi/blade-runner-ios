@@ -12,6 +12,7 @@ export interface TravelEntry {
 
 export interface SubjectEvidence {
   warrants: string;
+  warrantDescription?: string;
   incidents: number;
   databaseQuery: {
     travelHistory: TravelEntry[];

@@ -495,7 +495,7 @@ function generateDossierData(traits: SubjectTraits, name: string, sex: 'M' | 'F'
     Math.floor(Math.random() * addresses[traits.originPlanet].length)
   ];
 
-  // Generate random date of birth (age 20-60)
+  // Generate random date of birth (age 20-60) in dd/mm/yyyy format
   const currentYear = 3184;
   const age = 20 + Math.floor(Math.random() * 40);
   const birthYear = currentYear - age;
@@ -504,7 +504,7 @@ function generateDossierData(traits: SubjectTraits, name: string, sex: 'M' | 'F'
 
   return {
     name,
-    dateOfBirth: `${birthYear}-${month}-${day}`,
+    dateOfBirth: `${day}/${month}/${birthYear}`,
     address,
     occupation,
     sex: sex === 'M' ? 'MALE' : sex === 'F' ? 'FEMALE' : 'UNKNOWN',
@@ -661,9 +661,10 @@ export function createSubjectFromTraits(
     dossier,
   };
 
-  // Apply manual overrides
+  // Apply manual overrides (excluding dossier which is already merged above)
   if (config.manualOverrides) {
-    Object.assign(subject, config.manualOverrides);
+    const { dossier: _excludeDossier, ...otherOverrides } = config.manualOverrides;
+    Object.assign(subject, otherOverrides);
   }
 
   return subject;

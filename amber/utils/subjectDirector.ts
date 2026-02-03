@@ -102,6 +102,7 @@ export const buildSubjectFromSeed = (
   const directiveEval = evaluateDirective(seed, directive);
 
   subject.warrants = evidence.warrants;
+  subject.warrantDescription = evidence.warrantDescription;
   subject.incidents = evidence.incidents;
   subject.databaseQuery = evidence.databaseQuery;
   subject.verificationRecord = evidence.verificationRecord;

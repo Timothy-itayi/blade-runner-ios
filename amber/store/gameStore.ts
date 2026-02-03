@@ -25,6 +25,7 @@ export interface DecisionLogEntry {
   correct: boolean;
   // Additional context for map display
   subjectType?: string;
+  sex?: 'M' | 'F' | 'X';
   originPlanet?: string;
   destinationPlanet?: string;
   permitType?: string;

@@ -134,6 +134,7 @@ export default function MainScreen() {
   const pendingAlert = useMemo(() => {
     return alertLog.find(entry => entry.outcome === 'PENDING') || null;
   }, [alertLog]);
+  const [alertModeVisible, setAlertModeVisible] = useState(false);
 
   const gameOpacity = useRef(new Animated.Value(DEV_MODE ? 1 : 0)).current;
 
@@ -528,11 +529,13 @@ export default function MainScreen() {
               onIdentityScanComplete={() => setIsIdentityScanning(false)}
               gatheredInformation={gatheredInformation}
               onInformationUpdate={handleInformationUpdate}
+              alertModeVisible={alertModeVisible}
+              onAlertModeChange={setAlertModeVisible}
             />
             <AmberAlertModal
-              visible={!!pendingAlert}
+              visible={!!pendingAlert && !alertModeVisible}
               alert={pendingAlert}
-              onHandle={() => router.push('/map')}
+              onHandle={() => setAlertModeVisible(true)}
               onIgnore={handleIgnoreAlert}
             />
 

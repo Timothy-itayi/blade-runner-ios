@@ -12,9 +12,16 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Svg, { Line, G } from 'react-native-svg';
+import Svg, { Line } from 'react-native-svg';
+import { Canvas, Line as SkiaLine, vec } from '@shopify/react-native-skia';
 import { MapTheme, getNodeStateColor, getEdgeTypeColor } from '../../constants/mapTheme';
 import { Theme } from '../../constants/theme';
+
+// Grid configuration
+const GRID_SPACING = 40; // Distance between grid intersections
+const CROSS_SIZE = 4; // Half-length of each cross arm
+const CROSS_COLOR = 'rgba(255, 255, 255, 0.25)'; // Subtle white crosses
+const CROSS_STROKE_WIDTH = 1;
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -68,20 +75,33 @@ interface NodeMapProps {
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
-function getNodePosition(index: number, containerWidth: number, containerHeight: number): NodePosition {
-  const centerX = containerWidth / 2;
-  const centerY = containerHeight / 2;
+function getNodePosition(
+  index: number, 
+  canvasWidth: number, 
+  canvasHeight: number,
+  maxRadius?: number
+): NodePosition {
+  const centerX = canvasWidth / 2;
+  const centerY = canvasHeight / 2;
   
-  const baseRadius = Math.min(containerWidth, containerHeight) * 0.25;
-  const radiusGrowth = Math.min(containerWidth, containerHeight) * 0.06;
-  const angleStep = (Math.PI * 2) / 5;
+  // Base radius and growth - nodes spread outward in rings
+  const baseRadius = Math.min(canvasWidth, canvasHeight) * 0.12;
+  const radiusGrowth = Math.min(canvasWidth, canvasHeight) * 0.08;
+  const nodesPerRing = 8; // More nodes per ring for better distribution
+  const angleStep = (Math.PI * 2) / nodesPerRing;
   const angleOffset = -Math.PI / 2;
   
-  const ringIndex = Math.floor(index / 5);
-  const posInRing = index % 5;
+  const ringIndex = Math.floor(index / nodesPerRing);
+  const posInRing = index % nodesPerRing;
   
-  const angle = angleOffset + (posInRing * angleStep) + (ringIndex * 0.4);
-  const radius = baseRadius + (ringIndex * radiusGrowth * 2.5);
+  // Stagger angle slightly per ring for visual interest
+  const angle = angleOffset + (posInRing * angleStep) + (ringIndex * 0.3);
+  let radius = baseRadius + (ringIndex * radiusGrowth);
+  
+  // Clamp radius if maxRadius is specified
+  if (maxRadius && radius > maxRadius) {
+    radius = maxRadius;
+  }
   
   return {
     x: centerX + Math.cos(angle) * radius,
@@ -91,47 +111,61 @@ function getNodePosition(index: number, containerWidth: number, containerHeight:
 }
 
 // ============================================
-// GRID BACKGROUND - 2001 Style
+// GRID CROSS BACKGROUND
+// Draws subtle crosses at grid intersections
 // ============================================
-function GridBackground({ width, height }: { width: number; height: number }) {
-  const lines = useMemo(() => {
-    const elements: JSX.Element[] = [];
-    const spacing = 40;
-    
-    // Vertical lines
-    for (let x = 0; x < width; x += spacing) {
-      elements.push(
-        <Line
-          key={`v-${x}`}
-          x1={x}
-          y1={0}
-          x2={x}
-          y2={height}
-          stroke={MapTheme.colors.grid}
-          strokeWidth={1}
-        />
-      );
-    }
-    
-    // Horizontal lines
-    for (let y = 0; y < height; y += spacing) {
-      elements.push(
-        <Line
-          key={`h-${y}`}
-          x1={0}
-          y1={y}
-          x2={width}
-          y2={y}
-          stroke={MapTheme.colors.grid}
-          strokeWidth={1}
-        />
-      );
-    }
-    
-    return elements;
-  }, [width, height]);
+const CANVAS_MULTIPLIER = 3; // How many times larger than viewport the canvas is
 
-  return <G>{lines}</G>;
+interface GridCrossBackgroundProps {
+  canvasWidth: number;
+  canvasHeight: number;
+}
+
+function GridCrossBackground({ canvasWidth, canvasHeight }: GridCrossBackgroundProps) {
+  // Generate crosses at each grid intersection
+  const crosses = useMemo(() => {
+    const result: React.ReactNode[] = [];
+    const numX = Math.ceil(canvasWidth / GRID_SPACING) + 1;
+    const numY = Math.ceil(canvasHeight / GRID_SPACING) + 1;
+    
+    for (let iy = 0; iy < numY; iy++) {
+      for (let ix = 0; ix < numX; ix++) {
+        const cx = ix * GRID_SPACING;
+        const cy = iy * GRID_SPACING;
+        const key = `cross-${ix}-${iy}`;
+        
+        // Horizontal line of cross
+        result.push(
+          <SkiaLine
+            key={`${key}-h`}
+            p1={vec(cx - CROSS_SIZE, cy)}
+            p2={vec(cx + CROSS_SIZE, cy)}
+            color={CROSS_COLOR}
+            strokeWidth={CROSS_STROKE_WIDTH}
+          />
+        );
+        
+        // Vertical line of cross
+        result.push(
+          <SkiaLine
+            key={`${key}-v`}
+            p1={vec(cx, cy - CROSS_SIZE)}
+            p2={vec(cx, cy + CROSS_SIZE)}
+            color={CROSS_COLOR}
+            strokeWidth={CROSS_STROKE_WIDTH}
+          />
+        );
+      }
+    }
+    
+    return result;
+  }, [canvasWidth, canvasHeight]);
+
+  return (
+    <Canvas style={{ width: canvasWidth, height: canvasHeight }}>
+      {crosses}
+    </Canvas>
+  );
 }
 
 // ============================================
@@ -224,9 +258,20 @@ function SubjectNode({ node, position, isSelected, onPress }: SubjectNodeProps) 
     return { opacity };
   });
 
+  // Node is 14px, so offset by half (7) to center on position
+  // Container is 70px wide for label, so offset by half (35) horizontally
+  const NODE_SIZE = 14;
+  const CONTAINER_WIDTH = 70;
+  
   return (
     <TouchableOpacity
-      style={[styles.nodeContainer, { left: position.x - 20, top: position.y - 20 }]}
+      style={[
+        styles.nodeContainer, 
+        { 
+          left: position.x - CONTAINER_WIDTH / 2, 
+          top: position.y - NODE_SIZE / 2,
+        }
+      ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -397,6 +442,7 @@ function NodeTooltip({ node, position, containerWidth, containerHeight }: NodeTo
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 3;
 const SPRING_CONFIG = { damping: 15, stiffness: 150 };
+const RECENTER_TIMING = { duration: 220, easing: Easing.out(Easing.cubic) };
 
 // ============================================
 // MAIN COMPONENT
@@ -424,28 +470,41 @@ export default function NodeMap({
   
   const selectedId = selectedNodeId !== undefined ? selectedNodeId : internalSelectedId;
   const effectiveHeight = height || containerHeight;
-  const centerX = width / 2;
-  const centerY = effectiveHeight / 2;
+  
+  // Extended canvas dimensions - larger than viewport to allow panning
+  const canvasWidth = width * CANVAS_MULTIPLIER;
+  const canvasHeight = effectiveHeight * CANVAS_MULTIPLIER;
+  
+  // Offset to center the canvas over the viewport
+  const canvasOffsetX = (canvasWidth - width) / 2;
+  const canvasOffsetY = (canvasHeight - effectiveHeight) / 2;
+  
+  // Center of the canvas (where player node goes)
+  const canvasCenterX = canvasWidth / 2;
+  const canvasCenterY = canvasHeight / 2;
+  
+  // Max radius for nodes to stay within canvas bounds (with padding)
+  const maxNodeRadius = Math.min(canvasWidth, canvasHeight) * 0.4;
   
   // Filter out player node (rendered separately as core)
   const subjectNodes = nodes.filter(n => n.type !== 'player');
   
-  // Calculate positions for subject nodes
+  // Calculate positions for subject nodes within the canvas
   const positions = useMemo(() => 
-    subjectNodes.map((_, i) => getNodePosition(i, width, effectiveHeight)),
-    [subjectNodes.length, width, effectiveHeight]
+    subjectNodes.map((_, i) => getNodePosition(i, canvasWidth, canvasHeight, maxNodeRadius)),
+    [subjectNodes.length, canvasWidth, canvasHeight, maxNodeRadius]
   );
   
-  // Create position lookup for edges
+  // Create position lookup for edges (in canvas coordinates)
   const positionLookup = useMemo(() => {
     const lookup: Record<string, { x: number; y: number }> = {
-      'player': { x: centerX, y: centerY },
+      'player': { x: canvasCenterX, y: canvasCenterY },
     };
     subjectNodes.forEach((node, i) => {
       lookup[node.id] = { x: positions[i].x, y: positions[i].y };
     });
     return lookup;
-  }, [subjectNodes, positions, centerX, centerY]);
+  }, [subjectNodes, positions, canvasCenterX, canvasCenterY]);
   
   // Find selected node for tooltip
   const selectedNode = nodes.find(n => n.id === selectedId);
@@ -468,9 +527,10 @@ export default function NodeMap({
 
   // Recenter the map
   const handleRecenter = useCallback(() => {
-    scale.value = withSpring(1, SPRING_CONFIG);
-    translateX.value = withSpring(0, SPRING_CONFIG);
-    translateY.value = withSpring(0, SPRING_CONFIG);
+    // Smooth return (no bounce)
+    scale.value = withTiming(1, RECENTER_TIMING);
+    translateX.value = withTiming(0, RECENTER_TIMING);
+    translateY.value = withTiming(0, RECENTER_TIMING);
     savedScale.value = 1;
     savedTranslateX.value = 0;
     savedTranslateY.value = 0;
@@ -513,14 +573,14 @@ export default function NodeMap({
       runOnJS(updateTransformState)(!isAtOrigin);
     });
 
-  // Combine gestures
+  // Combine gestures for simultaneous pan + pinch
   const combinedGesture = Gesture.Simultaneous(panGesture, pinchGesture);
 
-  // Animated style for the map content
+  // Animated style for the map content (includes canvas offset)
   const animatedMapStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
+      { translateX: translateX.value - canvasOffsetX },
+      { translateY: translateY.value - canvasOffsetY },
       { scale: scale.value },
     ],
   }));
@@ -528,13 +588,17 @@ export default function NodeMap({
   return (
     <View style={[styles.container, { width, height: effectiveHeight }]}>
       <GestureDetector gesture={combinedGesture}>
-        <Animated.View style={[styles.mapContent, animatedMapStyle]}>
-          {/* SVG Layer - Grid and Edges */}
+        <Animated.View style={[styles.mapContent, { width: canvasWidth, height: canvasHeight }, animatedMapStyle]}>
+          {/* Grid texture background */}
+          {showGrid && (
+            <View style={styles.gridContainer}>
+              <GridCrossBackground canvasWidth={canvasWidth} canvasHeight={canvasHeight} />
+            </View>
+          )}
+          
+          {/* SVG Layer for Edges */}
           <View style={styles.svgContainer}>
-            <Svg width={width} height={effectiveHeight}>
-              {showGrid && <GridBackground width={width} height={effectiveHeight} />}
-              
-              {/* Edges */}
+            <Svg width={canvasWidth} height={canvasHeight}>
               {edges.map((edge) => {
                 const fromPos = positionLookup[edge.from];
                 const toPos = positionLookup[edge.to];
@@ -553,8 +617,8 @@ export default function NodeMap({
             </Svg>
           </View>
           
-          {/* Core node (player) */}
-          <CoreNode centerX={centerX} centerY={centerY} />
+          {/* Core node (player) - at canvas center */}
+          <CoreNode centerX={canvasCenterX} centerY={canvasCenterY} />
           
           {/* Subject nodes */}
           {subjectNodes.map((node, i) => (
@@ -572,8 +636,8 @@ export default function NodeMap({
             <NodeTooltip 
               node={selectedNode} 
               position={selectedPosition}
-              containerWidth={width}
-              containerHeight={effectiveHeight}
+              containerWidth={canvasWidth}
+              containerHeight={canvasHeight}
             />
           )}
         </Animated.View>
@@ -607,9 +671,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   mapContent: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
+    position: 'relative',
+  },
+  gridContainer: {
+    ...StyleSheet.absoluteFillObject,
   },
   svgContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -679,12 +744,12 @@ const styles = StyleSheet.create({
     left: 24,
   },
   // Subject node styles
+  // Node is centered at top of container, label below
   nodeContainer: {
     position: 'absolute',
     width: 70,
     height: 50,
     alignItems: 'center',
-    marginLeft: -15, // offset for wider container
   },
   node: {
     width: 14,
@@ -696,8 +761,11 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    top: -7, // center around node (node is 14px, glow is 28px, so offset by (28-14)/2 = 7)
-    left: 21, // center horizontally (container is 70px, glow is 28px, so (70-28)/2 = 21)
+    // Center glow on node: node is at top, centered horizontally
+    // Glow is 28px, node is 14px, so offset by -7 to center vertically
+    // Horizontally: (70-28)/2 = 21
+    top: -7,
+    left: 21,
   },
   nodeSelection: {
     position: 'absolute',
@@ -705,8 +773,8 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 14,
     borderWidth: 2,
-    top: -7, // center around node
-    left: 21, // center horizontally
+    top: -7,
+    left: 21,
   },
   nodeLabel: {
     fontFamily: Theme.fonts.mono,

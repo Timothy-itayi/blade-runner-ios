@@ -72,37 +72,34 @@ type ImageRun = {
 
 const MODEL_ASSET = require('../../models/face_landmark.tflite');
 const SEGMENT_MODEL_ASSET = require('../../models/selfie_segmentation.tflite');
+// NOTE: All assets referenced here must exist on disk. Metro resolves `require()`
+// statically at bundle-time; missing files crash the app.
+//
+// The face pipeline currently preloads ACTIVE_SOURCES[0..2] and treats them as:
+// 0 = human, 1 = cyborg, 2 = uncanny.
+// Keep those slots stable.
 const IMAGE_SOURCES = [
   {
-    key: 'neutral',
-    label: 'neutral-expression',
+    key: 'human-0',
+    label: 'asian-late30s-male',
     archetype: 'human' as const,
-    asset: require('../../assets/ai-portraits/timothy_itayi_neutral_expression_facing_camera_head_and_shoul_0f9d1137-478a-44d0-bd39-d600c34db2cc_3.png'),
+    asset: require('../../assets/ai-portraits/asian-late30s-male.png'),
   },
   {
-    key: 'cyborg',
-    label: 'cyborg-implants',
+    key: 'cyborg-0',
+    label: 'female-late30s-white',
     archetype: 'cyborg' as const,
-    asset: require('../../assets/ai-portraits/timothy_itayi_human_cyborg_hybrid_partial_facial_implants_exp_c337c6ba-b3cb-4046-9554-357c27634711_3.png'),
+    asset: require('../../assets/ai-portraits/female-late30s-white.png'),
   },
   {
-    key: 'uncanny',
-    label: 'uncanny',
+    key: 'uncanny-0',
+    label: 'male-white-40s',
     archetype: 'uncanny' as const,
-    asset: require('../../assets/ai-portraits/timothy_itayi_synthetic_human_replicant_slightly_uncanny_feat_5902affe-5785-43a1-8928-41222ec93cbe_3.png'),
-  },
-  {
-    key: 'alien',
-    label: 'alien-texture',
-    asset: require('../../assets/ai-portraits/timothy_itayi_humanoid_alien_unfamiliar_skin_texture_slightly_4ef3b708-c23a-48b3-bd36-fac8be599008_1.png'),
-  },
-  {
-    key: 'robot',
-    label: 'robot-plates',
-    asset: require('../../assets/ai-portraits/timothy_itayi_humanoid_robot_face_plates_and_seams_visible_me_b66526ea-6817-4949-9792-8be4981abf9e_0.png'),
+    asset: require('../../assets/ai-portraits/male-white-40s.png'),
   },
 ];
-const ACTIVE_SOURCES = IMAGE_SOURCES.slice(0, 3);
+// Use all available sources
+const ACTIVE_SOURCES = IMAGE_SOURCES;
 const PIPELINE_USE_SEGMENTATION = false;
 const PIPELINE_YIELD_BETWEEN_IMAGES = true;
 const TEXTURE_KEYS = [

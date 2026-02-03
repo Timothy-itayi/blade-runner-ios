@@ -60,7 +60,6 @@ export const CommLinkPanel = ({
               active={hudStage === 'full'}
               delay={BUILD_SEQUENCE.header + 500}
               style={styles.dialogueText}
-              numberOfLines={3}
             />
           ) : (
             <Text style={[styles.dialogueText, { opacity: 0.3 }]}>[ NO ACTIVE TRANSMISSION ]</Text>
@@ -80,7 +79,7 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    height: 110,
+    height: 128,
     backgroundColor: 'rgba(127, 184, 216, 0.03)',
   },
   header: {
@@ -134,8 +133,8 @@ const styles = StyleSheet.create({
   dialogueText: {
     color: Theme.colors.textPrimary,
     fontFamily: Theme.fonts.mono,
-    fontSize: 14,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 17,
     fontStyle: 'italic',
   },
   footer: {

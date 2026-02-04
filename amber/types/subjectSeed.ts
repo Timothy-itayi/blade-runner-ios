@@ -36,6 +36,8 @@ export interface SubjectSeed {
   reasonForVisit?: string;
   destinationPlanet?: string;
   greetingText?: string;
+  /** Additional dialogue lines triggered by player actions */
+  dialogueLines?: string[];
   communicationStyle?: CommunicationStyle;
   credentialBehavior?: CredentialBehavior;
   dossier?: {

@@ -13,6 +13,8 @@ const matchesCondition = (seed: SubjectSeed, condition: DirectiveConditionType):
   switch (condition) {
     case 'WARRANTS':
       return !!seed.truthFlags.hasWarrant;
+    case 'TRANSIT_FLAGGED':
+      return !!seed.truthFlags.hasTransitIssue;
     case 'REPLICANTS':
       return seed.subjectType === 'REPLICANT';
     case 'SYNTHETICS':
@@ -105,6 +107,7 @@ export const buildSubjectFromSeed = (
   subject.warrantDescription = evidence.warrantDescription;
   subject.incidents = evidence.incidents;
   subject.databaseQuery = evidence.databaseQuery;
+  subject.dialogueLines = seed.dialogueLines;
   subject.verificationRecord = evidence.verificationRecord;
   subject.evidenceOutputs = evidence.outputs;
 

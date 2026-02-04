@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getShiftForSubject } from '../constants/shifts';
 
 const SAVE_KEY = '@amber_save';
 const SAVE_VERSION = 3;
@@ -111,11 +112,11 @@ export const getSaveInfo = async (): Promise<{ shiftNumber: number; timestamp: n
     const data: SaveData = JSON.parse(saved);
     if (data.version !== SAVE_VERSION) return null;
 
-    // Calculate shift number (1-20) from subject index
-    const shiftNumber = Math.floor(data.currentSubjectIndex / 4) + 1;
+    // Calculate shift number from subject index
+    const shiftNumber = getShiftForSubject(data.currentSubjectIndex).id;
 
     return {
-      shiftNumber: Math.min(shiftNumber, 20),
+      shiftNumber,
       timestamp: data.timestamp,
     };
   } catch (error) {

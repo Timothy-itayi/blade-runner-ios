@@ -154,8 +154,10 @@ export const useGameHandlers = (props: GameHandlersProps) => {
       destinationPlanet: currentSubject.destinationPlanet,
       permitType: currentSubject.dossier?.occupation,
       warrants: currentSubject.warrants,
+      warrantDescription: currentSubject.warrantDescription,
       denyReason,
     });
+    /* AMBER alert flow disabled for test build.
     if (currentShift.id > 1 && currentSubject.alertScenario) {
       const existingAlert = store.alertLog.find(entry => entry.subjectId === currentSubject.id);
       if (!existingAlert) {
@@ -167,6 +169,7 @@ export const useGameHandlers = (props: GameHandlersProps) => {
         });
       }
     }
+    */
     if (consequence.type === 'NONE') {
       // Clean decision: no life loss
     } else if (consequence.type === 'WARNING') {

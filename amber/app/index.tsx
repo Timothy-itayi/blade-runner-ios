@@ -30,7 +30,6 @@ import { createDefaultSubjectPool, getSubjectByIndex } from '../utils/subjectMan
 import { SubjectData } from '../data/subjects';
 import { getShiftForSubject, isEndOfShift, DEMO_FINAL_SHIFT } from '../constants/shifts';
 import { useGameStore } from '../store/gameStore';
-import { AmberAlertModal } from '../components/game/AmberAlertModal';
 import { createEmptyInformation, GatheredInformation, MEMORY_SLOT_CAPACITY } from '../types/information';
 import { determineEquipmentFailures } from '../utils/equipmentFailures';
 import { createPatternTracker, PatternTracker } from '../utils/warningPatterns';
@@ -43,8 +42,6 @@ export default function MainScreen() {
   const router = useRouter();
   const decisionLog = useGameStore((state) => state.decisionLog);
   const alertLog = useGameStore((state) => state.alertLog);
-  const resolveAlert = useGameStore((state) => state.resolveAlert);
-  const addPropaganda = useGameStore((state) => state.addPropaganda);
   const propagandaFeed = useGameStore((state) => state.propagandaFeed);
   
   const [gamePhase, setGamePhase] = useState<GamePhase>(DEV_MODE ? 'active' : 'intro');
@@ -131,10 +128,7 @@ export default function MainScreen() {
   // Phase 5: Use subject pool instead of hardcoded SUBJECTS
   const currentSubject = getSubjectByIndex(currentSubjectIndex, subjectPool);
   const activeDirective = currentShift.directive;
-  const pendingAlert = useMemo(() => {
-    return alertLog.find(entry => entry.outcome === 'PENDING') || null;
-  }, [alertLog]);
-  const [alertModeVisible, setAlertModeVisible] = useState(false);
+  // AMBER alert flow disabled for test build.
 
   const gameOpacity = useRef(new Animated.Value(DEV_MODE ? 1 : 0)).current;
 
@@ -278,23 +272,6 @@ export default function MainScreen() {
     setHudStage('none');
     // Return to home screen
     setGamePhase('intro');
-  };
-
-  const handleIgnoreAlert = () => {
-    if (!pendingAlert) return;
-    const now = Date.now();
-    resolveAlert(pendingAlert.subjectId, {
-      outcome: 'IGNORED',
-      resolvedAt: now,
-    });
-    addPropaganda({
-      id: `PR-${now}-${pendingAlert.subjectId}`,
-      subjectId: pendingAlert.subjectId,
-      headline: pendingAlert.scenario.propaganda.headline,
-      body: pendingAlert.scenario.propaganda.body,
-      timestamp: now,
-      outcome: 'IGNORED',
-    });
   };
 
   // Auto-save function
@@ -529,15 +506,8 @@ export default function MainScreen() {
               onIdentityScanComplete={() => setIsIdentityScanning(false)}
               gatheredInformation={gatheredInformation}
               onInformationUpdate={handleInformationUpdate}
-              alertModeVisible={alertModeVisible}
-              onAlertModeChange={setAlertModeVisible}
             />
-            <AmberAlertModal
-              visible={!!pendingAlert && !alertModeVisible}
-              alert={pendingAlert}
-              onHandle={() => setAlertModeVisible(true)}
-              onIgnore={handleIgnoreAlert}
-            />
+            {/* AMBER alert flow disabled for test build */}
 
             {DEV_MODE && SHOW_LANDMARK_TEST && (
               <FaceLandmarkTfliteTest

@@ -4,22 +4,96 @@ import AnimatedReanimated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withRepeat,
   runOnJS,
   Easing,
 } from 'react-native-reanimated';
+import { Canvas, Image as SkiaImage, useImage, RuntimeShader, vec, Fill } from '@shopify/react-native-skia';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { Theme } from '../../constants/theme';
 import { deviceStyles as styles } from '../../styles/device-menu.styles';
-import TerminalText from './terminal-text';
+import { TypewriterText } from '../ui/ScanData';
 
 const STICKER_TEXTURE = require('../../assets/stickers/Texturelabs_InkPaint_399S.jpg');
 const METAL_TEXTURE = require('../../assets/textures/Texturelabs_Metal_264S.jpg');
+const AmberLogoImage = require('../../assets/logo.png');
+const SpeakerImage = require('../../assets/speaker.png');
 
-// Tactile button component with press animation
-interface TactileButtonProps {
-  label: string;
-  onPress: () => void;
-  isActive?: boolean;
-}
+// Animated LED Component
+const GlowingLed = ({ color, size = 6, interval = 1000, delay = 0 }: { color: string; size?: number; interval?: number; delay?: number }) => {
+  const opacity = useSharedValue(0.4);
+
+  React.useEffect(() => {
+    setTimeout(() => {
+      opacity.value = withRepeat(
+        withTiming(1, { duration: interval / 2, easing: Easing.inOut(Easing.ease) }),
+        -1,
+        true
+      );
+    }, delay);
+  }, [interval, delay]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <AnimatedReanimated.View
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: color,
+          shadowColor: color,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.8,
+          shadowRadius: 4,
+        },
+        animatedStyle,
+      ]}
+    />
+  );
+};
+
+// Camera Lens Component
+const CameraLens = () => (
+  <View
+    style={{
+      width: 14,
+      height: 14,
+      borderRadius: 7,
+      backgroundColor: '#111',
+      borderWidth: 1,
+      borderColor: '#333',
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    }}
+  >
+    <View
+      style={{
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#000',
+        borderWidth: 1,
+        borderColor: '#222',
+      }}
+    />
+    <View
+      style={{
+        position: 'absolute',
+        top: 2,
+        right: 3,
+        width: 3,
+        height: 3,
+        borderRadius: 1.5,
+        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+      }}
+    />
+  </View>
+);
 
 function TactileButton({ label, onPress, isActive = false }: TactileButtonProps) {
   const [isPressed, setIsPressed] = useState(false);
@@ -91,12 +165,96 @@ export const MainMenu = ({
 }: MainMenuProps) => {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [textIndex, setTextIndex] = useState(0);
+  const [showLogo, setShowLogo] = useState(false);
   const panelStartY = useSharedValue(0);
   const panelTranslateY = useSharedValue(0);
+  const logoOpacity = useSharedValue(0);
+
+  const SEQUENCE = [
+    "WELCOME TO AMBER",
+    "EVERY CHOICE LEAVES A MARK."
+  ];
+
+  // Shader to create a "line art" / hatch effect
+  // This takes the image luminance and applies a hatch pattern
+  const HATCH_SHADER = `
+    uniform shader image;
+    uniform float opacity;
+    uniform float2 resolution;
+    uniform float4 color;
+
+    const float PI = 3.14159265;
+
+    half4 main(float2 xy) {
+      half4 tex = image.eval(xy);
+      float alpha = tex.a * opacity;
+      
+      if (alpha == 0.0) {
+        return float4(0.0);
+      }
+
+      // Convert to luminance
+      float lum = dot(tex.rgb, float3(0.299, 0.587, 0.114));
+      
+      // Edge detection (simple threshold on luminance for now, or just use lum)
+      // Actually, we want to draw "ink" where it is dark.
+      // Invert lum for "ink density"
+      float ink = 1.0 - lum;
+      
+      float3 outColor = float3(0.0);
+      float paint = 0.0;
+
+      // Hatching pattern
+      // Diagonal lines
+      float scale = 4.0;
+      float p1 = sin((xy.x + xy.y) * scale);
+      float p2 = sin((xy.x - xy.y) * scale);
+      
+      // Thresholds for hatching density
+      // Dark areas get more hatching
+      if (ink > 0.2) {
+        if (p1 > 0.0) paint = 1.0;
+      }
+      if (ink > 0.5) {
+        if (p2 > 0.0) paint = 1.0;
+      }
+      if (ink > 0.8) {
+         // Cross hatch tighter
+         if (sin((xy.x + xy.y) * scale * 2.0) > 0.0) paint = 1.0;
+      }
+      
+      // Also draw original shape alpha
+      return vec4(color.rgb, paint * alpha);
+    }
+  `;
+
+  const logoImage = useImage(AmberLogoImage);
+
+  const resetSequence = () => {
+    setShowLogo(false);
+    setTextIndex(0);
+  };
 
   const handleTypingComplete = useCallback(() => {
     setIsReady(true);
-  }, []);
+    if (textIndex === SEQUENCE.length - 1) {
+       setTimeout(() => {
+         setShowLogo(true);
+         logoOpacity.value = withTiming(1, { duration: 2000 });
+         
+         setTimeout(() => {
+           logoOpacity.value = withTiming(0, { duration: 1000 }, (finished) => {
+             if (finished) {
+               runOnJS(resetSequence)();
+             }
+           });
+         }, 4000);
+       }, 500);
+    } else {
+       setTimeout(() => setTextIndex(prev => prev + 1), 1500);
+    }
+  }, [textIndex, logoOpacity]);
 
   const hiddenButtons: HiddenButton[] = [
     ...(hasSaveData
@@ -149,6 +307,20 @@ export const MainMenu = ({
   const ventSlots = Array(18).fill(null);
   const scanlines = Array(50).fill(null);
 
+  // Enhanced CRT Scanline Animation
+  const scanlineAnim = useSharedValue(0);
+  React.useEffect(() => {
+    scanlineAnim.value = withRepeat(
+      withTiming(1, { duration: 8000, easing: Easing.linear }),
+      -1,
+      false
+    );
+  }, []);
+
+  const animatedScanlineStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: scanlineAnim.value * 5 }],
+  }));
+
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <GestureHandlerRootView style={styles.root}>
@@ -168,9 +340,23 @@ export const MainMenu = ({
             <View style={styles.bevelShadowRight} />
 
             <View style={styles.topSection}>
-              <View style={styles.handleContainer} />
-              <View style={styles.topClipContainer} />
-              <View style={styles.antennaSection} />
+              {/* Left: Status Cluster */}
+              <View style={[styles.handleContainer, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 6 }]}>
+                <GlowingLed color="#c9a227" size={5} interval={2000} />
+                <GlowingLed color="#c9a227" size={5} interval={2000} delay={500} />
+                <GlowingLed color="#4a8a5a" size={5} interval={3000} />
+              </View>
+
+              {/* Center: Camera/Sensor */}
+              <View style={[styles.topClipContainer, { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }]}>
+                 <CameraLens />
+                 <GlowingLed color="#d4534a" size={4} interval={1000} />
+              </View>
+
+              {/* Right: Speaker */}
+              <View style={[styles.antennaSection, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Image source={SpeakerImage} style={{ width: 32, height: 32, opacity: 0.8 }} resizeMode="contain" />
+              </View>
             </View>
 
             <View style={styles.ventGrilleContainer}>
@@ -193,20 +379,61 @@ export const MainMenu = ({
                       <View style={styles.screenVignetteRight} />
                       <View style={styles.scanlinesOverlay}>
                         {scanlines.map((_, index) => (
-                          <View key={index} style={styles.scanline} />
+                          <AnimatedReanimated.View 
+                            key={index} 
+                            style={[
+                              styles.scanline, 
+                              { 
+                                opacity: index % 2 === 0 ? 0.1 : 0.05,
+                                transform: [{ translateY: index % 3 === 0 ? 1 : 0 }] // Static jitter
+                              },
+                              animatedScanlineStyle 
+                            ]} 
+                          />
                         ))}
+                        {/* CRT flicker overlay */}
+                        <GlowingLed color="rgba(255, 255, 255, 0.03)" size={1000} interval={50} delay={0} />
                       </View>
                       <View style={styles.screenReflection} />
 
                       <View style={styles.terminalContainer}>
                         <View style={styles.terminalTextWrapper}>
-                          <TerminalText
-                            text="Welcome to Amber"
-                            typingSpeed={80}
-                            onComplete={handleTypingComplete}
-                            showSystemReady={false}
-                            style={styles.terminalGreen}
-                          />
+                          {!showLogo ? (
+                            <TypewriterText
+                              text={SEQUENCE[textIndex]}
+                              active={true}
+                              speed={50}
+                              onComplete={handleTypingComplete}
+                              style={[styles.terminalGreen, { color: Theme.colors.textPrimary, textAlign: 'center' }]}
+                              showCursor={true}
+                              keepCursor={true}
+                            />
+                          ) : (
+                            <AnimatedReanimated.View style={{ opacity: logoOpacity, width: 120, height: 120 }}>
+                                {logoImage && (
+                                  <Canvas style={{ flex: 1 }}>
+                                    <Fill color="transparent" />
+                                    <RuntimeShader 
+                                      source={HATCH_SHADER} 
+                                      uniforms={{ 
+                                        opacity: 1.0, 
+                                        resolution: vec(120, 120),
+                                        color: vec(226/255, 211/255, 191/255, 1.0) // Theme.colors.textPrimary #e2d3bf
+                                      }}
+                                    >
+                                       <SkiaImage
+                                          image={logoImage}
+                                          fit="contain"
+                                          x={0}
+                                          y={0}
+                                          width={120}
+                                          height={120}
+                                       />
+                                    </RuntimeShader>
+                                  </Canvas>
+                                )}
+                            </AnimatedReanimated.View>
+                          )}
                         </View>
                       </View>
                     </View>
@@ -266,7 +493,7 @@ export const MainMenu = ({
                     <View style={styles.slideHandleBar}>
                       <View style={styles.slideHandleBarHighlight} />
                     </View>
-                    <Text style={styles.slideHint}>{isPanelOpen ? 'SLIDE UP' : 'SLIDE DOWN'}</Text>
+                    <Text style={[styles.slideHint, { color: '#000000' }]}>{isPanelOpen ? 'SLIDE UP' : 'SLIDE DOWN'}</Text>
                   </View>
                 </AnimatedReanimated.View>
               </GestureDetector>

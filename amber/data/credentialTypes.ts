@@ -80,6 +80,9 @@ export function getSubjectCredentialsLegacy(subjectId: string): SubjectCredentia
   return SUBJECT_CREDENTIALS.find(c => c.subjectId === subjectId);
 }
 
+// Permit status type including UNVERIFIED for transit flag contradictions
+export type PermitStatus = 'VALID' | 'EXPIRING_SOON' | 'EXPIRED' | 'INVALID' | 'UNVERIFIED';
+
 // Helper to format credential expiration status
 export function getExpirationStatus(expirationDate: string): 'VALID' | 'EXPIRING_SOON' | 'EXPIRED' {
   const expDate = new Date(expirationDate.replace(/-/g, '/'));
@@ -89,6 +92,18 @@ export function getExpirationStatus(expirationDate: string): 'VALID' | 'EXPIRING
   if (daysUntilExpiration < 0) return 'EXPIRED';
   if (daysUntilExpiration < 14) return 'EXPIRING_SOON';
   return 'VALID';
+}
+
+// Get permit status considering transit flags - creates UNVERIFIED contradictions
+export function getPermitStatus(
+  credential: CredentialDetails | undefined,
+  hasTransitIssue: boolean
+): PermitStatus {
+  if (!credential) return 'INVALID';
+  if (!credential.valid) return 'INVALID';
+  // Valid credential but transit log has flags = UNVERIFIED (system glitch/contradiction)
+  if (hasTransitIssue) return 'UNVERIFIED';
+  return getExpirationStatus(credential.expirationDate);
 }
 
 // Helper to get credential type display name

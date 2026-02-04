@@ -2,6 +2,7 @@ import type { RequiredCheck } from '../utils/requiredChecks';
 
 export type DirectiveConditionType =
   | 'WARRANTS'
+  | 'TRANSIT_FLAGGED'
   | 'REPLICANTS'
   | 'SYNTHETICS'
   | 'ENGINEERS'

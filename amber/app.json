@@ -4,14 +4,14 @@
     "slug": "amber",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/app-icon.png",
+    "icon": "./assets/logo.png",
     "scheme": "amber",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.timothyitayi.amber",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -19,8 +19,8 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0A0C0F",
-        "foregroundImage": "./assets/app-icon.png",
-        "backgroundImage": "./assets/app-icon.png"
+        "foregroundImage": "./assets/logo.png",
+        "backgroundImage": "./assets/logo.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -34,14 +34,14 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/app-icon.png"
+      "favicon": "./assets/logo.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "image": "./assets/app-icon.png",
+          "image": "./assets/logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#0A0C0F",

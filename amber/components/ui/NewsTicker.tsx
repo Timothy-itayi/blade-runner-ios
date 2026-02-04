@@ -6,14 +6,14 @@
 // Uses the infinite scroll pattern: duplicate content, animate one segment width,
 // seamless loop because second copy is identical to first.
 
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, Animated, Easing, LayoutChangeEvent } from 'react-native';
 import { Theme } from '../../constants/theme';
 
 interface NewsTickerProps {
-  /** Array of headlines to display in rotation */
+  /** Array of headlines to display in sequence */
   headlines: string[];
-  /** Speed of scroll in pixels per second (default: 50) */
+  /** Speed of scroll in pixels per second (default: 60) */
   speed?: number;
   /** Background color variant */
   variant?: 'default' | 'alert' | 'info';
@@ -23,22 +23,25 @@ interface NewsTickerProps {
   prefix?: string;
 }
 
-const SEPARATOR = '   ◆   ';
+// Container width for starting off-screen (will be measured)
+const OFFSCREEN_START = 800;
 
 export function NewsTicker({
   headlines,
-  speed = 50,
+  speed = 60,
   variant = 'default',
   visible = true,
   prefix = 'AMBER NEWS',
 }: NewsTickerProps) {
-  const scrollAnim = useRef(new Animated.Value(0)).current;
+  const scrollAnim = useRef(new Animated.Value(OFFSCREEN_START)).current;
+  const [containerWidth, setContainerWidth] = useState(0);
   const [textWidth, setTextWidth] = useState(0);
+  const [headlineIndex, setHeadlineIndex] = useState(0);
   const animationRef = useRef<Animated.CompositeAnimation | null>(null);
   const isMounted = useRef(true);
 
-  // Combine all headlines into one scrolling string (one segment)
-  const combinedText = headlines.join(SEPARATOR) + SEPARATOR;
+  // Current headline to display
+  const currentHeadline = headlines[headlineIndex] ?? '';
 
   useEffect(() => {
     isMounted.current = true;
@@ -47,44 +50,69 @@ export function NewsTicker({
     };
   }, []);
 
+  // Reset to first headline when headlines array changes
   useEffect(() => {
-    if (!visible || headlines.length === 0 || textWidth <= 0) {
-      scrollAnim.setValue(0);
-      return;
-    }
+    setHeadlineIndex(0);
+  }, [headlines]);
 
-    // Duration for one segment to scroll through
-    const duration = (textWidth / speed) * 1000;
+  // Animate current headline: start off-screen right, scroll to off-screen left, then next
+  const runScrollAnimation = useCallback(() => {
+    if (!isMounted.current || containerWidth <= 0 || textWidth <= 0) return;
 
-    // Recursive animation: animate one full segment, then reset and repeat
-    // Reset is invisible because the duplicate content is identical
-    const runAnimation = () => {
-      if (!isMounted.current) return;
+    // Start position: just off the right edge of the container
+    const startX = containerWidth;
+    // End position: text fully scrolled off left edge
+    const endX = -textWidth - 50; // Add buffer to ensure fully offscreen
+    // Total distance to travel
+    const distance = startX - endX;
+    // Duration based on distance and speed
+    const duration = (distance / speed) * 1000;
 
-      scrollAnim.setValue(0);
-      animationRef.current = Animated.timing(scrollAnim, {
-        toValue: -textWidth,
-        duration,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      });
+    scrollAnim.setValue(startX);
+    animationRef.current = Animated.timing(scrollAnim, {
+      toValue: endX,
+      duration,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    });
 
-      animationRef.current.start(({ finished }) => {
-        if (finished && isMounted.current) {
-          runAnimation();
-        }
-      });
-    };
+    animationRef.current.start(({ finished }) => {
+      if (finished && isMounted.current) {
+        // Move to next headline
+        setHeadlineIndex((prev) => (prev + 1) % headlines.length);
+      }
+    });
+  }, [containerWidth, textWidth, speed, headlines.length, scrollAnim]);
 
-    runAnimation();
+  // Trigger animation when dimensions are ready or headline changes
+  useEffect(() => {
+    if (!visible || headlines.length === 0) return;
+    if (containerWidth <= 0 || textWidth <= 0) return;
+
+    // Small delay to ensure layout is stable
+    const timer = setTimeout(() => {
+        runScrollAnimation();
+    }, 100);
 
     return () => {
+        clearTimeout(timer);
       if (animationRef.current) {
         animationRef.current.stop();
       }
-      scrollAnim.stopAnimation();
     };
-  }, [visible, headlines, speed, textWidth]);
+  }, [visible, headlineIndex, containerWidth, textWidth, runScrollAnimation]);
+
+  // Measure container width
+  const onContainerLayout = useCallback((e: LayoutChangeEvent) => {
+    const width = e.nativeEvent.layout.width;
+    if (width > 0) setContainerWidth(width);
+  }, []);
+
+  // Measure text width
+  const onTextLayout = useCallback((e: LayoutChangeEvent) => {
+    const width = e.nativeEvent.layout.width;
+    if (width > 0) setTextWidth(width);
+  }, []);
 
   if (!visible || headlines.length === 0) return null;
 
@@ -131,7 +159,7 @@ export function NewsTicker({
       )}
 
       {/* Scrolling ticker area */}
-      <View style={styles.tickerContainer}>
+      <View style={styles.tickerContainer} onLayout={onContainerLayout}>
         <Animated.View
           style={[
             styles.tickerContent,
@@ -140,21 +168,11 @@ export function NewsTicker({
             },
           ]}
         >
-          {/* First copy - measure this one */}
           <Text
             style={[styles.tickerText, { color: colors.textColor }]}
-            onLayout={(e) => {
-              const width = e.nativeEvent.layout.width;
-              if (width > 0 && textWidth === 0) {
-                setTextWidth(width);
-              }
-            }}
+            onLayout={onTextLayout}
           >
-            {combinedText}
-          </Text>
-          {/* Second copy - seamless continuation */}
-          <Text style={[styles.tickerText, { color: colors.textColor }]}>
-            {combinedText}
+            {currentHeadline}
           </Text>
         </Animated.View>
       </View>
@@ -255,27 +273,38 @@ const styles = StyleSheet.create({
   },
   prefixText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   tickerContainer: {
     flex: 1,
     height: '100%',
     overflow: 'hidden',
     justifyContent: 'center',
+    position: 'relative', // Ensure absolute child is relative to this
   },
   tickerContent: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
     alignItems: 'center',
-    paddingLeft: 10,
+    position: 'absolute',
+    left: 0,
+    height: '100%',
+    minWidth: '100%', 
   },
   tickerText: {
     fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    letterSpacing: 0.6,
     flexShrink: 0,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+    minWidth: '100%',
   },
   endCap: {
     width: 24,
@@ -308,5 +337,8 @@ const styles = StyleSheet.create({
     fontFamily: Theme.fonts.mono,
     fontSize: 10,
     letterSpacing: 0.3,
+    textShadowColor: 'rgba(0, 0, 0, 0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 });

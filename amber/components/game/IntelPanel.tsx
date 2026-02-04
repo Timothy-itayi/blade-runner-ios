@@ -372,6 +372,7 @@ export const IntelPanel = ({
   const renderCredentialsPhase = () => {
     const credentials = credentialData?.credentials || [];
     const behavior = greetingData?.credentialBehavior || 'COOPERATIVE';
+    const isForged = behavior === 'FORGED';
 
     return (
       <>
@@ -400,26 +401,32 @@ export const IntelPanel = ({
                   : '#c9a227';
                 
                 return (
-                  <View key={index} style={styles.credentialItem}>
+                  <View key={index} style={[styles.credentialItem, isForged && styles.credentialItemForged]}>
                     <View style={styles.credentialHeader}>
-                      <Text style={styles.credentialType}>
+                      <Text style={[styles.credentialType, isForged && styles.credentialTextForged]}>
                         {getCredentialTypeName(cred.type)}
                       </Text>
                       {cred.anomalies.length > 0 && (
                         <Text style={styles.anomalyBadge}>!</Text>
                       )}
                     </View>
-                    <Text style={styles.credentialNumber}>{cred.number}</Text>
-                    <Text style={styles.credentialDetail}>HOLDER: {cred.holderName}</Text>
-                    <Text style={styles.credentialDetail}>PURPOSE: {cred.purpose}</Text>
+                    <Text style={[styles.credentialNumber, isForged && styles.credentialTextForged]}>
+                      {cred.number}
+                    </Text>
+                    <Text style={[styles.credentialDetail, isForged && styles.credentialTextForged]}>
+                      HOLDER: {cred.holderName}
+                    </Text>
+                    <Text style={[styles.credentialDetail, isForged && styles.credentialTextForged]}>
+                      PURPOSE: {cred.purpose}
+                    </Text>
                     <View style={styles.credentialExpirationRow}>
-                      <Text style={styles.credentialDetail}>
+                      <Text style={[styles.credentialDetail, isForged && styles.credentialTextForged]}>
                         EXPIRES: {cred.expirationDate} (
                       </Text>
                       <Text style={[styles.credentialDetail, { color: statusColor }]}>
                         {expirationStatus}
                       </Text>
-                      <Text style={styles.credentialDetail}>)</Text>
+                      <Text style={[styles.credentialDetail, isForged && styles.credentialTextForged]}>)</Text>
                     </View>
                     {cred.anomalies.length > 0 && (
                       <Text style={styles.anomalyText}>

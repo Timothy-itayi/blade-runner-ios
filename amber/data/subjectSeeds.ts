@@ -17,6 +17,12 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     reasonForVisit: 'Work shift transfer. Warehouse clerk.',
     destinationPlanet: 'DISTRICT 3',
     greetingText: 'Warehouse clerk. Shift transfer to District 3.',
+    dialogueLines: [
+      'Just need to clock in on time.',
+      'My supervisor will complain if I am late again.',
+      'The manifest is already loaded. Can we move this along?',
+      'I do this every week. Same route.',
+    ],
     communicationStyle: 'FLUENT',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -37,6 +43,12 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     reasonForVisit: 'Family visit. Mother in recovery.',
     destinationPlanet: 'DISTRICT 2',
     greetingText: 'Family visit. Mother in recovery. Request access.',
+    dialogueLines: [
+      'She has been in recovery for weeks.',
+      'Why does this take so long?',
+      'I am not a criminal. I just want to see my mother.',
+      'Please. She does not have much time.',
+    ],
     communicationStyle: 'AGITATED',
     credentialBehavior: 'RELUCTANT',
     dossier: {
@@ -68,7 +80,8 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
         body: 'Authorities confirm a lone individual caused the disruption. AMBER systems prevented further harm.',
       },
     },
-    truthFlags: { hasWarrant: true, hasTransitIssue: false, hasIncident: true },
+    // Warrant but NO incident on file - contradictory data for player confusion
+    truthFlags: { hasWarrant: true, hasTransitIssue: false, hasIncident: false },
   },
   {
     id: 'S1-03',
@@ -82,6 +95,12 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     reasonForVisit: 'Security contractor replacement.',
     destinationPlanet: 'CENTRAL HUB',
     greetingText: 'Security contractor rotation. Augments registered. Request hub access.',
+    dialogueLines: [
+      'Standard rotation. Nothing unusual.',
+      'I report to Central in twenty minutes.',
+      'Check the override codes if you need to.',
+      'Is there an issue with my clearance?',
+    ],
     communicationStyle: 'FORMAL',
     credentialBehavior: 'COOPERATIVE',
     dossier: {
@@ -144,13 +163,20 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     reasonForVisit: 'Housing appeal appointment.',
     destinationPlanet: 'DISTRICT 2',
     greetingText: 'Housing appeal appointment.',
+    dialogueLines: [
+      'Just need to get there.',
+      'Appointment. Very important.',
+      'Papers? Yes. Here. Somewhere.',
+      'Please. I have nowhere else.',
+    ],
     communicationStyle: 'BROKEN',
     credentialBehavior: 'FORGED',
     dossier: {
       occupation: 'Delivery Driver',
       address: 'Outer Blocks, East Gate',
     },
-    truthFlags: { hasWarrant: true, hasTransitIssue: false, hasIncident: true },
+    // Incident on file but NO active warrant - contradictory data
+    truthFlags: { hasWarrant: false, hasTransitIssue: false, hasIncident: true },
   },
   {
     id: 'S1-07',
@@ -185,6 +211,12 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
     reasonForVisit: 'Urgent clinic transfer.',
     destinationPlanet: 'DISTRICT 1',
     greetingText: 'Clinic nurse, trauma unit. Patient in transit. Need immediate clearance.',
+    dialogueLines: [
+      'Every second counts here.',
+      'Check the emergency override if you need to.',
+      'I have multiple credentials. Medical priority.',
+      'Please. Lives depend on this.',
+    ],
     communicationStyle: 'AGITATED',
     credentialBehavior: 'MULTIPLE',
     dossier: {
@@ -323,7 +355,8 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
         body: 'Unauthorized access attempt contained. Operations continue without disruption.',
       },
     },
-    truthFlags: { hasWarrant: false, hasTransitIssue: false, hasIncident: true },
+    // Incident AND transit flag - double trouble
+    truthFlags: { hasWarrant: false, hasTransitIssue: true, hasIncident: true },
   },
   {
     id: 'S2-04',
@@ -364,7 +397,8 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
       occupation: 'Caregiver',
       address: 'District 6, Willow Court',
     },
-    truthFlags: { hasWarrant: false, hasTransitIssue: false, hasIncident: true },
+    // Transit flag + valid credentials = UNVERIFIED status confusion
+    truthFlags: { hasWarrant: false, hasTransitIssue: true, hasIncident: true },
     exceptionTags: ['EMERGENCY'],
   },
   {
@@ -385,7 +419,8 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
       occupation: 'Clerk',
       address: 'District 6, Willow Court',
     },
-    truthFlags: { hasWarrant: false, hasTransitIssue: false, hasIncident: false },
+    // Clean credentials but transit flag = UNVERIFIED status
+    truthFlags: { hasWarrant: false, hasTransitIssue: true, hasIncident: false },
   },
   {
     id: 'S3-03',
@@ -492,7 +527,8 @@ export const SUBJECT_SEEDS: SubjectSeed[] = [
       occupation: 'Factory Worker',
       address: 'Outer Ring, Block 7',
     },
-    truthFlags: { hasWarrant: true, hasTransitIssue: false, hasIncident: true },
+    // Warrant but NO incident - creates confusion
+    truthFlags: { hasWarrant: true, hasTransitIssue: false, hasIncident: false },
   },
   {
     id: 'S3-07',

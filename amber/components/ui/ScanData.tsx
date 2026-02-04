@@ -29,6 +29,7 @@ export const TypewriterText = ({
   style,
   numberOfLines,
   showCursor = true,
+  keepCursor = false,
   instant = false,
   speed = 25, // Phase 4: Customizable typing speed
   onComplete, // Phase 4: Callback when typing completes
@@ -39,6 +40,7 @@ export const TypewriterText = ({
   style?: any,
   numberOfLines?: number,
   showCursor?: boolean,
+  keepCursor?: boolean,
   instant?: boolean,
   speed?: number,
   onComplete?: () => void,
@@ -46,6 +48,16 @@ export const TypewriterText = ({
   const [display, setDisplay] = React.useState(instant ? text : '');
   const [isComplete, setIsComplete] = React.useState(instant);
   const [isTyping, setIsTyping] = React.useState(false);
+  const [cursorVisible, setCursorVisible] = React.useState(true);
+
+  React.useEffect(() => {
+    if ((isTyping || keepCursor) && showCursor) {
+      const cursorInterval = setInterval(() => {
+        setCursorVisible(v => !v);
+      }, 500);
+      return () => clearInterval(cursorInterval);
+    }
+  }, [isTyping, keepCursor, showCursor]);
 
   React.useEffect(() => {
     // If instant mode, just show text immediately
@@ -82,7 +94,7 @@ export const TypewriterText = ({
           setDisplay(currentText);
         } else {
           setIsComplete(true);
-          setIsTyping(false); // Done typing - hide cursor
+          setIsTyping(false); // Done typing
           if (interval) clearInterval(interval);
           onComplete?.(); // Phase 4: Call completion callback
         }
@@ -102,8 +114,8 @@ export const TypewriterText = ({
       ellipsizeMode={numberOfLines ? 'tail' : undefined}
     >
       {display}
-      {showCursor && isTyping && !isComplete && (
-        <Text style={{ color: style?.color || Theme.colors.textPrimary, opacity: 0.8 }}>|</Text>
+      {showCursor && (isTyping || (keepCursor && isComplete)) && (
+        <Text style={{ color: style?.color || Theme.colors.textPrimary, opacity: cursorVisible ? 0.8 : 0 }}>|</Text>
       )}
     </Text>
   );

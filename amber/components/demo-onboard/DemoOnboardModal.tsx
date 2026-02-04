@@ -34,20 +34,20 @@ const SLIDES: Slide[] = [
     ],
   },
   {
-    title: 'ALERTS',
+    title: 'CONSEQUENCE MAP',
     lines: [
-      'Some subjects trigger incidents after processing.',
-      'The map button glows red when an alert is active.',
-      'You can handle the alert or ignore it.',
-      'Ignoring has consequences.',
+      'Every decision updates the consequence map.',
+      'Tap MAP to review outcomes and casualty chains.',
+      'Use it to trace what your approvals caused.',
     ],
   },
   {
     title: 'BEGIN',
     lines: [
-      'Subjects are waiting.',
-      'Check the directive. Verify credentials. Decide.',
+      'Subjects are waiting to be processed.',
+
       'Your choices are final.',
+      
     ],
   },
 ];

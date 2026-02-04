@@ -121,6 +121,8 @@ export interface SubjectData {
   // BPM and dialogue
   bpm?: string | number;
   dialogue?: string;
+  /** Additional dialogue lines triggered by player actions */
+  dialogueLines?: string[];
   
   // BPM Behavioral Tells
   bpmTells?: {

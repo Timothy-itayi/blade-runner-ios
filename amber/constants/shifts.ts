@@ -55,7 +55,7 @@ export const SHIFTS: ShiftData[] = [
   },
   // =============================================================================
   // SHIFT 3: LOCKDOWN (7 subjects)
-  // All denied except VIP and diplomatic clearance
+  // Deny flagged transit reports
   // Mixed alerts and subjects
   // =============================================================================
   {
@@ -64,11 +64,11 @@ export const SHIFTS: ShiftData[] = [
     chapter: 'Lockdown',
     stationName: 'AMBER DEPOT PERIMETER',
     authorityLabel: 'DEPOT SECURITY',
-    briefing: 'Full lockdown in effect. Deny all transit unless VIP or diplomatic clearance is confirmed.',
+    briefing: 'Tightened access. Deny subjects with flagged transit history.',
     directive: DIRECTIVES.SHIFT_3.text.join('\n'),
     directiveModel: DIRECTIVES.SHIFT_3,
     unlockedChecks: ['DATABASE', 'CREDENTIAL'],
-    activeRules: ['CHECK_WARRANTS', 'CHECK_CLEARANCE'],
+    activeRules: ['CHECK_TRANSIT'],
   },
 ];
 

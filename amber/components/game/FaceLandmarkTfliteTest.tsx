@@ -18,6 +18,7 @@ import {
   vec,
 } from '@shopify/react-native-skia';
 import { SeededRandom } from '../../utils/seededRandom';
+import { FACE_PIPELINE_SOURCES, FACE_PIPELINE_SOURCE_COUNT } from '../../utils/faceSources';
 
 type SupportedTypedArray =
   | Float32Array
@@ -74,32 +75,6 @@ const MODEL_ASSET = require('../../models/face_landmark.tflite');
 const SEGMENT_MODEL_ASSET = require('../../models/selfie_segmentation.tflite');
 // NOTE: All assets referenced here must exist on disk. Metro resolves `require()`
 // statically at bundle-time; missing files crash the app.
-//
-// The face pipeline currently preloads ACTIVE_SOURCES[0..2] and treats them as:
-// 0 = human, 1 = cyborg, 2 = uncanny.
-// Keep those slots stable.
-const IMAGE_SOURCES = [
-  {
-    key: 'human-0',
-    label: 'asian-late30s-male',
-    archetype: 'human' as const,
-    asset: require('../../assets/ai-portraits/asian-late30s-male.png'),
-  },
-  {
-    key: 'cyborg-0',
-    label: 'female-late30s-white',
-    archetype: 'cyborg' as const,
-    asset: require('../../assets/ai-portraits/female-late30s-white.png'),
-  },
-  {
-    key: 'uncanny-0',
-    label: 'male-white-40s',
-    archetype: 'uncanny' as const,
-    asset: require('../../assets/ai-portraits/male-white-40s.png'),
-  },
-];
-// Use all available sources
-const ACTIVE_SOURCES = IMAGE_SOURCES;
 const PIPELINE_USE_SEGMENTATION = false;
 const PIPELINE_YIELD_BETWEEN_IMAGES = true;
 const TEXTURE_KEYS = [
@@ -321,6 +296,7 @@ const UNCANNY_FACE_EFFECTS = {
   eyeSheenBright: 'rgba(240, 205, 120, 0.95)',
   eyeSheenDark: 'rgba(120, 90, 50, 0.6)',
 };
+const VARIANT_TINTS = ['#c2b199', '#b8a5cc', '#9fb7c4', '#c8b8a5', '#a6bfa8'];
 
 const SOBEL_SHADER = Skia.RuntimeEffect.Make(`
 uniform shader image;
@@ -1334,6 +1310,7 @@ type FaceLandmarkTfliteTestProps = {
   isScanning?: boolean;
   mode?: 'panel' | 'portrait';
   activeIndex?: number;
+  portraitSeed?: string;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -1360,16 +1337,62 @@ function useFacePipeline(warmCacheActive: boolean): FacePipelineValue {
   const [summary, setSummary] = useState<RunSummary | null>(null);
   const [runs, setRuns] = useState<ImageRun[]>([]);
   const runStageRef = useRef<'none' | 'landmarks' | 'segmentation'>('none');
-  const imageNeutral = useImage(ACTIVE_SOURCES[0].asset);
-  const imageCyborg = useImage(ACTIVE_SOURCES[1].asset);
-  const imageUncanny = useImage(ACTIVE_SOURCES[2].asset);
+  const sourceImage0 = useImage(FACE_PIPELINE_SOURCES[0].asset);
+  const sourceImage1 = useImage(FACE_PIPELINE_SOURCES[1].asset);
+  const sourceImage2 = useImage(FACE_PIPELINE_SOURCES[2].asset);
+  const sourceImage3 = useImage(FACE_PIPELINE_SOURCES[3].asset);
+  const sourceImage4 = useImage(FACE_PIPELINE_SOURCES[4].asset);
+  const sourceImage5 = useImage(FACE_PIPELINE_SOURCES[5].asset);
+  const sourceImage6 = useImage(FACE_PIPELINE_SOURCES[6].asset);
+  const sourceImage7 = useImage(FACE_PIPELINE_SOURCES[7].asset);
+  const sourceImage8 = useImage(FACE_PIPELINE_SOURCES[8].asset);
+  const sourceImage9 = useImage(FACE_PIPELINE_SOURCES[9].asset);
+  const sourceImage10 = useImage(FACE_PIPELINE_SOURCES[10].asset);
+  const sourceImage11 = useImage(FACE_PIPELINE_SOURCES[11].asset);
+  const sourceImage12 = useImage(FACE_PIPELINE_SOURCES[12].asset);
+  const sourceImage13 = useImage(FACE_PIPELINE_SOURCES[13].asset);
+  const sourceImage14 = useImage(FACE_PIPELINE_SOURCES[14].asset);
+  const sourceImage15 = useImage(FACE_PIPELINE_SOURCES[15].asset);
+  const sourceImage16 = useImage(FACE_PIPELINE_SOURCES[16].asset);
   const images = useMemo(
     () => [
-      { ...ACTIVE_SOURCES[0], image: imageNeutral },
-      { ...ACTIVE_SOURCES[1], image: imageCyborg },
-      { ...ACTIVE_SOURCES[2], image: imageUncanny },
+      { ...FACE_PIPELINE_SOURCES[0], image: sourceImage0 },
+      { ...FACE_PIPELINE_SOURCES[1], image: sourceImage1 },
+      { ...FACE_PIPELINE_SOURCES[2], image: sourceImage2 },
+      { ...FACE_PIPELINE_SOURCES[3], image: sourceImage3 },
+      { ...FACE_PIPELINE_SOURCES[4], image: sourceImage4 },
+      { ...FACE_PIPELINE_SOURCES[5], image: sourceImage5 },
+      { ...FACE_PIPELINE_SOURCES[6], image: sourceImage6 },
+      { ...FACE_PIPELINE_SOURCES[7], image: sourceImage7 },
+      { ...FACE_PIPELINE_SOURCES[8], image: sourceImage8 },
+      { ...FACE_PIPELINE_SOURCES[9], image: sourceImage9 },
+      { ...FACE_PIPELINE_SOURCES[10], image: sourceImage10 },
+      { ...FACE_PIPELINE_SOURCES[11], image: sourceImage11 },
+      { ...FACE_PIPELINE_SOURCES[12], image: sourceImage12 },
+      { ...FACE_PIPELINE_SOURCES[13], image: sourceImage13 },
+      { ...FACE_PIPELINE_SOURCES[14], image: sourceImage14 },
+      { ...FACE_PIPELINE_SOURCES[15], image: sourceImage15 },
+      { ...FACE_PIPELINE_SOURCES[16], image: sourceImage16 },
     ],
-    [imageCyborg, imageNeutral, imageUncanny]
+    [
+      sourceImage0,
+      sourceImage1,
+      sourceImage2,
+      sourceImage3,
+      sourceImage4,
+      sourceImage5,
+      sourceImage6,
+      sourceImage7,
+      sourceImage8,
+      sourceImage9,
+      sourceImage10,
+      sourceImage11,
+      sourceImage12,
+      sourceImage13,
+      sourceImage14,
+      sourceImage15,
+      sourceImage16,
+    ]
   );
   useEffect(() => {
     if (!warmCacheActive) return;
@@ -1618,7 +1641,7 @@ function useFacePipeline(warmCacheActive: boolean): FacePipelineValue {
   return {
     runs,
     summary,
-    isReady: runs.length >= 3,
+    isReady: runs.length >= FACE_PIPELINE_SOURCE_COUNT,
     modelState,
     segmentationState,
   };
@@ -1644,6 +1667,7 @@ export function FaceLandmarkTfliteTest({
   isScanning = false,
   mode = 'panel',
   activeIndex = 0,
+  portraitSeed,
   style,
 }: FaceLandmarkTfliteTestProps) {
   const pipeline = useContext(FacePipelineContext);
@@ -1751,6 +1775,16 @@ export function FaceLandmarkTfliteTest({
       secondaryOpacity: rng.range(0.7, 0.95),
     };
   };
+  const resolvePortraitVariant = (seed: string) => {
+    const rng = new SeededRandom(`${seed}_variant`);
+    return {
+      tintColor: VARIANT_TINTS[rng.int(0, VARIANT_TINTS.length - 1)],
+      tintOpacity: rng.range(0.08, 0.22),
+      textureBoost: rng.range(0.85, 1.35),
+      secondaryBoost: rng.range(0.75, 1.45),
+      edgeBoost: rng.range(0.75, 1.35),
+    };
+  };
 
   if (
     mode === 'portrait' &&
@@ -1785,7 +1819,7 @@ export function FaceLandmarkTfliteTest({
       <View style={styles.panel}>
         <Text style={styles.title}>TFLite Face Landmark</Text>
         <Text style={styles.line}>PREPARING SCANNER</Text>
-        <Text style={styles.line}>{ACTIVE_SOURCES.length} portraits</Text>
+        <Text style={styles.line}>{FACE_PIPELINE_SOURCE_COUNT} portraits</Text>
       </View>
     );
   }
@@ -1801,6 +1835,7 @@ export function FaceLandmarkTfliteTest({
 
   if (mode === 'portrait') {
     const portraitRun = runs.length ? runs[activeIndex % runs.length] : null;
+    const resolvedSeed = portraitSeed ?? portraitRun?.seed ?? 'portrait_default';
     const handleLayout = (event: LayoutChangeEvent) => {
       const { width, height } = event.nativeEvent.layout;
       if (width === portraitLayout.width && height === portraitLayout.height) return;
@@ -1866,19 +1901,20 @@ export function FaceLandmarkTfliteTest({
               textureLookup.inkPaint399 || textureLookup.grunge336 || textureLookup.grunge342 || null;
             const uncannySoilTexture = textureLookup.soil146 || null;
             const uncannyStoneTexture = textureLookup.stone165 || null;
-            const textureRecipe = resolveTextureRecipe(portraitRun.seed, portraitRun.archetype);
+            const textureRecipe = resolveTextureRecipe(resolvedSeed, portraitRun.archetype);
+            const variant = resolvePortraitVariant(resolvedSeed);
             const textureBase = ARCHETYPE_TEXTURE_STRENGTH[portraitRun.archetype];
             const textureOpacity = isScanning
-              ? clamp(scanProgress, 0, 1) * (textureBase + 0.2) * (textureRecipe?.primaryOpacity ?? 1)
-              : textureBase * (textureRecipe?.primaryOpacity ?? 1);
+              ? clamp(scanProgress, 0, 1) * (textureBase + 0.2) * (textureRecipe?.primaryOpacity ?? 1) * variant.textureBoost
+              : textureBase * (textureRecipe?.primaryOpacity ?? 1) * variant.textureBoost;
             const tint = ARCHETYPE_TINT[portraitRun.archetype];
             const tintSecondary = ARCHETYPE_TINT_SECOND[portraitRun.archetype];
             const textureSecondaryBase = ARCHETYPE_TEXTURE_SECOND_STRENGTH[portraitRun.archetype];
             const textureSecondaryOpacity = isScanning
-              ? clamp(scanProgress, 0, 1) * (textureSecondaryBase + 0.15) * (textureRecipe?.secondaryOpacity ?? 1)
-              : textureSecondaryBase * (textureRecipe?.secondaryOpacity ?? 1);
+              ? clamp(scanProgress, 0, 1) * (textureSecondaryBase + 0.15) * (textureRecipe?.secondaryOpacity ?? 1) * variant.secondaryBoost
+              : textureSecondaryBase * (textureRecipe?.secondaryOpacity ?? 1) * variant.secondaryBoost;
             const lighting = ARCHETYPE_LIGHTING[portraitRun.archetype];
-            const edgeOpacity = ARCHETYPE_EDGE_OPACITY[portraitRun.archetype];
+            const edgeOpacity = ARCHETYPE_EDGE_OPACITY[portraitRun.archetype] * variant.edgeBoost;
             const edgeBlendMode = ARCHETYPE_EDGE_BLEND_MODE[portraitRun.archetype];
             const primaryTileWidth = textureRecipe?.primaryRepeat
               ? previewWidth * (textureRecipe?.primaryScale ?? 1)
@@ -1906,6 +1942,9 @@ export function FaceLandmarkTfliteTest({
                       height={previewHeight}
                       fit="fill"
                     />
+                    <Group blendMode="multiply" opacity={variant.tintOpacity}>
+                      <Fill color={variant.tintColor} />
+                    </Group>
                     {USE_GPU_EDGES && portraitRun.maskImage && SOBEL_SHADER && (
                       <Group
                         blendMode={edgeBlendMode}
@@ -2054,7 +2093,7 @@ export function FaceLandmarkTfliteTest({
                     {portraitRun.archetype === 'uncanny' && (
                       <>
                         {(() => {
-                          const patternRng = new SeededRandom(`${portraitRun.seed}_uncannyPattern`);
+                          const patternRng = new SeededRandom(`${resolvedSeed}_uncannyPattern`);
                           const soilScale = patternRng.range(0.18, 0.28);
                           const stoneScale = patternRng.range(0.12, 0.2);
                           const soilOffset = {

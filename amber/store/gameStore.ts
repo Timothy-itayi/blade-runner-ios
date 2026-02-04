@@ -32,6 +32,7 @@ export interface DecisionLogEntry {
   permitStatus?: string;
   denyReason?: string; // Why they were denied (directive violation, warrant, etc.)
   warrants?: string;
+  warrantDescription?: string; // Detailed reason for the warrant
 }
 
 export type AlertOutcome =

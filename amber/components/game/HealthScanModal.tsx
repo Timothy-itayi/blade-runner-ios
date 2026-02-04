@@ -81,9 +81,6 @@ export const HealthScanModal = ({ subject, onClose }: HealthScanModalProps) => {
 
   // Generate health findings from bio scan data
   const healthFindings = [];
-  if (bioData.biologicalType === 'REPLICANT') {
-    healthFindings.push('SYNTHETIC BIOLOGICAL MARKERS DETECTED');
-  }
   if (bioData.augmentationLevel && bioData.augmentationLevel !== 'NONE') {
     healthFindings.push(`CYBERNETIC AUGMENTATIONS: ${bioData.augmentationLevel}`);
   }
@@ -92,9 +89,6 @@ export const HealthScanModal = ({ subject, onClose }: HealthScanModalProps) => {
   }
   if (bioData.bioStructure && bioData.bioStructure !== 'STANDARD') {
     healthFindings.push(`BIO STRUCTURE: ${bioData.bioStructure}`);
-  }
-  if (bioData.fingerprintType && bioData.fingerprintType !== 'HUMAN') {
-    healthFindings.push(`FINGERPRINT TYPE: ${bioData.fingerprintType}`);
   }
 
   return (

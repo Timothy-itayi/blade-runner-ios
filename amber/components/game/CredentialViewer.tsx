@@ -48,6 +48,7 @@ export const CredentialViewer = ({
   const greetingData = getSubjectGreeting(subject.id, subject);
   const credentialData = getSubjectCredentials(subject.id, subject);
   const behavior = greetingData?.credentialBehavior || 'COOPERATIVE';
+  const isForged = behavior === 'FORGED';
   const behaviorStyle = BEHAVIOR_STYLES[behavior];
   const presentationDelay = credentialData?.presentationDelay || 0;
 
@@ -176,11 +177,12 @@ export const CredentialViewer = ({
                       style={[
                         styles.credentialCard,
                         cred.anomalies.length > 0 && styles.credentialCardAnomaly,
+                        isForged && styles.credentialCardForged,
                       ]}
                       onPress={() => handleExamineCredential(index)}
                     >
                       <View style={styles.credentialCardHeader}>
-                        <Text style={styles.credentialType}>
+                        <Text style={[styles.credentialType, isForged && styles.credentialTextForged]}>
                           {getCredentialTypeName(cred.type)}
                         </Text>
                         {cred.anomalies.length > 0 && (
@@ -189,9 +191,11 @@ export const CredentialViewer = ({
                           </View>
                         )}
                       </View>
-                      <Text style={styles.credentialNumber}>{cred.number}</Text>
+                      <Text style={[styles.credentialNumber, isForged && styles.credentialTextForged]}>
+                        {cred.number}
+                      </Text>
                       <View style={styles.credentialMeta}>
-                        <Text style={styles.credentialMetaText}>
+                        <Text style={[styles.credentialMetaText, isForged && styles.credentialTextForged]}>
                           ISSUED: {cred.issuedBy}
                         </Text>
                         <Text
@@ -426,6 +430,11 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
   },
+  credentialCardForged: {
+    borderStyle: 'dashed',
+    borderColor: 'rgba(212, 83, 74, 0.6)',
+    backgroundColor: 'rgba(212, 83, 74, 0.08)',
+  },
   credentialCardAnomaly: {
     borderColor: Theme.colors.accentWarn,
     backgroundColor: 'rgba(201, 162, 39, 0.05)',
@@ -442,6 +451,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 1,
+  },
+  credentialTextForged: {
+    color: Theme.colors.textDim,
+    letterSpacing: 0,
+    fontStyle: 'italic',
   },
   anomalyBadge: {
     width: 18,

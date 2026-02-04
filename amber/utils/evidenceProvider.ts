@@ -20,25 +20,40 @@ const formatDate = (rng: SeededRandom): string => {
   return `${year}-${month}-${day}`;
 };
 
-const buildTravelHistory = (rng: SeededRandom, hasTransitIssue: boolean): TravelEntry[] => {
-  const count = rng.int(1, 4);
+const TRANSIT_FLAG_PERMIT_REASONS = [
+  'MISSING TRANSIT CLEARANCE',
+  'EXPIRED TRANSIT PERMIT',
+  'UNAUTHORIZED SECTOR ACCESS',
+];
+
+const buildTravelHistory = (rng: SeededRandom, seed: SubjectSeed): TravelEntry[] => {
+  const { originPlanet } = seed;
+  const destinationPlanet = seed.destinationPlanet ?? originPlanet;
+  const hasTransitIssue = seed.truthFlags.hasTransitIssue;
   const entries: TravelEntry[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const route = rng.pick(TRANSIT_ROUTES);
-    const flagged = hasTransitIssue && rng.bool(0.5);
+  const addEntry = (from: string, to: string, flagged = false): void => {
     entries.push({
-      from: route.from,
-      to: route.to,
+      from,
+      to,
       date: formatDate(rng),
       flagged,
-      flagNote: flagged ? rng.pick(TRANSIT_FLAG_REASONS) : undefined,
+      flagNote: flagged ? rng.pick(TRANSIT_FLAG_PERMIT_REASONS) : undefined,
     });
+  };
+
+  if (originPlanet === destinationPlanet) {
+    addEntry(originPlanet, destinationPlanet, hasTransitIssue);
+    return entries;
   }
-  if (hasTransitIssue && !entries.some((e) => e.flagged)) {
-    // Ensure at least one entry is flagged with a specific reason
-    const flagReason = rng.pick(TRANSIT_FLAG_REASONS);
-    entries[0] = { ...entries[0], flagged: true, flagNote: flagReason };
+
+  if (destinationPlanet === 'CENTRAL HUB') {
+    addEntry(originPlanet, destinationPlanet, hasTransitIssue);
+    return entries;
   }
+
+  // District-to-district travel: prior hop then final hop to destination.
+  addEntry(originPlanet, 'CENTRAL HUB', false);
+  addEntry('CENTRAL HUB', destinationPlanet, hasTransitIssue);
   return entries;
 };
 
@@ -115,7 +130,7 @@ export const createSubjectEvidence = (seed: SubjectSeed): SubjectEvidence => {
   const warrants = warrantEntry ? warrantEntry.offense : 'NONE';
   const warrantDescription = warrantEntry ? warrantEntry.description : undefined;
   const incidents = seed.truthFlags.hasIncident ? rng.int(1, 3) : 0;
-  const travelHistory = buildTravelHistory(rng, seed.truthFlags.hasTransitIssue);
+  const travelHistory = buildTravelHistory(rng, seed);
   const discrepancies = seed.truthFlags.hasIncident
     ? pickMany(rng, INCIDENT_DISCREPANCIES, rng.int(1, 3))
     : [];

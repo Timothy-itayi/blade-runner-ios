@@ -330,9 +330,12 @@ export const HomeScreen = ({ onComplete, onContinue, hasSaveData, saveShiftNumbe
               <View style={styles.confirmContent}>
                 <Text style={styles.confirmIcon}>⚠</Text>
                 <Text style={styles.confirmMessage}>
-                  This will erase your current progress.
+                  THIS WILL WIPE YOUR SAVE.
                 </Text>
-                <Text style={styles.confirmQuestion}>Continue?</Text>
+                <Text style={styles.confirmMessage}>
+                  YOUR PREVIOUS PERFORMANCE WAS UNIMPRESSIVE ANYWAY.
+                </Text>
+                <Text style={styles.confirmQuestion}>CONTINUE?</Text>
               </View>
               <View style={styles.confirmButtons}>
                 <Pressable

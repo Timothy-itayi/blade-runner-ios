@@ -5,10 +5,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { CommLinkPanel } from '../CommLinkPanel';
 import { SubjectData } from '../../../data/subjects';
-import { ShiftData } from '../../../constants/shifts';
+import { ShiftData, SUBJECTS_PER_SHIFT } from '../../../constants/shifts';
 import { Theme } from '../../../constants/theme';
 import { getSubjectGreeting } from '../../../data/subjectGreetings';
-import { getCredentialTypeName, getExpirationStatus, getSubjectCredentials } from '../../../data/credentialTypes';
+import { getCredentialTypeName, getPermitStatus, getSubjectCredentials } from '../../../data/credentialTypes';
 import { useGameStore } from '../../../store/gameStore';
 import { MechanicalButton } from '../../ui/MechanicalUI';
 import { LabelTape, LEDIndicator } from '../../ui/LabelTape';
@@ -21,8 +21,8 @@ import {
   getRequiredChecks,
   RequiredCheck,
 } from '../../../utils/requiredChecks';
-import { AlertModeScreen } from '../AlertModeScreen';
 import { NewsTicker } from '../../ui/NewsTicker';
+import { resolvePortraitSelection } from '@/utils/portraitSelection';
 
 // Metal texture for chassis
 const METAL_TEXTURE = require('../../../assets/textures/Texturelabs_Metal_264S.jpg');
@@ -95,8 +95,6 @@ interface GameScreenProps {
   onNext: () => void;
   gatheredInformation?: GatheredInformation;
   onInformationUpdate?: (info: Partial<GatheredInformation>) => void;
-  alertModeVisible?: boolean;
-  onAlertModeChange?: (visible: boolean) => void;
   [key: string]: any;
 }
 
@@ -111,21 +109,16 @@ export const GameScreen = ({
   onNext,
   gatheredInformation,
   onInformationUpdate,
-  alertModeVisible: alertModeVisibleProp,
-  onAlertModeChange,
 }: GameScreenProps) => {
   const router = useRouter();
-  // FaceLandmark portrait selection must be tied to the subject, not the UI index.
-  // The previous `currentSubjectIndex % 3` guaranteed mismatches (e.g. Sarah Miles showing a male portrait).
-  const portraitBaseImageId = useMemo(() => {
-    // FaceLandmarkTflite pipeline currently preloads only a small set of base faces.
-    // Index 1 is the only guaranteed female face in that set.
-    if (currentSubject.sex === 'F') return 1;
-
-    // For everything else, pick deterministically so it doesn't "shuffle" per render.
-    const stable = ((currentSubject.seed ?? currentSubjectIndex) as number) >>> 0;
-    return stable % 2 === 0 ? 0 : 2;
-  }, [currentSubject.sex, currentSubject.seed, currentSubjectIndex]);
+  const decisionLog = useGameStore((state) => state.decisionLog);
+  const portraitSelection = useMemo(() => {
+    return resolvePortraitSelection({
+      subjectId: currentSubject.id ?? String(currentSubjectIndex),
+      sex: currentSubject.sex,
+      subjectType: currentSubject.subjectType,
+    });
+  }, [currentSubject.id, currentSubject.sex, currentSubject.subjectType, currentSubjectIndex]);
   const forceProceduralPortrait = true;
   const [dbOutput, setDbOutput] = useState<string[]>([]);
   const [lastQuery, setLastQuery] = useState<string>('NONE');
@@ -134,22 +127,83 @@ export const GameScreen = ({
     type: 'APPROVE' | 'DENY';
     missing: RequiredCheck[];
   } | null>(null);
-  const [alertModeVisibleInternal, setAlertModeVisibleInternal] = useState(false);
-  const alertModeVisible = alertModeVisibleProp ?? alertModeVisibleInternal;
-  const setAlertModeVisible = onAlertModeChange ?? setAlertModeVisibleInternal;
-  const hasPendingAlert = useGameStore((state) => state.alertLog.some((alert) => alert.outcome === 'PENDING'));
-  const propagandaFeed = useGameStore((state) => state.propagandaFeed);
-
-  // Get news headlines from propaganda feed + static headlines
-  const newsHeadlines = useMemo(() => {
-    const staticNews = [
-      'AMBER SYSTEMS OPERATIONAL — ALL DISTRICTS SECURE',
-      'TRANSIT EFFICIENCY UP 12% THIS QUARTER',
-      'CHECKPOINT COMPLIANCE ENSURES PUBLIC SAFETY',
+  // Dialogue state: tracks which dialogue line to show (increments on player actions)
+  const [dialogueIndex, setDialogueIndex] = useState(0);
+  // Reset dialogue index when subject changes
+  useEffect(() => {
+    setDialogueIndex(0);
+  }, [currentSubject.id]);
+  
+  const WORLD_NEWS_BY_HALF_SHIFT: string[][] = [
+    // Shift 1, first half
+    [
+      'GOVT APPROVES AMBER AS CENTRAL HUB — PERMITS REQUIRED AT ALL GATES',
+      'DISTRICT 3 HYDRO STOCKS UP 4% ON WATER RATION EXTENSION',
+      'CITIZENS REMINDED: CREDENTIALS MUST MATCH DESTINATION',
+      'GRAVBALL SEMIFINALS: CENTRAL HUB DEFEATS OUTER RING 8-3',
+    ],
+    // Shift 1, second half
+    [
+      'FIRST WEEK OF AMBER OVERSIGHT DECLARED A SUCCESS — COMPLIANCE RISES',
+      'SYNTH-PROTEIN FUTURES HOLD STEADY AT 42 CREDITS PER UNIT',
+      'RANDOM SPOT CHECKS BEGIN AT OUTER TRANSIT POINTS',
+      'DOME 7 MAINTENANCE SCHEDULED — ATMOSPHERIC VENTS CLEARED',
+    ],
+    // Shift 2, first half
+    [
+      'TRANSIT AUTHORITY INSTITUTES RANDOM PERMIT AUDITS — LINES LENGTHEN',
+      'GRAVBALL FINALS: DISTRICT 1 CRUSHES CENTRAL HUB 12-3',
+      'OFFICERS AUTHORIZED TO DETAIN FOR DOCUMENT INCONSISTENCIES',
+      'ENTERTAINMENT: HOLOVID STAR CANCELS DISTRICT 2 APPEARANCE',
+    ],
+    // Shift 2, second half
+    [
+      'CURFEW EXPANDED AFTER UNSANCTIONED CROSSINGS — VIOLATIONS ESCALATE',
+      'DISTRICT 5 MINING SHARES DROP 7% — LABOR SHORTAGES CITED',
+      'FAILURE TO PRESENT PERMITS NOW SUBJECT TO REMOVAL',
+      'WEATHER ADVISORY: DUST STORM EXPECTED IN OUTER DISTRICTS',
+    ],
+    // Shift 3, first half
+    [
+      'AMBER ANNOUNCES RATION TIERING BY DISTRICT — OUTER ZONES CUT FIRST',
+      'CENTRAL EXCHANGE CLOSED FOR AUDIT — TRADE DELAYED',
+      'PRIORITY TRANSIT RESERVED FOR VERIFIED WORK ORDERS',
+      'DISTRICT 4 POWER GRID STABILIZED AFTER OVERNIGHT SURGE',
+    ],
+    // Shift 3, second half
+    [
+      'UNREGISTERED PASSENGERS DETAINED IN TRANSIT SWEEP — RECORDS SEALED',
+      'SYNTH-MEAT PRICES SURGE 15% — SUPPLIERS BLAME TRANSIT DELAYS',
+      'AMBER: "NONCOMPLIANCE WILL BE MET WITH ACTION."',
+      'OBITUARIES: FACTORY FOREMAN HONORED FOR 30 YEARS SERVICE',
+    ],
+  ];
+  const harmNews = useMemo(() => {
+    const harmEntries = decisionLog.filter(
+      (entry) => entry.decision === 'APPROVE' && !entry.correct
+    );
+    if (harmEntries.length === 0) return null;
+    const entry = harmEntries[harmEntries.length - 1];
+    const name = entry.subjectName?.toUpperCase() ?? 'SUBJECT';
+    const role = entry.permitType ? entry.permitType.toUpperCase() : 'SUBJECT';
+    const district = (entry.destinationPlanet || entry.originPlanet || 'DISTRICT').toUpperCase();
+    const verb = role.includes('DELIVERY') ? 'PLOWS TRAFFIC — CHILD DEAD' : 'LINKED TO FATAL INCIDENT';
+    return [
+      `BREAKING: ${role} ${name} ${verb} — ${district}`,
+      `AMBER LOOKOUT ISSUED — SUBJECT ID CONFIRMED — PUBLIC ADVISED`,
+      `REPORT ANY CONTACT TO AMBER AUTHORITY — CHECKPOINTS ALERTED`,
     ];
-    const propagandaHeadlines = propagandaFeed.slice(-3).map((p) => p.headline);
-    return [...propagandaHeadlines, ...staticNews].slice(0, 5);
-  }, [propagandaFeed]);
+  }, [decisionLog]);
+  const newsHeadlines = useMemo(() => {
+    if (harmNews) return harmNews;
+    const halfShiftSize = Math.ceil(SUBJECTS_PER_SHIFT / 2);
+    const halfShiftIndex = Math.floor((currentSubjectIndex % SUBJECTS_PER_SHIFT) / halfShiftSize);
+    const newsIndex = Math.min(
+      WORLD_NEWS_BY_HALF_SHIFT.length - 1,
+      (currentShift.id - 1) * 2 + halfShiftIndex
+    );
+    return WORLD_NEWS_BY_HALF_SHIFT[newsIndex];
+  }, [currentShift.id, currentSubjectIndex, harmNews]);
 
   const info = gatheredInformation || createEmptyInformation();
   const requiredChecks = useMemo(() => {
@@ -198,6 +252,13 @@ export const GameScreen = ({
     hasDecision,
     decisionOutcome?.type,
   ]);
+
+  const warrantPriority = useMemo(() => {
+    if (!info.warrantCheck) return 'PENDING';
+    if (currentSubject.warrants && currentSubject.warrants !== 'NONE') return 'HIGH';
+    if (currentSubject.incidents > 0) return 'ELEVATED';
+    return 'STD';
+  }, [info.warrantCheck, currentSubject.warrants, currentSubject.incidents]);
   
   const handleMapPress = () => {
     router.push('/map');
@@ -222,15 +283,25 @@ export const GameScreen = ({
     setActivePanel('WARRANTS');
   }, [currentSubject.id]);
 
+  // Handle panel switch - also advances dialogue
+  const handlePanelSwitch = (panel: 'WARRANTS' | 'DOCUMENTATION' | 'TRANSIT') => {
+    if (panel !== activePanel) {
+      setActivePanel(panel);
+      const dialogueLines = currentSubject.dialogueLines ?? [];
+      if (dialogueLines.length > 0) {
+        setDialogueIndex((prev) => Math.min(prev + 1, dialogueLines.length - 1));
+      }
+    }
+  };
+
   // Auto-advance after decision
   useEffect(() => {
     if (!hasDecision) return;
-    if (hasPendingAlert) return;
     const timer = setTimeout(() => {
       onNext();
     }, 1200);
     return () => clearTimeout(timer);
-  }, [hasDecision, hasPendingAlert, onNext]);
+  }, [hasDecision, onNext]);
 
   const handleDecision = (type: 'APPROVE' | 'DENY') => {
     if (hasDecision) return;
@@ -365,6 +436,12 @@ export const GameScreen = ({
 
     setDbOutput(output);
     setLastQuery(query);
+    
+    // Increment dialogue index when player performs a check action
+    const dialogueLines = currentSubject.dialogueLines ?? [];
+    if (dialogueLines.length > 0) {
+      setDialogueIndex((prev) => Math.min(prev + 1, dialogueLines.length - 1));
+    }
 
     if (!onInformationUpdate) return;
 
@@ -395,9 +472,10 @@ export const GameScreen = ({
   const primaryCredential = credentialData?.credentials?.[0];
   const ticketDestination = primaryCredential?.destinationPlanet || currentSubject.destinationPlanet || '—';
   const ticketPermit = primaryCredential ? getCredentialTypeName(primaryCredential.type) : '—';
+  const hasTransitIssue = currentSubject.truthFlags?.hasTransitIssue ?? false;
   const ticketStatus = primaryCredential
-    ? (primaryCredential.valid ? getExpirationStatus(primaryCredential.expirationDate) : 'INVALID')
-    : '—';
+    ? getPermitStatus(primaryCredential, hasTransitIssue)
+    : 'INVALID';
 
   return (
     <View style={styles.container}>
@@ -443,7 +521,7 @@ export const GameScreen = ({
       <NewsTicker
         headlines={newsHeadlines}
         prefix="AMBER NEWS"
-        variant={hasPendingAlert ? 'alert' : 'default'}
+        variant="default"
         speed={40}
       />
 
@@ -484,7 +562,7 @@ export const GameScreen = ({
                 {(['WARRANTS', 'DOCUMENTATION', 'TRANSIT'] as const).map((tab) => (
                   <TouchableOpacity
                     key={tab}
-                    onPress={() => setActivePanel(tab)}
+                    onPress={() => handlePanelSwitch(tab)}
                     style={[styles.panelTab, activePanel === tab && styles.panelTabActive]}
                   >
                     <Text style={[styles.panelTabText, activePanel === tab && styles.panelTabTextActive]}>
@@ -531,8 +609,8 @@ export const GameScreen = ({
                         <Text style={styles.warrantStatValue}>{flags.length}</Text>
                       </View>
                       <View style={styles.warrantStatItem}>
-                         <Text style={styles.warrantStatLabel}>PRIORITY</Text>
-                         <Text style={styles.warrantStatValue}>{currentSubject.subjectType === 'REPLICANT' ? 'HIGH' : 'STD'}</Text>
+                        <Text style={styles.warrantStatLabel}>PRIORITY</Text>
+                        <Text style={styles.warrantStatValue}>{warrantPriority}</Text>
                       </View>
                     </View>
 
@@ -655,9 +733,19 @@ export const GameScreen = ({
                       </View>
                       <View style={styles.ticketGridItem}>
                         <Text style={styles.subjectKey}>STATUS</Text>
-                         <Text style={[styles.subjectValue, ticketStatus === 'INVALID' ? styles.statusDisplayRejected : styles.statusDisplayCleared]}>
+                         <Text style={[
+                           styles.subjectValue,
+                           ticketStatus === 'INVALID' || ticketStatus === 'EXPIRED'
+                             ? styles.statusDisplayRejected
+                             : ticketStatus === 'UNVERIFIED'
+                             ? styles.statusDisplayUnverified
+                             : styles.statusDisplayCleared
+                         ]}>
                           {ticketStatus}
                         </Text>
+                        {ticketStatus === 'UNVERIFIED' && (
+                          <Text style={styles.statusDiscrepancyNote}>TRANSIT LOG DISCREPANCY</Text>
+                        )}
                       </View>
                       <View style={styles.ticketGridItem}>
                         <Text style={styles.subjectKey}>ISSUER</Text>
@@ -795,12 +883,19 @@ export const GameScreen = ({
       <View style={styles.commsLinkWrapper}>
         <CommLinkPanel
           hudStage={hudStage}
-          dialogue={currentSubject.dialogue ?? getSubjectGreeting(currentSubject.id, currentSubject)?.greeting}
+          dialogue={(() => {
+            // Dynamic dialogue: use dialogueLines if available, fallback to greeting
+            const dialogueLines = currentSubject.dialogueLines ?? [];
+            if (dialogueLines.length > 0 && dialogueIndex > 0) {
+              return dialogueLines[Math.min(dialogueIndex, dialogueLines.length - 1)];
+            }
+            return currentSubject.dialogue ?? getSubjectGreeting(currentSubject.id, currentSubject)?.greeting;
+          })()}
           subjectId={currentSubject.id}
-          subjectType={currentSubject.subjectType}
-          isAnomaly={currentSubject.biometricData?.anomalyDetected}
           useProceduralPortrait={forceProceduralPortrait}
-          baseImageIdOverride={portraitBaseImageId}
+          baseImageIdOverride={portraitSelection.baseIndex}
+          portraitSeed={portraitSelection.seed}
+          decisionStamp={decisionOutcome?.type ?? null}
         />
       </View>
 
@@ -825,15 +920,7 @@ export const GameScreen = ({
               ledActive={true}
               style={styles.modeButton}
             />
-            <MechanicalButton
-              label="AMBER"
-              onPress={() => setAlertModeVisible(true)}
-              color={OSC_COLORS.buttonRed}
-              showLED
-              ledColor="red"
-              ledActive={hasPendingAlert}
-              style={styles.modeButton}
-            />
+            {/* AMBER ALERT MODE DISABLED FOR TEST BUILD */}
           </View>
         </View>
 
@@ -890,33 +977,25 @@ export const GameScreen = ({
       {pendingDecision && (
         <View style={styles.warningOverlay}>
           <View style={styles.warningPanel}>
-            <Text style={styles.warningTitle}>WARNING</Text>
+            <Text style={styles.warningTitle}>AMBER NOTICE</Text>
             <Text style={styles.warningText}>
-              REQUIRED CHECK INCOMPLETE: {pendingDecision.missing.join(', ')}
+              You skipped required checks: {pendingDecision.missing.join(', ')}.
+              Proceed after verification or else.
             </Text>
             <View style={styles.warningActions}>
               <TouchableOpacity
                 onPress={() => {
-                  const { type } = pendingDecision;
                   setPendingDecision(null);
-                  onDecision(type);
                 }}
               >
-                <Text style={styles.warningActionText}>[ PROCEED ANYWAY ]</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setPendingDecision(null)}>
-                <Text style={styles.warningActionText}>[ CANCEL ]</Text>
+                <Text style={styles.warningActionText}>[ ACKNOWLEDGE ]</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       )}
 
-      {/* Alert Mode Screen */}
-      <AlertModeScreen
-        visible={alertModeVisible}
-        onClose={() => setAlertModeVisible(false)}
-      />
+      {/* Alert Mode Screen disabled for test build */}
     </View>
   );
 };
@@ -1971,6 +2050,17 @@ const styles = StyleSheet.create({
   statusDisplayRejected: {
     color: OSC_COLORS.ledRed,
   },
+  statusDisplayUnverified: {
+    color: '#e6a23c', // Amber/yellow for uncertainty
+  },
+  statusDiscrepancyNote: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 7,
+    color: '#e6a23c',
+    letterSpacing: 0.5,
+    marginTop: 2,
+    opacity: 0.9,
+  },
   databaseQueryGroup: {
     gap: 8,
     marginTop: 8,
@@ -2120,7 +2210,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   modeButton: {
-    minWidth: 70,
+    minWidth: 96,
     height: 44,
   },
   decisionRow: {

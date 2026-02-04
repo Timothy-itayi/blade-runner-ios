@@ -9,7 +9,8 @@ import { Theme } from '../constants/theme';
 import { MechanicalButton } from '../components/ui/MechanicalUI';
 import { HUDBox } from '../components/ui/HUDBox';
 import { useGameStore } from '../store/gameStore';
-import { ProceduralPortrait } from '../components/ui/ProceduralPortrait';
+import { FaceLandmarkTfliteTest, FacePipelineProvider } from '../components/game/FaceLandmarkTfliteTest';
+import { resolvePortraitSelection } from '@/utils/portraitSelection';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const METAL_TEXTURE = require('../assets/textures/Texturelabs_Metal_264S.jpg');
@@ -20,11 +21,17 @@ export default function MapScreen() {
   const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
   const [mapLayout, setMapLayout] = useState({ width: SCREEN_WIDTH - 32, height: SCREEN_HEIGHT * 0.5 });
   const decisionLog = useGameStore((state) => state.decisionLog);
-  const alertLog = useGameStore((state) => state.alertLog);
-  const propagandaFeed = useGameStore((state) => state.propagandaFeed);
-
-  // Alert state is handled by the dedicated AlertModeScreen
-  // We still use alertLog for node coloring on the map
+  const selectedLogEntry = useMemo(
+    () => (selectedNode ? decisionLog.find(entry => entry.subjectId === selectedNode.subjectId) : null),
+    [decisionLog, selectedNode]
+  );
+  const portraitSelection = useMemo(() => {
+    return resolvePortraitSelection({
+      subjectId: selectedNode?.subjectId || selectedNode?.id,
+      sex: selectedLogEntry?.sex || 'M',
+      subjectType: selectedLogEntry?.subjectType,
+    });
+  }, [selectedLogEntry?.sex, selectedLogEntry?.subjectType, selectedNode]);
 
   const handleBack = () => {
     router.back();
@@ -46,19 +53,16 @@ export default function MapScreen() {
     const subjectEdges: MapEdge[] = [];
     decisionLog.forEach((entry, index) => {
       const decisionLabel = entry.decision === 'APPROVE' ? 'APPROVED' : 'DENIED';
-      const alertEntry = alertLog.find(alert => alert.subjectId === entry.subjectId);
-      const isAlertRed = alertEntry?.outcome === 'IGNORED' || alertEntry?.outcome === 'DETONATED';
       const state: NodeState =
         entry.decision === 'APPROVE'
           ? (entry.correct ? 'approved-clean' : 'approved-harm')
           : (entry.correct ? 'denied-clean' : 'denied-harm');
-      const finalState: NodeState = isAlertRed ? 'alert-red' : state;
       const nodeId = `subject-${entry.subjectId}-${index}`;
       subjectNodes.push({
         id: nodeId,
         type: 'subject',
         label: `${entry.subjectName} — ${decisionLabel}`,
-        state: finalState,
+        state,
         subjectId: entry.subjectId,
       });
       subjectEdges.push({
@@ -69,10 +73,13 @@ export default function MapScreen() {
       });
     });
     return {
-      nodes: [{ id: 'player', type: 'player', label: 'AMBER CHECKPOINT', state: 'approved-clean' }, ...subjectNodes],
+      nodes: [
+        { id: 'player', type: 'player', label: 'AMBER CHECKPOINT', state: 'approved-clean' } as MapNode,
+        ...subjectNodes,
+      ],
       edges: subjectEdges,
     };
-  }, [decisionLog, alertLog]);
+  }, [decisionLog]);
 
   // Stats from nodes (subject count only)
   const stats = useMemo(() => {
@@ -81,13 +88,14 @@ export default function MapScreen() {
       total: subjects.length,
       approved: subjects.filter(n => n.state.startsWith('approved')).length,
       denied: subjects.filter(n => n.state.startsWith('denied')).length,
-      harm: subjects.filter(n => n.state.includes('harm') || n.state === 'alert-red').length,
+      harm: subjects.filter(n => n.state.includes('harm')).length,
     };
   }, [nodes]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={[styles.container, { paddingBottom: insets.bottom }]}>
+    <FacePipelineProvider warmCacheActive={true}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={[styles.container, { paddingBottom: insets.bottom }]}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerPanel}>
@@ -127,11 +135,6 @@ export default function MapScreen() {
             <Text style={[styles.statValue, { color: MapTheme.colors.nodeDeniedClean }]}>{stats.denied}</Text>
             <Text style={styles.statLabel}>DENIED</Text>
           </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: MapTheme.colors.nodeApprovedHarm }]}>{stats.harm}</Text>
-            <Text style={styles.statLabel}>CASUALTIES</Text>
-          </View>
         </View>
 
         {/* Map Container - full height, center node in middle */}
@@ -165,23 +168,10 @@ export default function MapScreen() {
             <Text style={styles.legendText}>DENIED</Text>
           </View>
           <View style={styles.legendRow}>
-            <View style={[styles.legendDot, { backgroundColor: MapTheme.colors.nodeAlertRed }]} />
-            <Text style={styles.legendText}>ALERT</Text>
-          </View>
-          <View style={styles.legendRow}>
             <View style={[styles.legendDot, { backgroundColor: MapTheme.colors.coreNode }]} />
             <Text style={styles.legendText}>YOU</Text>
           </View>
         </View>
-
-        {/* Propaganda Feed */}
-        {propagandaFeed.length > 0 && (
-          <View style={styles.propagandaPanel}>
-            <Text style={styles.propagandaLabel}>AMBER NEWS</Text>
-            <Text style={styles.propagandaHeadline}>{propagandaFeed[0].headline}</Text>
-            <Text style={styles.propagandaBody}>{propagandaFeed[0].body}</Text>
-          </View>
-        )}
 
         {/* Back Button */}
         <View style={styles.footer}>
@@ -211,7 +201,7 @@ export default function MapScreen() {
                   <Text style={styles.detailType}>LOCATION: CENTRAL HUB</Text>
                 </>
               ) : (() => {
-                const logEntry = decisionLog.find(entry => entry.subjectId === selectedNode.subjectId);
+                const logEntry = selectedLogEntry;
                 const isApproved = selectedNode.state.startsWith('approved');
                 const isDenied = selectedNode.state.startsWith('denied');
                 
@@ -227,22 +217,19 @@ export default function MapScreen() {
                     {/* Portrait and Name Row */}
                     <View style={styles.detailPortraitRow}>
                       <View style={styles.detailPortraitContainer}>
-                        <ProceduralPortrait
-                          subjectId={selectedNode.subjectId || selectedNode.id}
-                          subjectType={logEntry?.subjectType}
-                          sex={logEntry?.sex || 'M'}
-                          portraitPreset="dossier"
-                          style={styles.detailPortrait}
-                        />
+                      <FaceLandmarkTfliteTest
+                        mode="portrait"
+                        activeIndex={portraitSelection.baseIndex}
+                        portraitSeed={portraitSelection.seed}
+                        isScanning={false}
+                        scanProgress={0}
+                        style={styles.detailPortrait}
+                      />
                       </View>
                       <View style={styles.detailNameContainer}>
                         <Text style={styles.detailName}>{logEntry?.subjectName || selectedNode.label.split(' — ')[0]}</Text>
                         {/* Subject Info Grid */}
                         <View style={styles.detailGridCompact}>
-                          <View style={styles.detailGridItem}>
-                            <Text style={styles.detailGridLabel}>TYPE</Text>
-                            <Text style={styles.detailGridValue}>{logEntry?.subjectType || 'HUMAN'}</Text>
-                          </View>
                           <View style={styles.detailGridItem}>
                             <Text style={styles.detailGridLabel}>ORIGIN</Text>
                             <Text style={styles.detailGridValue}>{logEntry?.originPlanet || '—'}</Text>
@@ -267,9 +254,15 @@ export default function MapScreen() {
                             <Text style={styles.detailGridValue}>{logEntry?.permitType || '—'}</Text>
                           </View>
                         </View>
-                        {logEntry?.warrants && logEntry.warrants !== 'NONE' && (
-                          <View style={styles.detailWarning}>
-                            <Text style={styles.detailWarningText}>⚠ WARRANT: {logEntry.warrants}</Text>
+                        {/* Active Warrant Details - prominent section for harm cases */}
+                        {selectedNode.state === 'approved-harm' && logEntry?.warrants && logEntry.warrants !== 'NONE' && (
+                          <View style={styles.warrantSection}>
+                            <Text style={styles.warrantSectionLabel}>⚠ WARRANT: {logEntry.warrants}</Text>
+                            {logEntry.warrantDescription && (
+                              <Text style={styles.warrantSectionDetails}>
+                                {logEntry.warrantDescription}
+                              </Text>
+                            )}
                           </View>
                         )}
                       </View>
@@ -288,31 +281,16 @@ export default function MapScreen() {
                       </View>
                     )}
                     
-                    {/* Alert info if exists */}
-                    {alertLog.some(entry => entry.subjectId === selectedNode.subjectId) && (
-                      <View style={styles.alertDetail}>
-                        {alertLog
-                          .filter(entry => entry.subjectId === selectedNode.subjectId)
-                          .map(entry => (
-                            <View key={`alert-${entry.subjectId}`}>
-                              <Text style={styles.alertDetailLabel}>ALERT STATUS</Text>
-                              <Text style={styles.alertDetailValue}>{entry.outcome.replace('_', ' ')}</Text>
-                              {entry.collateralCount ? (
-                                <Text style={styles.alertDetailValue}>COLLATERAL: {entry.collateralCount}</Text>
-                              ) : null}
-                            </View>
-                          ))}
-                      </View>
-                    )}
                   </>
                 );
               })()}
             </View>
           </View>
         )}
-      </View>
+        </View>
 
-    </SafeAreaView>
+      </SafeAreaView>
+    </FacePipelineProvider>
   );
 }
 
@@ -334,7 +312,7 @@ function getStateColor(state: NodeState): string {
 function getStateLabel(state: NodeState): string {
   switch (state) {
     case 'approved-clean': return 'APPROVED';
-    case 'approved-harm': return 'HARM CAUSED';
+    case 'approved-harm': return 'ACTIVE WARRANT';
     case 'denied-clean': return 'DENIED';
     case 'denied-harm': return 'DENIED — HARM';
     case 'held': return 'HELD';
@@ -629,6 +607,29 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: MapTheme.colors.nodeApprovedHarm,
   },
+  warrantSection: {
+    marginTop: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: 'rgba(212, 83, 74, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 83, 74, 0.5)',
+  },
+  warrantSectionLabel: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#d4534a',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  warrantSectionDetails: {
+    fontFamily: Theme.fonts.mono,
+    fontSize: 9,
+    color: 'rgba(255, 180, 180, 0.9)',
+    lineHeight: 13,
+    letterSpacing: 0.3,
+  },
   alertDetail: {
     marginTop: 10,
     paddingTop: 8,
@@ -679,32 +680,6 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: MapTheme.colors.textSecondary,
     letterSpacing: 0.5,
-  },
-  propagandaPanel: {
-    marginTop: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    backgroundColor: MapTheme.colors.panel,
-  },
-  propagandaLabel: {
-    fontFamily: Theme.fonts.mono,
-    fontSize: 9,
-    color: MapTheme.colors.textDim,
-    letterSpacing: 1,
-    marginBottom: 6,
-  },
-  propagandaHeadline: {
-    fontFamily: Theme.fonts.mono,
-    fontSize: 12,
-    color: MapTheme.colors.textPrimary,
-    marginBottom: 4,
-  },
-  propagandaBody: {
-    fontFamily: Theme.fonts.mono,
-    fontSize: 10,
-    color: MapTheme.colors.textSecondary,
-    lineHeight: 14,
   },
   // Footer
   footer: {

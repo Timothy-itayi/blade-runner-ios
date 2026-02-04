@@ -139,7 +139,7 @@ export default function AmberLogoScreen({
       >
         {/* Logo glow effect (behind image) */}
         <Animated.View style={[styles.logoGlow, { opacity: Animated.multiply(glowPulse, 0.4) }]} />
-        <Image source={require('../../assets/app-icon.png')} style={styles.logo} resizeMode="contain" />
+        <Image source={require('../../assets/logo.png')} style={styles.logo} resizeMode="contain" />
       </Animated.View>
 
       {/* AMBER text */}

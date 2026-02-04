@@ -386,6 +386,12 @@ export const styles = StyleSheet.create({
     paddingBottom: 8,
     marginBottom: 8,
   },
+  credentialItemForged: {
+    borderStyle: 'dashed',
+    borderBottomColor: 'rgba(212, 83, 74, 0.5)',
+    backgroundColor: 'rgba(212, 83, 74, 0.08)',
+    paddingHorizontal: 6,
+  },
   credentialHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -416,6 +422,11 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.2,
     marginTop: 2,
     lineHeight: 12,
+  },
+  credentialTextForged: {
+    color: Theme.colors.textDim,
+    letterSpacing: 0,
+    fontStyle: 'italic',
   },
   credentialExpirationRow: {
     flexDirection: 'row',

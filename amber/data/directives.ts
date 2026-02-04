@@ -28,15 +28,15 @@ export const DIRECTIVES: Record<string, DirectiveRule> = {
   },
 
   // =============================================================================
-  // SHIFT 3: Clearance-based - Civilians denied except VIP and DIPLOMAT
-  // Standard civilians restricted. VIP and diplomatic clearance exempted.
+  // SHIFT 3: Transit-flagged denial (lighter than full lockdown)
+  // Deny subjects with flagged transit history.
   // =============================================================================
   SHIFT_3: {
     id: 'SHIFT_3',
-    base: 'ALL',
-    exceptions: ['VIP', 'DIPLOMAT'],
+    base: 'TRANSIT_FLAGGED',
+    exceptions: [],
     hiddenExceptions: [],
-    requiredChecks: ['WARRANT', 'TRANSIT'],
-    text: ['DENY: ALL', 'EXCEPT: VIP', 'EXCEPT: DIPLOMAT'],
+    requiredChecks: ['TRANSIT'],
+    text: ['DENY: TRANSIT FLAGS'],
   },
 };

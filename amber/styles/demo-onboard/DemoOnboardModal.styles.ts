@@ -22,6 +22,8 @@ export const styles = StyleSheet.create({
     borderColor: Theme.colors.border,
     backgroundColor: 'rgba(13, 17, 23, 0.85)',
     padding: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     color: Theme.colors.textPrimary,
@@ -31,15 +33,18 @@ export const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 12,
     textTransform: 'uppercase',
+    textAlign: 'center',
   },
   body: {
     gap: 8,
+    alignItems: 'center',
   },
   bodyText: {
     color: Theme.colors.textSecondary,
     fontFamily: Theme.fonts.mono,
     fontSize: 12,
     lineHeight: 18,
+    textAlign: 'center',
   },
   dotsRow: {
     flexDirection: 'row',

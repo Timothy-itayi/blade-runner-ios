@@ -1,96 +1,134 @@
-# AMBER
+Based on your new requirements, here is the revised **Game Design Document (GDD) v2.0 for AMBER**.
 
-A narrative decision-making game built for iOS. Players operate as a security checkpoint operator in a dystopian sci-fi setting, investigating subjects and making APPROVE/DENY decisions that shape the narrative.
+This version strips out the sci-fi elements (Replicants, space travel, biometrics) to focus on a grounded, gritty surveillance simulation about human processing, consequences, and interface familiarity.
 
-## Tech Stack
+---
 
-**Framework & Runtime**
-- React Native 0.81.5 (Expo SDK ~54)
-- React 19.1.0
-- TypeScript 5.9.2 (strict mode)
+# AMBER: Game Design Document (Revision 2.0)
 
-**State Management**
-- Zustand 5.0.10 — global game state (lives, equipment status, citations)
-- React hooks (`useState`, `useEffect`) — component-local state and game flow
-- Custom hooks (`useGameState`, `useGameHandlers`) — game logic abstraction
+## 1. High Concept
 
-**Navigation & Routing**
-- Expo Router 6.0.21 — file-based routing
-- React Navigation 7.x — underlying navigation primitives
+**AMBER** is a grounded surveillance simulation set in a fictional, divided city. Players act as an operator at the **Main Transit Hub**, the central checkpoint connecting various Districts. Unlike broad sci-fi epics, this is a game about **humans dealing with human problems**—smuggling, warrants, and civil unrest.
 
-**Audio**
-- expo-audio 1.1.1 — primary audio playback
-- expo-av 16.0.8 — legacy video/audio support
+**Core Philosophy:** "Streamlined Surveillance." The interface mimics a familiar handheld device, stripped of retro-junk clutter, focusing on clean data and high-stakes decisions.
 
-**UI & Styling**
-- Custom HUD-based design system
-- Share Tech Mono (via `@expo-google-fonts/share-tech-mono`) — terminal aesthetic
-- React Native Animated API — UI transitions and feedback
-- expo-haptics — tactile feedback
+**Core Loop:** `Review Documents` → `Run Database Checks` → `Decide (Approve/Deny)` → `Live with the Consequences`.
 
-**3D Graphics** (if used)
-- Three.js 0.182.0
-- @react-three/fiber 9.5.0
-- @react-three/drei 10.7.7
+---
 
-**Persistence**
-- @react-native-async-storage/async-storage 2.2.0 — save game state
+## 2. Setting & Narrative
 
-**Development**
-- ESLint 9.25.0 (expo config)
-- Expo CLI — build tooling and dev server
+* **The World:** A realistic, near-future city divided into **Districts** (e.g., Industrial District, Uptown, The Fringes). There is no space travel; all transit is local/regional.
+* **The Subjects:** Purely human. Citizens, workers, refugees, and criminals. No androids or cyborgs (yet).
+* **Tone:** Grounded reality. The horror comes from bureaucratic indifference and the ripple effects of your choices, not sci-fi monsters.
 
-## Architecture
+---
 
-**Project Structure**
-```
-amber/
-├── app/              # Expo Router entry points
-├── components/       # React components (game, intro, UI)
-├── hooks/           # Custom React hooks (game state, audio, handlers)
-├── store/           # Zustand stores (gameStore.ts)
-├── data/            # Static game data (subjects, credentials, traits)
-├── constants/       # Game constants (shifts, themes, messages)
-├── utils/           # Utility functions (save manager, helpers)
-├── types/           # TypeScript type definitions
-└── assets/          # Media assets (audio, video, images)
-```
+## 3. Gameplay Mechanics (Current Build)
 
-**State Architecture**
-- **Global state** (Zustand): Lives, equipment failures, citations — persists across sessions
-- **Game state** (hooks): Current subject, scan status, decisions, gathered information — resets per shift
-- **Component state**: UI visibility, animations, modal states — ephemeral
+### 3.1 The Process
 
-**Game Flow**
-1. Intro sequence → boot sequence → operator assignment
-2. Shift loop: subject appears → investigation → decision → consequences
-3. Between shifts: news reports, personal messages, narrative progression
-4. Save/load via AsyncStorage
+The player processes subjects at the Main Hub. The flow is streamlined to prioritize efficient data analysis over mini-games.
 
-**Decision System**
-- Information-based deduction (no predetermined flags)
-- Players gather intel via scans, credential checks, interrogation
-- Decisions evaluated against gathered information
-- Consequences accumulate across shifts
+1. **Subject Intake:**
+* A subject arrives from a specific **District**.
+* They present a **Ticket** and **ID** (Text/Static Image based for now; video assets are out of scope).
 
-## Build & Run
 
-```bash
-cd amber
-npm install
-npm start          # Expo dev server
-npm run ios        # Run on iOS simulator
-npm run android    # Run on Android emulator
-```
+2. **Investigation (The Work Surface):**
+* **Warrant Check:** Queries the central police database for outstanding arrests.
+* **Transit Check:** Verifies travel history (e.g., "Did they really come from District 4?").
+* **Mechanic - The Forced Decision:** Players *can* check everything, or they can check nothing. If a player attempts to process a subject without running checks, the game forces the decision immediately. There is no hand-holding; if you approve a criminal because you didn't run a warrant check, the consequences are yours.
 
-**Requirements**
-- Node.js 18+
-- iOS: Xcode 15+ (for native builds)
-- EAS Build account (for TestFlight/App Store builds)
 
-## Notes
+3. **News & Alerts:**
+* Decisions trigger world events.
+* **UI Feedback:** Major consequences appear immediately as **AMBER News Alerts** scrolling on the main UI (e.g., "RIOT IN DISTRICT 9 LINKED TO SMUGGLED ARMS").
 
-- Currently in beta/demo stage (3 subjects)
-- Uses Expo's new architecture (`newArchEnabled: true`)
-- React Compiler enabled (`reactCompiler: true`)
-- Strict TypeScript with path aliases (`@/*`)
+
+
+### 3.2 The Node Map (Consequence System)
+
+The primary method of tracking progress and narrative branching.
+
+* **Structure:** A visual node graph.
+* **Center Node:** Represents **You** (The Main Hub / Player Character).
+* **Connected Nodes:** Represent processed **Subjects**.
+
+
+* **Interaction:**
+* **Tap a Subject Node:** Reveals the subject's details (Name, Origin, Outcome).
+* **Causality View:** If a subject triggered an event (e.g., a bombing or a protest), tapping their node reveals the **Trigger Link**—showing exactly how your decision led to that event.
+
+
+
+---
+
+## 4. User Interface (UI) & Aesthetic
+
+### 4.1 Visual Style
+
+* **Vibe:** Streamlined Surveillance. Clean lines, functional data, less "rusty retro-tech," more "utilitarian handheld."
+* **Audio:** **None.** The current build is silent to focus purely on visual information and mechanics.
+
+### 4.2 Main Menu
+
+* **Concept:** A personal handheld device.
+* **Texture:** The background features a **Sticker-bombed texture**, giving it a lived-in, grounded feel.
+* **Interaction:**
+* The user sees a sleeping/locked screen.
+* **Gesture:** User **slides down** to reveal the "START" button.
+* **Transition:** The screen reveals the text **"WELCOME TO AMBER"** which fades in, followed by the **AMBER LOGO**.
+
+
+
+### 4.3 Main Game Screen
+
+* **Layout:**
+* **Top:** News Ticker (Alerts).
+* **Center:** Subject Data (ID, Ticket details).
+* **Bottom:** Action Controls (Warrant Check, Transit Check, Approve, Deny).
+
+
+* **Feedback:** Stark, text-based confirmations. No complex animations or sound effects.
+
+---
+
+## 5. Development Roadmap & Scope
+
+### Phase 1 (Current Scope - "The Human Element")
+
+* **Entities:** Humans only.
+* **Locations:** City Districts (No planets).
+* **Features:**
+* Warrant & Transit Checks.
+* Node Map with Event Triggers.
+* News Ticker Integration.
+* Handheld/Sticker UI styling.
+* Slide-to-start Menu.
+
+
+
+### Phase 2 (Future Updates)
+
+* **Biometrics:** Fingerprint and retinal scanners.
+* **Video Assets:** Live footage of subjects.
+* **Sci-Fi Expansion:** Introduction of Replicants and Cyborgs (Post-launch narrative expansion).
+* **Audio:** Sound effects and ambience.
+
+---
+
+## 6. Technical Implementation Notes
+
+* **Data Models:**
+* `Subject` type must be refactored to remove `Planet` enums and replace them with `District` strings.
+* `Replicant` and `Cyborg` flags in `SubjectSeed` should be disabled or removed for the current build.
+
+
+* **State Management:**
+* The `decisionLog` in `gameStore.ts` needs to track "Checks Performed" vs "Checks Skipped" to determine if a decision was "Forced/Blind."
+
+
+* **Assets:**
+* Utilize `Texturelabs_InkPaint_399S.jpg` for the main menu background.
+* Remove references to `sound-effects` folders in the asset loading sequence for now.

@@ -1,8 +1,4 @@
-Based on your new requirements, here is the revised **Game Design Document (GDD) v2.0 for AMBER**.
 
-This version strips out the sci-fi elements (Replicants, space travel, biometrics) to focus on a grounded, gritty surveillance simulation about human processing, consequences, and interface familiarity.
-
----
 
 # AMBER: Game Design Document (Revision 2.0)
 

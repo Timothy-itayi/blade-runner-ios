@@ -1,130 +1,48 @@
+# AMBER (｀_´)ゞ
 
+> A grounded surveillance simulation where human decisions have city-wide consequences. 
 
-# AMBER: Game Design Document (Revision 2.0)
+**Status:** (ง •̀_•́)ง Prototype Phase (Build 4) | Work in Progress
+*AMBER is currently in active development. We are actively gathering and iterating on user feedback to refine the core mechanics and UI/UX.*
 
-## 1. High Concept
+## ( 📝・ω・) High Concept
+AMBER places you in the role of an operator at the Main Transit Hub of a fictional, divided city. Stripped of broad sci-fi tropes, this is a game about **humans dealing with human problems**—smuggling, warrants, and civil unrest. The horror and tension stem from bureaucratic indifference and the ripple effects of your split-second choices.
 
-**AMBER** is a grounded surveillance simulation set in a fictional, divided city. Players act as an operator at the **Main Transit Hub**, the central checkpoint connecting various Districts. Unlike broad sci-fi epics, this is a game about **humans dealing with human problems**—smuggling, warrants, and civil unrest.
+**Core Philosophy:** *Streamlined Surveillance.* The interface mimics a familiar utilitarian handheld device, focusing on clean data, high-stakes decisions, and zero hand-holding.
 
-**Core Philosophy:** "Streamlined Surveillance." The interface mimics a familiar handheld device, stripped of retro-junk clutter, focusing on clean data and high-stakes decisions.
+## (↻・ω・)↻ Core Gameplay Loop
+`Review Documents` ➔ `Run Database Checks` ➔ `Decide (Approve/Deny)` ➔ `Live with the Consequences`
 
-**Core Loop:** `Review Documents` → `Run Database Checks` → `Decide (Approve/Deny)` → `Live with the Consequences`.
+## (☆ω☆) Features (Current Build)
+* **The Work Surface:** Manually process subjects arriving from various City Districts by reviewing their ID and Transit Tickets.
+* **Active Investigations:** Query the central police database for outstanding warrants or verify travel history to catch discrepancies.
+* **The Forced Decision:** No hand-holding. Skip the background checks if you want, but you own the consequences of a blind approval.
+* **The Node Map (Causality System):** A visual graph tracking your narrative branching. Tap a subject node to view the "Trigger Link" and see exactly how your decision led to a specific city-wide event.
+* **Live News Alerts:** Major consequences from your decisions appear immediately as scrolling AMBER News Alerts on your UI.
+* **Utilitarian UI:** A grounded, sticker-bombed handheld interface featuring a "slide-to-start" unlock mechanism. 
 
----
+## ( 🔭・ω・) Development Roadmap
+### Phase 1: The Human Element (Current Focus)
+- [x] Warrant & Transit Checks
+- [x] Node Map with Event Triggers
+- [x] News Ticker Integration
+- [x] Refactoring global enums (transitioning from planetary to district-based logic)
 
-## 2. Setting & Narrative
+### Phase 2: Future Updates
+- [ ] **Biometrics:** Fingerprint and retinal scanners.
+- [ ] **Video Assets:** Live footage integration for subject processing.
+- [ ] **Audio:** Immersive sound effects and ambient hub noise.
+- [ ] **Expanded Lore:** Introduction of Replicants and Cyborgs.
 
-* **The World:** A realistic, near-future city divided into **Districts** (e.g., Industrial District, Uptown, The Fringes). There is no space travel; all transit is local/regional.
-* **The Subjects:** Purely human. Citizens, workers, refugees, and criminals. No androids or cyborgs (yet).
-* **Tone:** Grounded reality. The horror comes from bureaucratic indifference and the ripple effects of your choices, not sci-fi monsters.
+## (💻・ω・) Technical Notes (Build 4)
+* **State Management:** The `decisionLog` actively tracks "Checks Performed" vs. "Checks Skipped" to evaluate blind decisions.
+* **Assets:** Current build utilizes `Texturelabs_InkPaint_399S.jpg` for menu styling. Audio asset loading is temporarily disabled for pure visual/mechanic focus.
 
----
+(👂・ω・) Feedback & Iteration
+Because the current testers are local neighbors and co-workers, feedback is gathered through direct observation and verbal interviews.
 
-## 3. Gameplay Mechanics (Current Build)
+Current Focus: Observing how non-technical users interact with the "Slide to Unlock" mechanic and the News Ticker.
 
-### 3.1 The Process
+Latest Iterations: Simplified the warrant check UI based on verbal feedback that the previous version was "too cluttered."
 
-The player processes subjects at the Main Hub. The flow is streamlined to prioritize efficient data analysis over mini-games.
-
-1. **Subject Intake:**
-* A subject arrives from a specific **District**.
-* They present a **Ticket** and **ID** (Text/Static Image based for now; video assets are out of scope).
-
-
-2. **Investigation (The Work Surface):**
-* **Warrant Check:** Queries the central police database for outstanding arrests.
-* **Transit Check:** Verifies travel history (e.g., "Did they really come from District 4?").
-* **Mechanic - The Forced Decision:** Players *can* check everything, or they can check nothing. If a player attempts to process a subject without running checks, the game forces the decision immediately. There is no hand-holding; if you approve a criminal because you didn't run a warrant check, the consequences are yours.
-
-
-3. **News & Alerts:**
-* Decisions trigger world events.
-* **UI Feedback:** Major consequences appear immediately as **AMBER News Alerts** scrolling on the main UI (e.g., "RIOT IN DISTRICT 9 LINKED TO SMUGGLED ARMS").
-
-
-
-### 3.2 The Node Map (Consequence System)
-
-The primary method of tracking progress and narrative branching.
-
-* **Structure:** A visual node graph.
-* **Center Node:** Represents **You** (The Main Hub / Player Character).
-* **Connected Nodes:** Represent processed **Subjects**.
-
-
-* **Interaction:**
-* **Tap a Subject Node:** Reveals the subject's details (Name, Origin, Outcome).
-* **Causality View:** If a subject triggered an event (e.g., a bombing or a protest), tapping their node reveals the **Trigger Link**—showing exactly how your decision led to that event.
-
-
-
----
-
-## 4. User Interface (UI) & Aesthetic
-
-### 4.1 Visual Style
-
-* **Vibe:** Streamlined Surveillance. Clean lines, functional data, less "rusty retro-tech," more "utilitarian handheld."
-* **Audio:** **None.** The current build is silent to focus purely on visual information and mechanics.
-
-### 4.2 Main Menu
-
-* **Concept:** A personal handheld device.
-* **Texture:** The background features a **Sticker-bombed texture**, giving it a lived-in, grounded feel.
-* **Interaction:**
-* The user sees a sleeping/locked screen.
-* **Gesture:** User **slides down** to reveal the "START" button.
-* **Transition:** The screen reveals the text **"WELCOME TO AMBER"** which fades in, followed by the **AMBER LOGO**.
-
-
-
-### 4.3 Main Game Screen
-
-* **Layout:**
-* **Top:** News Ticker (Alerts).
-* **Center:** Subject Data (ID, Ticket details).
-* **Bottom:** Action Controls (Warrant Check, Transit Check, Approve, Deny).
-
-
-* **Feedback:** Stark, text-based confirmations. No complex animations or sound effects.
-
----
-
-## 5. Development Roadmap & Scope
-
-### Phase 1 (Current Scope - "The Human Element")
-
-* **Entities:** Humans only.
-* **Locations:** City Districts (No planets).
-* **Features:**
-* Warrant & Transit Checks.
-* Node Map with Event Triggers.
-* News Ticker Integration.
-* Handheld/Sticker UI styling.
-* Slide-to-start Menu.
-
-
-
-### Phase 2 (Future Updates)
-
-* **Biometrics:** Fingerprint and retinal scanners.
-* **Video Assets:** Live footage of subjects.
-* **Sci-Fi Expansion:** Introduction of Replicants and Cyborgs (Post-launch narrative expansion).
-* **Audio:** Sound effects and ambience.
-
----
-
-## 6. Technical Implementation Notes
-
-* **Data Models:**
-* `Subject` type must be refactored to remove `Planet` enums and replace them with `District` strings.
-* `Replicant` and `Cyborg` flags in `SubjectSeed` should be disabled or removed for the current build.
-
-
-* **State Management:**
-* The `decisionLog` in `gameStore.ts` needs to track "Checks Performed" vs "Checks Skipped" to determine if a decision was "Forced/Blind."
-
-
-* **Assets:**
-* Utilize `Texturelabs_InkPaint_399S.jpg` for the main menu background.
-* Remove references to `sound-effects` folders in the asset loading sequence for now.
+Active Goal: Translating "I got stuck" into specific UI/UX improvements for Build 5. (ง •̀_•́)ง

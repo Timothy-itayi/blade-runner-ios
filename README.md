@@ -2,6 +2,12 @@
 
 # AMBER: Game Design Document (Revision 2.0)
 
+
+## 🎬 Demo
+
+<img src="amber-demo.gif" width="300" alt="AMBER Demo">
+
+
 ## 1. High Concept
 
 **AMBER** is a grounded surveillance simulation set in a fictional, divided city. Players act as an operator at the **Main Transit Hub**, the central checkpoint connecting various Districts. Unlike broad sci-fi epics, this is a game about **humans dealing with human problems**—smuggling, warrants, and civil unrest.
